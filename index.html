@@ -16366,5 +16366,275 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════
+     JARVIS AUTO-SAVE ENGINE v2.0
+     - Auto-saves ALL signals every 5 minutes during market hours
+     - Saves F&O Calls, OPT_STATE (Nifty/BankNifty/Sensex), Stock Pickup
+     - Saves EMA/RSI signals from SIGNAL_LOG
+     - Deduplicates by strike + date so no double entries
+     - Shows a small toast when auto-saving
+     - On page load: restores history immediately
+═══════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+var AS_KEY     = 'jarvis_fo_call_history';   // same key used by rest of app
+var AS_ST_KEY  = 'jarvis_stock_pickup_hist'; // separate key for stock pickup signals
+var AS_RL_KEY  = 'jarvis_rl_signal_hist';    // key for EMA/RSI SIGNAL_LOG entries
+var AS_LAST    = 'jarvis_autosave_ts';       // last autosave timestamp
+
+/* ─── Helpers ─── */
+function asLoad(key){ try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; } }
+function asSave(key,arr){ try{ localStorage.setItem(key, JSON.stringify(arr.slice(0,500))); }catch(e){} }
+
+function nowIST(){
+  return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+}
+function isoNow(){ return new Date().toISOString(); }
+function todayStr(){ return isoNow().substring(0,10); }
+function fmtDate(d){ return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtTime(d){ return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}); }
+
+/* ─── Market hours check (IST 9:15 – 15:31) ─── */
+function isMarketHours(){
+  var n = nowIST();
+  var h = n.getHours(), m = n.getMinutes(), day = n.getDay();
+  if(day===0||day===6) return false;
+  var mins = h*60+m;
+  return mins >= 9*60+15 && mins <= 15*60+31;
+}
+
+/* ─── Toast helper (reuses jarvisToast if available) ─── */
+function asToast(msg, type){
+  if(typeof jarvisToast==='function'){ jarvisToast(msg, type||'success', 3000); return; }
+  console.log('[AutoSave]', msg);
+}
+
+/* ══════════════════════════════════════
+   1. SAVE F&O CALLS (FO_CALLS table)
+══════════════════════════════════════ */
+function autoSaveFOCalls(){
+  if(typeof FO_CALLS === 'undefined' || !Array.isArray(FO_CALLS) || !FO_CALLS.length) return 0;
+  var hist  = asLoad(AS_KEY);
+  var today = todayStr();
+  var added = 0;
+  FO_CALLS.forEach(function(c){
+    if(!c || !c.strike) return;
+    var exists = hist.some(function(h){
+      return h.source==='FO_TABLE' && h.strike===String(c.strike) && h.savedAt && h.savedAt.startsWith(today);
+    });
+    if(!exists){
+      var now = new Date();
+      hist.unshift({
+        id: Date.now()+Math.floor(Math.random()*999),
+        savedAt: isoNow(), savedDate: fmtDate(now), savedTime: fmtTime(now),
+        source: 'FO_TABLE',
+        index: c.instr||'—', tradeType: c.type==='CE'?'CALL (CE)':'PUT (PE)',
+        strike: String(c.strike||'—'), expiry: c.expiry||'—',
+        premium: c.buyPrice||'—', idealEntry: (c.buyPrice||'').replace(/[₹\s]/g,'').split('–')[0]||'—',
+        entryRange: c.buyPrice||'—',
+        target1: (c.target||'').split('–')[0].replace('₹','')||'—',
+        target2: (c.target||'').split('–')[1]||'—',
+        stopLoss: c.sl||'—', confidence: c.conf||'—', riskReward: c.rr||'—',
+        lotQty: c.lotQty||'—', status: c.status||'—', condition: c.cond||'—',
+        reason: c.reason||'—', result:'PENDING', exitPrice:null, exitNote:'',
+        pnlPct:null, spotAtSave:'—', vix:'—', pcr:'—'
+      });
+      added++;
+    }
+  });
+  if(added){ asSave(AS_KEY, hist); }
+  return added;
+}
+
+/* ══════════════════════════════════════
+   2. SAVE OPT_STATE signals (Nifty/BankNifty/Sensex)
+══════════════════════════════════════ */
+function autoSaveOptSignals(){
+  if(typeof OPT_STATE === 'undefined') return 0;
+  var hist  = asLoad(AS_KEY);
+  var today = todayStr();
+  var added = 0;
+  var map = { 'NIFTY': OPT_STATE.nifty, 'BANKNIFTY': OPT_STATE.bnifty, 'SENSEX': OPT_STATE.sensex };
+  Object.keys(map).forEach(function(label){
+    var st = map[label];
+    if(!st || st.signal==='wait' || !st.signal) return;
+    var exists = hist.some(function(h){
+      return h.source==='OPT_SIGNAL' && h.index===label && h.savedAt && h.savedAt.startsWith(today);
+    });
+    if(!exists){
+      var now = new Date();
+      hist.unshift({
+        id: Date.now()+Math.floor(Math.random()*999),
+        savedAt: isoNow(), savedDate: fmtDate(now), savedTime: fmtTime(now),
+        source: 'OPT_SIGNAL',
+        index: label, tradeType: st.signal==='ce'?'CALL (CE)':st.signal==='pe'?'PUT (PE)':'WAIT',
+        strike: st.strike ? st.strike+' '+(st.type||'').toUpperCase() : '—',
+        expiry: st.expiry||'—', premium: st.entry?'₹'+st.entry:'—',
+        idealEntry: st.entry||'—', entryRange: st.entry?'₹'+st.entry:'—',
+        target1: st.target||'—', target2:'—',
+        stopLoss: st.sl?'₹'+st.sl:'—', confidence: st.conf||'—',
+        riskReward: st.rr||'—', expReturn:'—', lotQty: st.lotQty||'—',
+        status: st.signal!=='wait'?'ACTIVE':'WAIT', condition:'—', reason: st.reason||'—',
+        result:'PENDING', exitPrice:null, exitNote:'', pnlPct:null,
+        spotAtSave: st.price?'₹'+st.price:'—', vix:'—', pcr:'—'
+      });
+      added++;
+    }
+  });
+  if(added){ asSave(AS_KEY, hist); }
+  return added;
+}
+
+/* ══════════════════════════════════════
+   3. SAVE EMA/RSI SIGNAL_LOG entries
+══════════════════════════════════════ */
+function autoSaveSignalLog(){
+  if(typeof SIGNAL_LOG === 'undefined' || !Array.isArray(SIGNAL_LOG) || !SIGNAL_LOG.length) return 0;
+  var hist  = asLoad(AS_RL_KEY);
+  var today = todayStr();
+  var added = 0;
+  SIGNAL_LOG.forEach(function(s){
+    if(!s) return;
+    var key = (s.time||'')+'_'+(s.type||'')+'_'+(s.instr||'');
+    var exists = hist.some(function(h){ return h._key===key && h.savedAt && h.savedAt.startsWith(today); });
+    if(!exists){
+      var now = new Date();
+      hist.unshift({
+        _key: key,
+        id: Date.now()+Math.floor(Math.random()*999),
+        savedAt: isoNow(), savedDate: fmtDate(now), savedTime: fmtTime(now),
+        source: 'SIGNAL_LOG',
+        index: s.instr||'NIFTY', tradeType: s.type||'—',
+        strike: s.strike||'—', expiry: s.expiry||'—',
+        entry: s.entry||'—', target: s.target||'—', sl: s.sl||'—',
+        confidence: s.confidence||'—', reason: s.reason||'—',
+        result:'PENDING', exitPrice:null, exitNote:'', pnlPct:null
+      });
+      added++;
+    }
+  });
+  if(added){ asSave(AS_RL_KEY, hist); }
+  return added;
+}
+
+/* ══════════════════════════════════════
+   4. SAVE Stock Pickup / SA cards
+══════════════════════════════════════ */
+function autoSaveStockPickup(){
+  // Stock Adviser cards are in window.SA_STOCKS or rendered in DOM
+  var stocks = window.SA_STOCKS || window.saStocks || window._saData || [];
+  if(!Array.isArray(stocks) || !stocks.length) return 0;
+  var hist  = asLoad(AS_ST_KEY);
+  var today = todayStr();
+  var added = 0;
+  stocks.forEach(function(s){
+    if(!s || !s.name) return;
+    var exists = hist.some(function(h){ return h.name===s.name && h.savedAt && h.savedAt.startsWith(today); });
+    if(!exists){
+      var now = new Date();
+      hist.unshift({
+        id: Date.now()+Math.floor(Math.random()*999),
+        savedAt: isoNow(), savedDate: fmtDate(now), savedTime: fmtTime(now),
+        source:'STOCK_PICKUP',
+        name: s.name||'—', action: s.action||'—', ltp: s.ltp||'—',
+        change: s.change||'—', entry: s.entry||'—',
+        target1: s.target1||s.t1||'—', target2: s.target2||s.t2||'—',
+        stopLoss: s.sl||'—', score: s.score||'—',
+        reason: s.reason||'—', result:'PENDING',
+        exitPrice:null, exitNote:'', pnlPct:null
+      });
+      added++;
+    }
+  });
+  if(added){ asSave(AS_ST_KEY, hist); }
+  return added;
+}
+
+/* ══════════════════════════════════════
+   MASTER AUTO-SAVE RUNNER
+══════════════════════════════════════ */
+function runAutoSave(silent){
+  var t1 = autoSaveFOCalls();
+  var t2 = autoSaveOptSignals();
+  var t3 = autoSaveSignalLog();
+  var t4 = autoSaveStockPickup();
+  var total = t1+t2+t3+t4;
+  localStorage.setItem(AS_LAST, isoNow());
+  if(!silent && total > 0){
+    asToast('💾 Auto-saved '+total+' signal'+(total>1?'s':'')+' to history', 'success');
+  }
+  if(total > 0) console.log('[AutoSave] Saved — FO:'+t1+' OPT:'+t2+' RLSIG:'+t3+' STOCK:'+t4);
+  return total;
+}
+
+/* ══════════════════════════════════════
+   PERIODIC AUTO-SAVE (every 5 minutes)
+   Also runs immediately on startup
+══════════════════════════════════════ */
+
+// Run once 8 seconds after page load (give other scripts time to init)
+setTimeout(function(){ runAutoSave(true); }, 8000);
+
+// Then every 5 minutes — always save, market hours or not
+setInterval(function(){
+  runAutoSave(false);
+}, 5 * 60 * 1000);
+
+// Also save whenever a new signal fires (hook into fetchAll)
+var _origFetchAll = window.fetchAll;
+if(typeof _origFetchAll === 'function'){
+  window.fetchAll = function(){
+    var result = _origFetchAll.apply(this, arguments);
+    setTimeout(function(){ runAutoSave(true); }, 3000); // wait 3s for data to settle
+    return result;
+  };
+} else {
+  // fetchAll not yet defined — watch for it
+  var _fetchAllWatcher = setInterval(function(){
+    if(typeof window.fetchAll === 'function' && window.fetchAll !== arguments.callee){
+      clearInterval(_fetchAllWatcher);
+      var orig = window.fetchAll;
+      window.fetchAll = function(){
+        var r = orig.apply(this, arguments);
+        setTimeout(function(){ runAutoSave(true); }, 3000);
+        return r;
+      };
+    }
+  }, 2000);
+}
+
+/* ══════════════════════════════════════
+   EXPOSE to window so buttons can call
+══════════════════════════════════════ */
+window.jarvisAutoSaveNow = function(){
+  var n = runAutoSave(false);
+  if(n===0) asToast('No new signals to save (already up to date)', 'info');
+};
+
+/* ══════════════════════════════════════
+   INJECT "SAVE NOW" BUTTON in header
+══════════════════════════════════════ */
+setTimeout(function(){
+  if(document.getElementById('jarvis-as-btn')) return;
+  var hdr = document.querySelector('.hdr-r') || document.querySelector('.hdr');
+  if(!hdr) return;
+  var btn = document.createElement('button');
+  btn.id = 'jarvis-as-btn';
+  btn.title = 'Save all current signals to history now';
+  btn.onclick = window.jarvisAutoSaveNow;
+  btn.style.cssText = 'padding:5px 12px;background:rgba(0,255,136,.09);border:1px solid rgba(0,255,136,.3);border-radius:6px;color:#00ff88;font-family:Orbitron,sans-serif;font-size:9px;cursor:pointer;letter-spacing:1px;transition:all .2s;white-space:nowrap';
+  btn.textContent = '💾 SAVE NOW';
+  btn.onmouseover = function(){ this.style.background='rgba(0,255,136,.2)'; };
+  btn.onmouseout  = function(){ this.style.background='rgba(0,255,136,.09)'; };
+  hdr.appendChild(btn);
+}, 3000);
+
+console.log('[JARVIS AutoSave v2] Loaded — auto-save every 5 min, hooks into fetchAll');
+
+})();
+</script>
+
 </body>
 </html>
