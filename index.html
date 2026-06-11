@@ -2029,15 +2029,19 @@ window.nd2Refresh = function(){
   }, 1200);
 };
 
-/* ── Hook into showPage to sync on visit ── */
-var _nd2OrigShowPage = showPage;
-showPage = function(id, btn){
-  _nd2OrigShowPage(id, btn);
-  if(id==='dash2'){
-    setTimeout(nd2SyncAll, 120);
-    setTimeout(nd2SyncAll, 1500); // second pass after data loads
+/* ── Hook into showPage to sync on visit (deferred until showPage is defined) ── */
+setTimeout(function(){
+  if(typeof showPage === 'function'){
+    var _nd2OrigShowPage = showPage;
+    showPage = function(id, btn){
+      _nd2OrigShowPage(id, btn);
+      if(id==='dash2'){
+        setTimeout(nd2SyncAll, 120);
+        setTimeout(nd2SyncAll, 1500);
+      }
+    };
   }
-};
+}, 500);
 
 /* ── Auto-sync every 15s when dash2 is visible ── */
 setInterval(function(){
@@ -6870,7 +6874,6 @@ async function doLogin(){
             clearInterval(_navTimer);
             showPage('dash', document.querySelector('.nav-tab'));
             if(typeof jarvisToast==='function') jarvisToast('☁ Cloud login: '+window.JARVIS_USER+' ('+window.JARVIS_ROLE+')','success',3000);
-            // ── Auto-load all cloud history after login ──
             setTimeout(function(){
               if(typeof srLoadFromCloud==='function') srLoadFromCloud().catch(function(e){console.warn('[srLoad]',e);});
               if(typeof foHistLoadFromCloud==='function') foHistLoadFromCloud().catch(function(e){console.warn('[foLoad]',e);});
@@ -12678,21 +12681,16 @@ function srSaveHistory() {
     });
     localStorage.setItem('ja_sr_history', JSON.stringify(toStore));
     // ── Save to Supabase using UPSERT ──
-    if(window.SUPA_USER && window._SUPA_TOKEN && typeof supaFetch === 'function') {
-      supaFetch('/rest/v1/reports', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({
-          user_id:     window.SUPA_USER.id,
-          report_type: 'sr_history',
-          title:       'Stock Signal History',
-          content:     JSON.stringify(toStore),
-          metadata:    { count: toStore.length, updated_at: new Date().toISOString() }
+    if(window.SUPA_USER && window._SUPA_TOKEN && typeof supaFetch==='function'){
+      supaFetch('/rest/v1/reports',{
+        method:'POST',
+        headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({
+          user_id:window.SUPA_USER.id, report_type:'sr_history',
+          title:'Stock Signal History', content:JSON.stringify(toStore),
+          metadata:{count:toStore.length, updated_at:new Date().toISOString()}
         })
-      }).then(function(r){
-        if(r.error) console.warn('[SR Supabase save]', r.error);
-        else console.log('[SR] Saved', toStore.length, 'signals to Supabase');
-      }).catch(function(e){ console.warn('[SR cloud save]', e); });
+      }).then(function(r){ if(r&&r.error) console.warn('[SR save]',r.error); else console.log('[SR] Saved',toStore.length,'signals to Supabase'); }).catch(function(e){ console.warn('[SR save]',e); });
     }
   } catch(e) {}
 }
@@ -12886,36 +12884,25 @@ async function srManualCatchUp() {
 var SR_CURRENT = null; // holds last generated report data
 
 // ── Historical signals database (realistic sample data) ──
-// ── jarvisDBInit: restores SR_HISTORY from localStorage on boot ──
-window.jarvisDBInit = window.jarvisDBInit || function() {
-  return Promise.resolve().then(function() {
-    try {
-      var stored = JSON.parse(localStorage.getItem('ja_sr_history')||'[]');
-      if(stored && stored.length) {
+window.jarvisDBInit = window.jarvisDBInit || function(){
+  return Promise.resolve().then(function(){
+    try{
+      var stored=JSON.parse(localStorage.getItem('ja_sr_history')||'[]');
+      if(stored&&stored.length){
         if(typeof SR_HISTORY==='undefined') window.SR_HISTORY=[];
-        var keys = SR_HISTORY.map(function(h){ return h.stock+'|'+(h.callDate||h.date); });
-        stored.forEach(function(s){
-          var k=s.stock+'|'+(s.callDate||s.date);
-          if(!keys.includes(k)) SR_HISTORY.unshift(s);
-        });
+        var keys=SR_HISTORY.map(function(h){return h.stock+'|'+(h.callDate||h.date);});
+        stored.forEach(function(s){var k=s.stock+'|'+(s.callDate||s.date);if(!keys.includes(k))SR_HISTORY.unshift(s);});
         console.log('[jarvisDBInit] Restored',SR_HISTORY.length,'signals');
       }
-    } catch(e){ console.warn('[jarvisDBInit]',e); }
+    }catch(e){ console.warn('[jarvisDBInit]',e); }
   });
 };
-window.JDB = window.JDB || {
-  saveSRHistory: function(hist){
-    try{ localStorage.setItem('ja_sr_history', JSON.stringify(hist)); }catch(e){}
-    if(window.SUPA_USER && window._SUPA_TOKEN && typeof supaFetch==='function'){
-      supaFetch('/rest/v1/reports',{
-        method:'POST',
-        headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
-        body:JSON.stringify({user_id:window.SUPA_USER.id,report_type:'sr_history',title:'Stock Signal History',content:JSON.stringify(hist),metadata:{count:hist.length,updated_at:new Date().toISOString()}})
-      }).catch(function(){});
-    }
-  }
-};
-// SR_HISTORY loaded from localStorage on boot (by jarvisDBInit above).
+window.JDB=window.JDB||{saveSRHistory:function(hist){
+  try{localStorage.setItem('ja_sr_history',JSON.stringify(hist));}catch(e){}
+  if(window.SUPA_USER&&window._SUPA_TOKEN&&typeof supaFetch==='function')
+    supaFetch('/rest/v1/reports',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:window.SUPA_USER.id,report_type:'sr_history',title:'Stock Signal History',content:JSON.stringify(hist),metadata:{count:hist.length,updated_at:new Date().toISOString()}})}).catch(function(){});
+}};
+// SR_HISTORY loaded from localStorage on boot.
 // Defaults only used on first-ever run when DB is empty.
 var SR_HISTORY_DEFAULTS = [
   {id:1, date:'03 Feb 2026', callDate:'2026-02-03', stock:'RELIANCE', ticker:'RELIANCE',
@@ -15055,36 +15042,26 @@ function foHistLoad(){
 function foHistSave(arr){
   try{
     localStorage.setItem(FO_HISTORY_KEY, JSON.stringify(arr));
-    // Also upsert to Supabase
     if(window.SUPA_USER && window._SUPA_TOKEN && typeof supaFetch==='function'){
       supaFetch('/rest/v1/reports',{
-        method:'POST',
-        headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
-        body:JSON.stringify({
-          user_id:window.SUPA_USER.id, report_type:'fo_call_history',
+        method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({user_id:window.SUPA_USER.id, report_type:'fo_call_history',
           title:'F&O Call History', content:JSON.stringify(arr),
-          metadata:{count:arr.length, updated_at:new Date().toISOString()}
-        })
-      }).then(function(r){ if(r.error) console.warn('[FO save]',r.error); }).catch(function(){});
+          metadata:{count:arr.length, updated_at:new Date().toISOString()}})
+      }).then(function(r){ if(r&&r.error) console.warn('[FO save]',r.error); else console.log('[FO] Saved',arr.length,'calls to Supabase'); }).catch(function(){});
     }
   }catch(e){}
 }
-
-/* ─── Load F&O history from Supabase ─── */
 window.foHistLoadFromCloud = async function(){
-  if(!window.SUPA_USER || !window._SUPA_TOKEN || typeof supaFetch!=='function') return;
+  if(!window.SUPA_USER||!window._SUPA_TOKEN||typeof supaFetch!=='function') return;
   try{
-    var r = await supaFetch('/rest/v1/reports?report_type=eq.fo_call_history&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
-    if(r.data && r.data.length && r.data[0].content){
-      var cloud = JSON.parse(r.data[0].content);
-      if(Array.isArray(cloud) && cloud.length){
-        var local = foHistLoad();
-        var localIds = local.map(function(h){ return String(h.id); });
-        var added = 0;
-        cloud.forEach(function(h){ if(!localIds.includes(String(h.id))){ local.unshift(h); added++; } });
-        if(added){ localStorage.setItem(FO_HISTORY_KEY, JSON.stringify(local)); }
-        console.log('[FO Cloud] Synced '+added+' F&O calls from Supabase');
-        if(added && typeof jarvisToast==='function') jarvisToast('☁ Loaded '+added+' F&O signals from cloud','info',2500);
+    var r=await supaFetch('/rest/v1/reports?report_type=eq.fo_call_history&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
+    if(r.data&&r.data.length&&r.data[0].content){
+      var cloud=JSON.parse(r.data[0].content);
+      if(Array.isArray(cloud)&&cloud.length){
+        var local=foHistLoad(), localIds=local.map(function(h){return String(h.id);}), added=0;
+        cloud.forEach(function(h){if(!localIds.includes(String(h.id))){local.unshift(h);added++;}});
+        if(added){ localStorage.setItem(FO_HISTORY_KEY,JSON.stringify(local)); console.log('[FO Cloud] Synced '+added+' calls'); if(typeof jarvisToast==='function') jarvisToast('☁ Loaded '+added+' F&O signals from cloud','info',2500); }
       }
     }
   }catch(e){ console.warn('[foHistLoadFromCloud]',e); }
@@ -16232,7 +16209,7 @@ console.log('[JARVIS] fo2 engine loaded');
 
 var CRED_TABLE = 'reports'; // reuse reports table with report_type='angel_creds'
 
-/* ─── Save creds to Supabase (admin only) — uses UPSERT ─── */
+/* ─── Save creds to Supabase (admin only) ─── */
 window.supaCredsave = async function() {
   if(!window.SUPA_USER) {
     if(typeof jarvisToast==='function') jarvisToast('Not logged in to cloud','warn'); return;
@@ -16248,7 +16225,7 @@ window.supaCredsave = async function() {
   if(!payload.apiKey && !payload.clientId) {
     if(typeof jarvisToast==='function') jarvisToast('Fill API Key and Client ID first','warn'); return;
   }
-  // Use UPSERT — single call, no race condition
+  // Check if existing record
   var r = await supaFetch('/rest/v1/'+CRED_TABLE, {
     method: 'POST',
     headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
@@ -16261,12 +16238,11 @@ window.supaCredsave = async function() {
     })
   });
   if(r.error) {
-    if(typeof jarvisToast==='function') jarvisToast('Cloud save failed: '+r.error, 'error');
-    console.error('[supaCredsave error]', r.error);
+    if(typeof jarvisToast==='function') jarvisToast('Cloud save failed: '+r.error,'error');
   } else {
+    // Also save locally
     if(typeof saveCreds==='function') saveCreds();
-    if(typeof jarvisToast==='function') jarvisToast('☁ Angel One credentials saved to cloud', 'success');
-    console.log('[supaCredsave] Saved successfully for', window.SUPA_USER.username);
+    if(typeof jarvisToast==='function') jarvisToast('☁ Credentials saved to cloud securely','success');
   }
 };
 
