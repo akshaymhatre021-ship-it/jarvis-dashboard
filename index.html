@@ -8123,16 +8123,14 @@ async function fetchNSEChain(symbol) {
     return null;
   }
 
-  // ── Strategy 1: Cloudflare Worker proxy ──
+  // ── Strategy 1: Cloudflare Worker proxy (action:nse_chain) ──
   if (PROXY_URL) {
     try {
-      var warmPayload = JSON.stringify({ url:'https://www.nseindia.com', method:'GET',
-        headers:{'User-Agent':'Mozilla/5.0','Accept':'text/html','Accept-Language':'en-IN,en;q=0.9'}, body:null });
-      await safeFetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:warmPayload }, 3000);
-      var payload = JSON.stringify({ url:nseUrl, method:'GET',
-        headers:{'User-Agent':'Mozilla/5.0','Accept':'application/json','Referer':'https://www.nseindia.com/option-chain',
-                 'X-Requested-With':'XMLHttpRequest','Accept-Language':'en-IN,en;q=0.9'}, body:null });
-      var r1 = await safeFetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:payload }, 8000);
+      var r1 = await safeFetch(PROXY_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'nse_chain', symbol:symbol})
+      }, 8000);
       var d1 = await tryParse(r1);
       if (d1) { _nseChainCache[symbol]={data:d1,ts:now}; _nseConnected=true; return d1; }
     } catch(e) {}
@@ -15414,7 +15412,7 @@ window.SUPA      = true;   // flag: Supabase available
 window.SUPA_USER = null;   // current profile
 
 /* ─── Core fetch wrapper for Supabase REST API ─── */
-async function supaFetch(path, opts) {
+window.supaFetch = async function supaFetch(path, opts) {
   opts = opts || {};
   var url = SUPA_URL + path;
   var headers = Object.assign({
