@@ -4477,6 +4477,10 @@ async function angelLogin() {
       localStorage.setItem('ja_j', creds.jwt);
       localStorage.setItem('ja_f', creds.feed);
       creds.connected = true;
+      // Save fresh JWT back to Supabase cloud creds
+      if (typeof supaCredSave === 'function') {
+        try { supaCredSave(); } catch(e) {}
+      }
       return true;
     }
     if (d && d.errorcode && d.errorcode !== 'AB1050') {
@@ -12680,7 +12684,7 @@ function srSaveHistory() {
     localStorage.setItem('ja_sr_history', JSON.stringify(toStore));
     // ── Save to Supabase using UPSERT ──
     if(window.SUPA_USER && window._SUPA_TOKEN && typeof supaFetch==='function'){
-      supaFetch('/rest/v1/reports',{
+      supaFetch('/rest/v1/reports?on_conflict=user_id,report_type',{
         method:'POST',
         headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
         body:JSON.stringify({
