@@ -4477,10 +4477,8 @@ async function angelLogin() {
       localStorage.setItem('ja_j', creds.jwt);
       localStorage.setItem('ja_f', creds.feed);
       creds.connected = true;
-      // Save fresh JWT back to Supabase cloud creds
-      if (typeof supaCredSave === 'function') {
-        try { supaCredSave(); } catch(e) {}
-      }
+      // Save fresh JWT back to cloud
+      if (typeof supaCredSave === 'function') { try { supaCredSave(); } catch(e) {} }
       return true;
     }
     if (d && d.errorcode && d.errorcode !== 'AB1050') {
@@ -8127,14 +8125,11 @@ async function fetchNSEChain(symbol) {
     return null;
   }
 
-  // ── Strategy 1: Cloudflare Worker proxy (action:nse_chain) ──
+  // ── Strategy 1: Cloudflare Worker nse_chain action ──
   if (PROXY_URL) {
     try {
-      var r1 = await safeFetch(PROXY_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({action:'nse_chain', symbol:symbol})
-      }, 8000);
+      var r1 = await safeFetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'nse_chain', symbol:symbol}) }, 8000);
       var d1 = await tryParse(r1);
       if (d1) { _nseChainCache[symbol]={data:d1,ts:now}; _nseConnected=true; return d1; }
     } catch(e) {}
@@ -12902,7 +12897,7 @@ window.jarvisDBInit = window.jarvisDBInit || function(){
 window.JDB=window.JDB||{saveSRHistory:function(hist){
   try{localStorage.setItem('ja_sr_history',JSON.stringify(hist));}catch(e){}
   if(window.SUPA_USER&&window._SUPA_TOKEN&&typeof supaFetch==='function')
-    supaFetch('/rest/v1/reports',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:window.SUPA_USER.id,report_type:'sr_history',title:'Stock Signal History',content:JSON.stringify(hist),metadata:{count:hist.length,updated_at:new Date().toISOString()}})}).catch(function(){});
+    supaFetch('/rest/v1/reports?on_conflict=user_id,report_type',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:window.SUPA_USER.id,report_type:'sr_history',title:'Stock Signal History',content:JSON.stringify(hist),metadata:{count:hist.length,updated_at:new Date().toISOString()}})}).catch(function(){});
 }};
 // SR_HISTORY loaded from localStorage on boot.
 // Defaults only used on first-ever run when DB is empty.
@@ -15045,7 +15040,7 @@ function foHistSave(arr){
   try{
     localStorage.setItem(FO_HISTORY_KEY, JSON.stringify(arr));
     if(window.SUPA_USER && window._SUPA_TOKEN && typeof supaFetch==='function'){
-      supaFetch('/rest/v1/reports',{
+      supaFetch('/rest/v1/reports?on_conflict=user_id,report_type',{
         method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
         body:JSON.stringify({user_id:window.SUPA_USER.id, report_type:'fo_call_history',
           title:'F&O Call History', content:JSON.stringify(arr),
@@ -16249,6 +16244,32 @@ window.supaCredsave = async function() {
 };
 
 /* ─── Load creds from Supabase ─── */
+
+/* ─── Save creds to Supabase ─── */
+window.supaCredSave = async function() {
+  if (!window.SUPA_USER || typeof supaFetch !== 'function' || typeof creds === 'undefined') return false;
+  try {
+    var payload = {
+      user_id: window.SUPA_USER.id,
+      report_type: 'angel_creds',
+      title: 'Angel One Credentials',
+      content: JSON.stringify({
+        apiKey: creds.apiKey, clientId: creds.clientId,
+        mpin: creds.mpin, totpSec: creds.totpSec,
+        jwt: creds.jwt, feed: creds.feed, connected: creds.connected
+      }),
+      metadata: { saved_at: new Date().toISOString() }
+    };
+    await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    console.log('[JARVIS] Cloud credentials saved for:', window.SUPA_USER.username);
+    return true;
+  } catch(e) { console.warn('[supaCredSave]', e); return false; }
+};
+
 window.supaCredLoad = async function() {
   if(!window.SUPA_USER || typeof supaFetch!=='function') return false;
   try {
