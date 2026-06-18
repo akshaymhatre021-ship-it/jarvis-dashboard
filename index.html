@@ -3158,6 +3158,62 @@ setTimeout(nd2SyncAll, 2000);
     </div>
   </div>
 
+  <!-- Auto Signal Engine -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
+    <div class="ph">
+      <div class="pt" style="color:#a064ff">🤖 AUTO SIGNAL ENGINE</div>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">PCR + EMA21 + VIX filters → auto-logs paper trades</span>
+    </div>
+    <div style="padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+            <input type="checkbox" id="ase-toggle" onchange="aseToggle()" style="opacity:0;width:0;height:0">
+            <span id="ase-toggle-track" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:24px;transition:.2s"></span>
+            <span id="ase-toggle-knob" style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.2s"></span>
+          </label>
+          <div>
+            <div id="ase-state-lbl" style="font-family:Orbitron;font-size:11px;color:var(--dim);letter-spacing:1px">ENGINE OFF</div>
+            <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Auto-paper-trades every qualifying signal</div>
+          </div>
+        </div>
+        <div id="ase-last-check" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);text-align:right">Not running</div>
+      </div>
+
+      <!-- Live condition readout -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">PCR</div>
+          <div id="ase-pcr" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VIX</div>
+          <div id="ase-vix" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">NIFTY vs EMA21</div>
+          <div id="ase-ema" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">SESSION WINDOW</div>
+          <div id="ase-window" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+
+      <!-- Rules reference -->
+      <div style="background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:#a064ff;margin-bottom:4px">BUY CE: PCR&gt;1.2 · Price&gt;EMA21 · VIX&lt;15 · 9:20–10:30 or 13:30–14:30 · ATM/1-OTM · TGT +40% / SL -30%</div>
+        <div style="color:#a064ff;margin-bottom:4px">BUY PE: PCR&lt;0.8 · Price&lt;EMA21 · VIX spike &gt;10% in 15min · ATM/1-OTM</div>
+        <div style="color:var(--r)">NO TRADE: PCR 0.9–1.1 · VIX&gt;20 · within 30min of expiry-day open</div>
+      </div>
+      <div id="ase-log" style="margin-top:10px;max-height:120px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></div>
+    </div>
+  </div>
+
   <!-- Add Trade -->
   <div class="panel" style="margin-bottom:10px">
     <div class="ph"><div class="pt">➕ LOG PAPER TRADE</div>
@@ -3241,6 +3297,71 @@ setTimeout(nd2SyncAll, 2000);
         <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:var(--g);border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Your Paper Portfolio</span></div>
         <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:var(--a);border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Nifty 50 Benchmark</span></div>
       </div>
+    </div>
+  </div>
+
+  <!-- P&L Dashboard (Week 2) -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(0,212,255,.25)">
+    <div class="ph"><div class="pt">📈 P&amp;L DASHBOARD</div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Real performance from your closed trades</span></div>
+    <div style="padding:14px">
+
+      <!-- Daily P&L bar chart -->
+      <div style="margin-bottom:16px">
+        <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">DAILY P&amp;L</div>
+        <canvas id="pt-daily-chart" height="140" style="width:100%;display:block;border-radius:6px"></canvas>
+        <div id="pt-daily-empty" style="display:none;text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No closed trades yet — close a few paper trades to see daily P&amp;L.</div>
+      </div>
+
+      <!-- Win rate by time of day -->
+      <div style="margin-bottom:16px">
+        <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">WIN RATE BY HOUR OF DAY</div>
+        <canvas id="pt-hour-chart" height="120" style="width:100%;display:block;border-radius:6px"></canvas>
+        <div id="pt-hour-empty" style="display:none;text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No closed trades yet.</div>
+      </div>
+
+      <!-- Win rate by strike type & signal source -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+        <div>
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">CE vs PE</div>
+          <div id="pt-strike-bd" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:Share Tech Mono;font-size:10px">
+            <div style="text-align:center;color:var(--dim);padding:10px 0">No data yet</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">AUTO vs MANUAL</div>
+          <div id="pt-source-bd" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:Share Tech Mono;font-size:10px">
+            <div style="text-align:center;color:var(--dim);padding:10px 0">No data yet</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">BEST / WORST STRIKE</div>
+          <div id="pt-best-strike" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:Share Tech Mono;font-size:10px">
+            <div style="text-align:center;color:var(--dim);padding:10px 0">No data yet</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Day-Wise P&L Breakdown -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">📅 DAY-WISE BREAKDOWN</div><span id="pt-days-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 trading days</span></div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:560px">
+        <thead><tr style="background:rgba(0,0,0,.3)">
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">DATE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">TRADES</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">WINS</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">LOSSES</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">WIN%</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">NET P&amp;L ₹</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">SOURCE</th>
+        </tr></thead>
+        <tbody id="pt-days-body">
+          <tr><td colspan="7" style="text-align:center;padding:16px;color:var(--dim)">No trades yet</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -13739,6 +13860,7 @@ function ptReset() {
   localStorage.removeItem('jarvis_pt_portfolio');
   PT_PORTFOLIO = null;
   ptInit();
+  ptSyncCloud();
   ptRefreshUI();
 }
 
@@ -13765,12 +13887,14 @@ function ptAddTrade() {
     id: Date.now(), instr: instr, source: source, buy: buy, qty: qty,
     cost: cost, target: target, sl: sl, status: 'OPEN', exit: null,
     date: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    dayKey: new Date().toLocaleDateString('en-CA'),
     time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
     exitDate: null
   };
   PT_PORTFOLIO.cash -= cost;
   PT_PORTFOLIO.trades.push(trade);
   ptSave();
+  ptSyncCloud();
   msg.style.cssText='display:block;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.3);color:var(--g);padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px';
   msg.textContent='✅ Paper trade added! Cost: ₹'+Math.round(cost).toLocaleString('en-IN');
   setTimeout(function(){ msg.style.display='none'; }, 3000);
@@ -13779,6 +13903,36 @@ function ptAddTrade() {
   document.getElementById('pt-qty').value='75';
   ptRefreshUI();
 }
+
+// ── Programmatic add, used by the Auto Signal Engine. Bypasses the form,
+//    tags the trade as auto-generated, and stores the context (PCR/VIX/
+//    reasons) needed later for day-wise breakdowns and loss analysis.
+function ptAddAutoTrade(opts) {
+  if (!PT_PORTFOLIO) ptInit();
+  var cost = opts.buy * opts.qty;
+  if (cost > PT_PORTFOLIO.cash) return { error: 'Insufficient paper cash' };
+  var now = new Date();
+  var dayKey = now.toLocaleDateString('en-CA'); // YYYY-MM-DD, stable sort key
+  var trade = {
+    id: Date.now() + Math.floor(Math.random()*1000),
+    instr: opts.instr, source: 'AUTO SIGNAL', auto: true,
+    buy: opts.buy, qty: opts.qty, cost: cost,
+    target: opts.target, sl: opts.sl, status: 'OPEN', exit: null,
+    date: now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    dayKey: dayKey,
+    time: now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+    exitDate: null,
+    signalType: opts.signalType || '',  // 'BUY CE' / 'BUY PE'
+    pcr: opts.pcr, vix: opts.vix, reasons: opts.reasons || ''
+  };
+  PT_PORTFOLIO.cash -= cost;
+  PT_PORTFOLIO.trades.push(trade);
+  ptSave();
+  ptSyncCloud();
+  ptRefreshUI();
+  return { trade: trade };
+}
+
 
 function ptCloseTrade(id, exitPrice) {
   if (!PT_PORTFOLIO) return;
@@ -13793,10 +13947,12 @@ function ptCloseTrade(id, exitPrice) {
     t.status = gross >= 0 ? 'PROFIT' : 'LOSS';
     t.result = gross >= 0 ? 'PROFIT' : 'LOSS';
     t.exitDate = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    t.dayKey = t.dayKey || new Date().toLocaleDateString('en-CA');
     PT_PORTFOLIO.cash += exitPrice * t.qty - Math.round(t.qty * 0.55);
     return t;
   });
   ptSave();
+  ptSyncCloud();
   ptRefreshUI();
 }
 
@@ -13917,6 +14073,266 @@ function ptRefreshUI() {
 
   // Draw benchmark chart
   ptDrawBenchmarkChart(portfolioVal, parseFloat(niftyRet));
+
+  // Day-wise breakdown
+  ptRenderDayWise(closedTrades);
+
+  // P&L Dashboard (Week 2): daily chart + hour/strike/source breakdowns
+  ptRenderDashboard(closedTrades);
+}
+
+function ptRenderDayWise(closedTrades) {
+  var body = document.getElementById('pt-days-body');
+  var countEl = document.getElementById('pt-days-count');
+  if (!body) return;
+  if (!closedTrades.length) {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>';
+    if (countEl) countEl.textContent = '0 trading days';
+    return;
+  }
+  var byDay = {};
+  closedTrades.forEach(function(t){
+    var key = t.dayKey || (t.exitDate || t.date || 'Unknown');
+    if (!byDay[key]) byDay[key] = { trades: 0, wins: 0, losses: 0, net: 0, auto: 0, manual: 0, label: t.exitDate || t.date || key };
+    var d = byDay[key];
+    d.trades++;
+    if (t.result === 'PROFIT') d.wins++; else d.losses++;
+    d.net += (t.net || 0);
+    if (t.auto) d.auto++; else d.manual++;
+  });
+  var keys = Object.keys(byDay).sort().reverse(); // most recent first
+  if (countEl) countEl.textContent = keys.length + ' trading day' + (keys.length!==1?'s':'');
+  body.innerHTML = keys.map(function(k){
+    var d = byDay[k];
+    var winPct = d.trades ? Math.round(d.wins/d.trades*100) : 0;
+    var pColor = d.net >= 0 ? 'var(--g)' : 'var(--r)';
+    var srcLbl = d.auto && d.manual ? 'AUTO+MANUAL' : d.auto ? 'AUTO' : 'MANUAL';
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<td style="padding:7px 10px;font-family:Orbitron;font-size:10px;color:var(--a)">'+d.label+'</td>'
+      +'<td style="padding:7px 10px">'+d.trades+'</td>'
+      +'<td style="padding:7px 10px;color:var(--g)">'+d.wins+'</td>'
+      +'<td style="padding:7px 10px;color:var(--r)">'+d.losses+'</td>'
+      +'<td style="padding:7px 10px;color:'+(winPct>=55?'var(--g)':winPct>=40?'var(--w)':'var(--r)')+'">'+winPct+'%</td>'
+      +'<td style="padding:7px 10px;font-family:Orbitron;font-size:10px;color:'+pColor+'">'+(d.net>=0?'+':'')+'₹'+Math.round(d.net).toLocaleString('en-IN')+'</td>'
+      +'<td style="padding:7px 10px;font-size:9px;color:var(--dim)">'+srcLbl+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  P&L DASHBOARD (Week 2)
+//  All charts/breakdowns below are computed directly from closed
+//  paper trades — no simulated/interpolated data, unlike the
+//  Nifty benchmark chart above which estimates a smooth curve.
+// ══════════════════════════════════════════════════════════════════
+
+function ptParseStrikeType(instr) {
+  if (!instr) return null;
+  var m = String(instr).toUpperCase().match(/(\d+)\s*(CE|PE)\b/);
+  return m ? { strike: m[1], type: m[2] } : null;
+}
+
+function ptRenderDashboard(closedTrades) {
+  ptRenderDailyChart(closedTrades);
+  ptRenderHourChart(closedTrades);
+  ptRenderStrikeBreakdown(closedTrades);
+  ptRenderSourceBreakdown(closedTrades);
+  ptRenderBestWorstStrike(closedTrades);
+}
+
+// ── 1. Daily P&L bar chart ──────────────────────────────────────
+function ptRenderDailyChart(closedTrades) {
+  var canvas = document.getElementById('pt-daily-chart');
+  var emptyEl = document.getElementById('pt-daily-empty');
+  if (!canvas) return;
+  if (!closedTrades.length) {
+    canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block'; if (emptyEl) emptyEl.style.display = 'none';
+
+  var byDay = {};
+  closedTrades.forEach(function(t){
+    var key = t.dayKey || t.exitDate || t.date || 'Unknown';
+    byDay[key] = (byDay[key] || 0) + (t.net || 0);
+  });
+  var keys = Object.keys(byDay).sort(); // chronological, oldest to newest
+  var vals = keys.map(function(k){ return byDay[k]; });
+  ptDrawBarChart(canvas, keys.map(function(k){
+    // shorten YYYY-MM-DD to DD/MM for axis labels when possible
+    var p = k.split('-'); return p.length===3 ? p[2]+'/'+p[1] : k;
+  }), vals, { positiveColor:'#00ff88', negativeColor:'#ff3d5a', valuePrefix:'₹' });
+}
+
+// ── 2. Win rate by hour of day ──────────────────────────────────
+function ptRenderHourChart(closedTrades) {
+  var canvas = document.getElementById('pt-hour-chart');
+  var emptyEl = document.getElementById('pt-hour-empty');
+  if (!canvas) return;
+  if (!closedTrades.length) {
+    canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block'; if (emptyEl) emptyEl.style.display = 'none';
+
+  var byHour = {}; // hour -> {wins, total}
+  closedTrades.forEach(function(t){
+    var hr = null;
+    if (t.time) {
+      // t.time is like "09:32 am" (en-IN, hour12). Parse to 24h bucket.
+      var m = String(t.time).match(/(\d{1,2}):(\d{2})\s*([ap]m)?/i);
+      if (m) {
+        var h = parseInt(m[1],10);
+        var ap = (m[3]||'').toLowerCase();
+        if (ap === 'pm' && h !== 12) h += 12;
+        if (ap === 'am' && h === 12) h = 0;
+        hr = h;
+      }
+    }
+    if (hr == null) return;
+    if (!byHour[hr]) byHour[hr] = { wins: 0, total: 0 };
+    byHour[hr].total++;
+    if (t.result === 'PROFIT') byHour[hr].wins++;
+  });
+  var hours = Object.keys(byHour).map(Number).sort(function(a,b){return a-b;});
+  if (!hours.length) {
+    canvas.style.display = 'none'; if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.textContent = 'No timestamped trades to bucket by hour yet.'; }
+    return;
+  }
+  var labels = hours.map(function(h){ return (h<10?'0':'')+h+':00'; });
+  var winPcts = hours.map(function(h){ var d = byHour[h]; return Math.round(d.wins/d.total*100); });
+  ptDrawBarChart(canvas, labels, winPcts, { positiveColor:'#00d4ff', negativeColor:'#00d4ff', valueSuffix:'%', fixedMax:100 });
+}
+
+// ── 3. CE vs PE breakdown ────────────────────────────────────────
+function ptRenderStrikeBreakdown(closedTrades) {
+  var el = document.getElementById('pt-strike-bd');
+  if (!el) return;
+  var grp = { CE:{wins:0,total:0,net:0}, PE:{wins:0,total:0,net:0} };
+  closedTrades.forEach(function(t){
+    var parsed = ptParseStrikeType(t.instr);
+    var type = (parsed && parsed.type) || (t.signalType && t.signalType.indexOf('PE')>=0 ? 'PE' : t.signalType && t.signalType.indexOf('CE')>=0 ? 'CE' : null);
+    if (!type || !grp[type]) return;
+    grp[type].total++;
+    if (t.result === 'PROFIT') grp[type].wins++;
+    grp[type].net += (t.net || 0);
+  });
+  if (!grp.CE.total && !grp.PE.total) { el.innerHTML = '<div style="text-align:center;color:var(--dim);padding:10px 0">No CE/PE trades yet</div>'; return; }
+  el.innerHTML = ['CE','PE'].map(function(k){
+    var d = grp[k];
+    if (!d.total) return '<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--dim)"><span>'+k+'</span><span>No trades</span></div>';
+    var wp = Math.round(d.wins/d.total*100);
+    var pColor = d.net>=0?'var(--g)':'var(--r)';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<span style="color:'+(k==='CE'?'var(--g)':'var(--r)')+';font-weight:700">'+k+'</span>'
+      +'<span style="color:var(--dim)">'+d.total+' trades</span>'
+      +'<span style="color:'+(wp>=50?'var(--g)':'var(--w)')+'">'+wp+'% win</span>'
+      +'<span style="color:'+pColor+'">'+(d.net>=0?'+':'')+'₹'+Math.round(d.net).toLocaleString('en-IN')+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+// ── 4. AUTO vs MANUAL breakdown ─────────────────────────────────
+function ptRenderSourceBreakdown(closedTrades) {
+  var el = document.getElementById('pt-source-bd');
+  if (!el) return;
+  var grp = { AUTO:{wins:0,total:0,net:0}, MANUAL:{wins:0,total:0,net:0} };
+  closedTrades.forEach(function(t){
+    var key = t.auto ? 'AUTO' : 'MANUAL';
+    grp[key].total++;
+    if (t.result === 'PROFIT') grp[key].wins++;
+    grp[key].net += (t.net || 0);
+  });
+  if (!grp.AUTO.total && !grp.MANUAL.total) { el.innerHTML = '<div style="text-align:center;color:var(--dim);padding:10px 0">No trades yet</div>'; return; }
+  el.innerHTML = ['AUTO','MANUAL'].map(function(k){
+    var d = grp[k];
+    if (!d.total) return '<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--dim)"><span>'+k+'</span><span>No trades</span></div>';
+    var wp = Math.round(d.wins/d.total*100);
+    var pColor = d.net>=0?'var(--g)':'var(--r)';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<span style="color:'+(k==='AUTO'?'#a064ff':'var(--a)')+';font-weight:700">'+k+'</span>'
+      +'<span style="color:var(--dim)">'+d.total+' trades</span>'
+      +'<span style="color:'+(wp>=50?'var(--g)':'var(--w)')+'">'+wp+'% win</span>'
+      +'<span style="color:'+pColor+'">'+(d.net>=0?'+':'')+'₹'+Math.round(d.net).toLocaleString('en-IN')+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+// ── 5. Best / worst performing strike ───────────────────────────
+function ptRenderBestWorstStrike(closedTrades) {
+  var el = document.getElementById('pt-best-strike');
+  if (!el) return;
+  var byStrike = {};
+  closedTrades.forEach(function(t){
+    var parsed = ptParseStrikeType(t.instr);
+    var key = parsed ? (parsed.strike+parsed.type) : t.instr;
+    if (!key) return;
+    if (!byStrike[key]) byStrike[key] = { total:0, wins:0, net:0 };
+    byStrike[key].total++;
+    if (t.result === 'PROFIT') byStrike[key].wins++;
+    byStrike[key].net += (t.net || 0);
+  });
+  var keys = Object.keys(byStrike);
+  if (!keys.length) { el.innerHTML = '<div style="text-align:center;color:var(--dim);padding:10px 0">No data yet</div>'; return; }
+  keys.sort(function(a,b){ return byStrike[b].net - byStrike[a].net; });
+  var best = keys[0], worst = keys[keys.length-1];
+  function row(label, key, color) {
+    var d = byStrike[key];
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<span style="color:'+color+'">'+label+' '+key+'</span>'
+      +'<span style="color:'+(d.net>=0?'var(--g)':'var(--r)')+'">'+(d.net>=0?'+':'')+'₹'+Math.round(d.net).toLocaleString('en-IN')+' ('+d.total+'x)</span>'
+      +'</div>';
+  }
+  el.innerHTML = row('🏆 Best:', best, 'var(--g)') + (keys.length>1 ? row('💀 Worst:', worst, 'var(--r)') : '');
+}
+
+// Generic small bar chart renderer used by the dashboard above.
+// opts: { positiveColor, negativeColor, valuePrefix, valueSuffix, fixedMax }
+function ptDrawBarChart(canvas, labels, values, opts) {
+  opts = opts || {};
+  var ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 600;
+  var H = canvas.height = canvas.height || 140;
+  var W = canvas.width;
+  ctx.clearRect(0,0,W,H);
+  if (!values.length) return;
+
+  var padTop = 16, padBottom = 22, padSide = 6;
+  var plotH = H - padTop - padBottom;
+  var maxAbs = opts.fixedMax != null ? opts.fixedMax : Math.max.apply(null, values.map(Math.abs).concat([1]));
+  var hasNeg = values.some(function(v){ return v < 0; });
+  var zeroY = hasNeg ? padTop + plotH/2 : padTop + plotH;
+  var scaleUp = hasNeg ? (plotH/2)/maxAbs : plotH/maxAbs;
+
+  // baseline
+  ctx.strokeStyle = 'rgba(26,40,64,.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(W, zeroY); ctx.stroke();
+
+  var n = values.length;
+  var slot = (W - padSide*2) / n;
+  var barW = Math.max(4, Math.min(34, slot * 0.6));
+
+  values.forEach(function(v, i){
+    var cx = padSide + slot*i + slot/2;
+    var barH = Math.abs(v) * scaleUp;
+    var color = v >= 0 ? (opts.positiveColor||'#00ff88') : (opts.negativeColor||'#ff3d5a');
+    ctx.fillStyle = color;
+    if (v >= 0) ctx.fillRect(cx-barW/2, zeroY-barH, barW, barH);
+    else ctx.fillRect(cx-barW/2, zeroY, barW, barH);
+
+    // value label
+    ctx.fillStyle = 'rgba(200,216,240,.8)';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    var lblY = v >= 0 ? zeroY-barH-4 : zeroY+barH+12;
+    var lblTxt = (opts.valuePrefix||'') + Math.round(Math.abs(v)).toLocaleString('en-IN') + (opts.valueSuffix||'');
+    if (n <= 14) ctx.fillText(lblTxt, cx, lblY);
+
+    // x-axis label
+    ctx.fillStyle = 'rgba(74,96,128,.9)';
+    ctx.font = '8px monospace';
+    ctx.fillText(String(labels[i]), cx, H-8);
+  });
 }
 
 function ptSet(id, val, color) {
@@ -13933,6 +14349,7 @@ function ptDeleteTrade(id) {
   if (t && t.status==='OPEN') PT_PORTFOLIO.cash += t.cost;
   PT_PORTFOLIO.trades = PT_PORTFOLIO.trades.filter(function(x){return x.id!==id;});
   ptSave();
+  ptSyncCloud();
   ptRefreshUI();
 }
 
@@ -13989,7 +14406,242 @@ function ptExportCSV() {
 // Auto-init paper trading when page loads
 (function(){
   try { ptInit(); } catch(e) {}
+  try { ptCloudLoad(); } catch(e) {}
 })();
+
+// ══════════════════════════════════════════════════════════════════
+//  CLOUD SYNC — Paper trading portfolio to Supabase
+//  Reuses the existing generic `reports` table (user_id, report_type,
+//  content jsonb) the same way sr_history / fo_call_history do, so no
+//  new table/migration is needed.
+// ══════════════════════════════════════════════════════════════════
+var PT_CLOUD_SYNC_PENDING = false;
+
+async function ptSyncCloud() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  if (!PT_PORTFOLIO) return;
+  // Debounce: collapse rapid successive saves into one
+  if (PT_CLOUD_SYNC_PENDING) return;
+  PT_CLOUD_SYNC_PENDING = true;
+  setTimeout(async function(){
+    PT_CLOUD_SYNC_PENDING = false;
+    try {
+      await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          user_id: window.SUPA_USER.id,
+          report_type: 'paper_trades',
+          title: 'Paper Trading Portfolio',
+          content: JSON.stringify(PT_PORTFOLIO),
+          metadata: { trade_count: PT_PORTFOLIO.trades.length, updated_at: new Date().toISOString() }
+        })
+      });
+    } catch(e) { console.warn('[PaperTrading] cloud sync failed', e); }
+  }, 800);
+}
+
+async function ptCloudLoad() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  try {
+    var r = await supaFetch('/rest/v1/reports?report_type=eq.paper_trades&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
+    if (r && r.data && r.data[0] && r.data[0].content) {
+      var cloud = JSON.parse(r.data[0].content);
+      if (cloud && cloud.version === 2) {
+        // Cloud copy wins if it has more trades than the local copy (newer device)
+        if (!PT_PORTFOLIO || (cloud.trades||[]).length >= (PT_PORTFOLIO.trades||[]).length) {
+          PT_PORTFOLIO = cloud;
+          ptSave();
+          ptRefreshUI();
+        }
+      }
+    }
+  } catch(e) { console.warn('[PaperTrading] cloud load failed', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  AUTO SIGNAL ENGINE
+//  Wraps the existing runSignalEngine() output with the trader's
+//  PCR / VIX / time-window / no-trade rules. When ON, every fresh
+//  qualifying signal is auto-logged as a paper trade (no manual entry).
+// ══════════════════════════════════════════════════════════════════
+var ASE_ON = false;
+var ASE_LAST_LOGGED_KEY = null; // de-dupe: avoid re-logging same signal repeatedly
+var ASE_LOG = []; // recent engine decisions, newest first, for the on-screen log
+
+function aseLoadState() {
+  try { ASE_ON = localStorage.getItem('jarvis_ase_on') === '1'; } catch(e) {}
+  var cb = document.getElementById('ase-toggle');
+  if (cb) cb.checked = ASE_ON;
+  aseUpdateToggleUI();
+}
+
+function aseToggle() {
+  var cb = document.getElementById('ase-toggle');
+  ASE_ON = !!(cb && cb.checked);
+  try { localStorage.setItem('jarvis_ase_on', ASE_ON ? '1' : '0'); } catch(e) {}
+  aseUpdateToggleUI();
+  if (ASE_ON) aseLog('Engine turned ON — evaluating conditions every cycle.');
+  else aseLog('Engine turned OFF.');
+}
+
+function aseUpdateToggleUI() {
+  var track = document.getElementById('ase-toggle-track');
+  var knob  = document.getElementById('ase-toggle-knob');
+  var lbl   = document.getElementById('ase-state-lbl');
+  if (track) track.style.background = ASE_ON ? 'rgba(0,255,136,.35)' : 'rgba(255,255,255,.08)';
+  if (knob)  { knob.style.left = ASE_ON ? '24px' : '2px'; knob.style.background = ASE_ON ? 'var(--g)' : 'var(--dim)'; }
+  if (lbl)   { lbl.textContent = ASE_ON ? 'ENGINE ON' : 'ENGINE OFF'; lbl.style.color = ASE_ON ? 'var(--g)' : 'var(--dim)'; }
+}
+
+function aseLog(msg) {
+  var now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  ASE_LOG.unshift('['+now+'] '+msg);
+  if (ASE_LOG.length > 30) ASE_LOG.pop();
+  var el = document.getElementById('ase-log');
+  if (el) el.innerHTML = ASE_LOG.map(function(l){ return '<div>'+l+'</div>'; }).join('');
+}
+
+// VIX spike tracking for the PE "sudden VIX spike >10% in 15min" rule
+var ASE_VIX_HISTORY = []; // {t: timestamp, v: vix}
+function aseTrackVix(vix) {
+  if (!vix) return;
+  var now = Date.now();
+  ASE_VIX_HISTORY.push({ t: now, v: vix });
+  ASE_VIX_HISTORY = ASE_VIX_HISTORY.filter(function(p){ return now - p.t <= 16*60*1000; });
+}
+function aseVixSpikePct() {
+  if (ASE_VIX_HISTORY.length < 2) return 0;
+  var now = Date.now();
+  var fifteenAgo = ASE_VIX_HISTORY.filter(function(p){ return now - p.t >= 14*60*1000; });
+  if (!fifteenAgo.length) return 0;
+  var base = fifteenAgo[0].v;
+  var latest = ASE_VIX_HISTORY[ASE_VIX_HISTORY.length-1].v;
+  if (!base) return 0;
+  return (latest - base) / base * 100;
+}
+
+// Is current IST time inside one of the two allowed trading windows?
+function aseInSessionWindow() {
+  var ist = getIST();
+  var mins = ist.getHours()*60 + ist.getMinutes();
+  var morning   = mins >= (9*60+20)  && mins <= (10*60+30);
+  var afternoon = mins >= (13*60+30) && mins <= (14*60+30);
+  return morning || afternoon;
+}
+
+// Is "today" an expiry day, and are we within 30 min of market open on it?
+function aseIsExpiryDayOpenGuard() {
+  try {
+    var expiry = getNiftyExpiry(); // string like '19-Jun-2026'
+    var todayStr = getIST().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-');
+    var isExpiryDay = expiry && todayStr && expiry.toLowerCase().indexOf(todayStr.split('-')[0]) !== -1 && expiry === todayStr;
+    if (!isExpiryDay) return false;
+    var ist = getIST();
+    var mins = ist.getHours()*60 + ist.getMinutes();
+    return mins >= 555 && mins <= 585; // 9:15–9:45 guard window
+  } catch(e) { return false; }
+}
+
+// Core evaluation — called every fetch cycle (piggybacks on runSignalEngine's cadence)
+function aseEvaluate() {
+  var statusEl = document.getElementById('ase-last-check');
+  if (statusEl) statusEl.textContent = 'Checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  var vix = (typeof LD !== 'undefined' && LD.INDIAVIX && LD.INDIAVIX.ltp) ? LD.INDIAVIX.ltp : null;
+  var pcr = (typeof OC_STATE !== 'undefined' && OC_STATE.pcr) ? OC_STATE.pcr : null;
+
+  aseTrackVix(vix);
+
+  // Update live readout regardless of ON/OFF, so the panel is useful even when idle
+  ptSet2('ase-pcr', pcr!=null ? pcr.toFixed(2) : '—');
+  ptSet2('ase-vix', vix!=null ? vix.toFixed(1) : '—');
+  var emaTxt = '—';
+  if (typeof SIGNAL_PRICES !== 'undefined' && SIGNAL_PRICES.length >= 22) {
+    var ema21v = calcEMA(SIGNAL_PRICES, 21);
+    if (ema21v && ni && ni.ltp) emaTxt = ni.ltp > ema21v ? 'ABOVE' : ni.ltp < ema21v ? 'BELOW' : 'AT';
+  }
+  ptSet2('ase-ema', emaTxt);
+  var inWindow = aseInSessionWindow();
+  ptSet2('ase-window', inWindow ? 'OPEN' : 'CLOSED');
+
+  if (!ASE_ON) { ptSet2('ase-verdict', 'OFF', 'var(--dim)'); return; }
+  if (!ni || !ni.ltp || pcr==null || vix==null) { ptSet2('ase-verdict', 'WAITING DATA', 'var(--w)'); return; }
+
+  // ── NO-TRADE conditions ──
+  if (aseIsExpiryDayOpenGuard()) { ptSet2('ase-verdict','NO TRADE: EXPIRY OPEN','var(--r)'); return; }
+  if (vix > 20) { ptSet2('ase-verdict','NO TRADE: VIX>20','var(--r)'); return; }
+  if (pcr >= 0.9 && pcr <= 1.1) { ptSet2('ase-verdict','NO TRADE: PCR FLAT','var(--r)'); return; }
+  if (!inWindow) { ptSet2('ase-verdict','OUTSIDE WINDOW','var(--dim)'); return; }
+
+  var ema21 = (typeof SIGNAL_PRICES !== 'undefined' && SIGNAL_PRICES.length >= 22) ? calcEMA(SIGNAL_PRICES, 21) : null;
+  if (ema21 == null) { ptSet2('ase-verdict','BUILDING EMA','var(--w)'); return; }
+
+  var aboveEma = ni.ltp > ema21;
+  var belowEma = ni.ltp < ema21;
+  var vixSpike = aseVixSpikePct();
+
+  var sideToTrade = null, reasons = [];
+  if (pcr > 1.2 && aboveEma && vix < 15) {
+    sideToTrade = 'CE';
+    reasons = ['PCR '+pcr.toFixed(2)+'>1.2', 'Price>EMA21', 'VIX '+vix.toFixed(1)+'<15', inWindow ? 'In session window' : ''];
+  } else if (pcr < 0.8 && belowEma && (vixSpike > 10)) {
+    sideToTrade = 'PE';
+    reasons = ['PCR '+pcr.toFixed(2)+'<0.8', 'Price<EMA21', 'VIX spike '+vixSpike.toFixed(1)+'%>10%'];
+  }
+
+  if (!sideToTrade) { ptSet2('ase-verdict','NO SIGNAL','var(--dim)'); return; }
+
+  ptSet2('ase-verdict', 'BUY ' + sideToTrade, sideToTrade==='CE' ? 'var(--g)' : 'var(--r)');
+
+  // De-dupe: only log once per distinct signal until conditions change materially
+  var dayKey = getIST().toLocaleDateString('en-CA');
+  var dedupeKey = dayKey + '_' + sideToTrade + '_' + Math.round(ni.ltp/50)*50;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+
+  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var chainLtp = getChainPrice('NIFTY', strike, sideToTrade === 'CE' ? 'ce' : 'pe');
+  if (!chainLtp || chainLtp <= 0) { aseLog('Signal found ('+sideToTrade+') but no chain price available — skipped.'); return; }
+
+  var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain
+  var sl     = Math.round(chainLtp * 0.70 / 5) * 5; // -30% premium loss
+  var instr  = 'NIFTY ' + strike + sideToTrade + ' ' + getNiftyExpiry();
+  var lotQty = 75; // NIFTY lot size
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    signalType: 'BUY ' + sideToTrade, pcr: pcr, vix: vix, reasons: reasons.filter(Boolean).join(' | ')
+  });
+
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY = dedupeKey;
+    aseLog('✅ Auto-logged BUY '+sideToTrade+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+reasons.filter(Boolean).join(', '));
+  } else if (res && res.error) {
+    aseLog('⚠ Signal found but could not log: ' + res.error);
+  }
+}
+
+function ptSet2(id, val, color) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  if (color) el.style.color = color; else el.style.color = '';
+}
+
+// Hook into the same cadence as the existing signal engine (fetchAll cycle)
+var _origFetchAllForASE = typeof fetchAll === 'function' ? fetchAll : null;
+if (_origFetchAllForASE) {
+  fetchAll = async function() {
+    await _origFetchAllForASE();
+    try { aseEvaluate(); } catch(e) { console.warn('[AutoSignalEngine]', e); }
+  };
+}
+// Also poll independently every 30s as a fallback in case fetchAll isn't firing
+setInterval(function(){ try { aseEvaluate(); } catch(e) {} }, 30000);
+
+setTimeout(function(){ try { aseLoadState(); } catch(e) {} }, 500);
+
 function srExportJSON() {
   if (!SR_CURRENT) { srGenReport(); return; }
   var jsonObj = {report_date:SR_CURRENT.report_date, stock_name:SR_CURRENT.stock_name, ticker:SR_CURRENT.ticker, win_ratio:SR_CURRENT.win_ratio, avg_return:SR_CURRENT.avg_return, strategy_accuracy:SR_CURRENT.strategy_accuracy, total_signals:SR_CURRENT.total, wins:SR_CURRENT.wins, losses:SR_CURRENT.losses};
