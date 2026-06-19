@@ -365,7 +365,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .ov-ind .il{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
 #ov-chart{width:100%;height:140px;display:block;border-radius:4px;background:rgba(0,0,0,.2);margin-bottom:11px;}
 
-/* F&O TABLEs */
+/* F&O TABLE */
 .fo-wrap{overflow-x:auto;}
 .fo-tbl{width:100%;border-collapse:collapse;font-size:11px;min-width:700px;}
 .fo-tbl th{padding:8px 9px;text-align:left;font-size:9px;font-family:'Share Tech Mono';letter-spacing:1px;color:var(--dim);border-bottom:2px solid var(--border);background:rgba(0,0,0,.28);white-space:nowrap;text-transform:uppercase;}
@@ -8401,10 +8401,28 @@ function seedVol(strike, atm, step, type) {
 // Angel One option symbol format: NIFTY24MAY2425000CE (for Nifty 25000 CE 24 May 2024)
 // Token lookup via Angel One search API
 var _angelOptTokenCache = {}; // "NIFTY_25000_CE_21MAY26" -> token
+// Persist token cache across page reloads — tokens for a given expiry don't
+// change intraday, so there's no reason to re-look them up every refresh.
+try {
+  var _savedTokCache = localStorage.getItem('jarvis_angel_tok_cache');
+  if (_savedTokCache) _angelOptTokenCache = JSON.parse(_savedTokCache) || {};
+} catch(e) {}
+function _persistAngelTokCache() {
+  try { localStorage.setItem('jarvis_angel_tok_cache', JSON.stringify(_angelOptTokenCache)); } catch(e) {}
+}
+
+// ── Rate-limit cooldown ──
+// Angel One's searchScrip endpoint returns 403 "Access denied because
+// exceeding access rate" if hit too often (e.g. 10 parallel calls every
+// 5s refresh). Once that happens, stop calling it entirely for a cooldown
+// window instead of retrying immediately and digging the hole deeper.
+var _angelRateLimitedUntil = 0;
+var ANGEL_RATE_LIMIT_COOLDOWN_MS = 180000; // back off for 3 min after a hit (was 60s — too short, allowed repeated bursts)
 
 async function angelSearchOptToken(symbol) {
   if (_angelOptTokenCache[symbol]) return _angelOptTokenCache[symbol];
   if (!creds || !creds.jwt) return null;
+  if (Date.now() < _angelRateLimitedUntil) return null; // cooling down, don't even try
   var searchUrl = BASE + '/rest/secure/angelbroking/order/v1/searchScrip';
   var hdrs = {
     'Content-Type':'application/json',
@@ -8417,10 +8435,16 @@ async function angelSearchOptToken(symbol) {
   try {
     var body = JSON.stringify({ exchange: 'NFO', searchscrip: symbol });
     var d = await multiPost(searchUrl, hdrs, body);
+    if (d && d.message && /exceeding access rate/i.test(d.message)) {
+      _angelRateLimitedUntil = Date.now() + ANGEL_RATE_LIMIT_COOLDOWN_MS;
+      console.warn('[Angel] Rate limited on searchScrip — pausing lookups for ' + (ANGEL_RATE_LIMIT_COOLDOWN_MS/1000) + 's');
+      return null;
+    }
     if (d && d.status && d.data && d.data.length > 0) {
       var match = d.data.find(function(s){ return s.tradingsymbol === symbol; }) || d.data[0];
       if (match && match.symboltoken) {
         _angelOptTokenCache[symbol] = match.symboltoken;
+        _persistAngelTokCache();
         return match.symboltoken;
       }
     }
@@ -8445,18 +8469,24 @@ function buildAngelOptSymbol(idx, strike, type, expiryStr) {
 // Batch-fetch Angel One NFO quotes for a list of {symbol, strike, type} items
 async function fetchAngelNFOQuotes(items) {
   if (!creds || !creds.jwt || !items.length) return {};
-  // Search tokens for all items in parallel (batch of 5 at once to be safe)
   var results = {};
   var tokenMap = {}; // token -> {strike, type}
 
-  // Batch token search
-  var batchSize = 10;
+  // Batch token search — smaller batches + relies on angelSearchOptToken's
+  // own cache-hit/cooldown logic per item, so cached strikes still resolve
+  // even while new lookups are paused during a rate-limit cooldown.
+  var batchSize = 5;
   for (var bi = 0; bi < items.length; bi += batchSize) {
     var batch = items.slice(bi, bi + batchSize);
     await Promise.all(batch.map(async function(item) {
       var tok = await angelSearchOptToken(item.symbol);
       if (tok) tokenMap[tok] = { strike: item.strike, type: item.type };
     }));
+    // Small gap between batches so we don't hammer searchScrip even
+    // when nothing is cached yet (e.g. right after a page load).
+    if (bi + batchSize < items.length) {
+      await new Promise(function(res){ setTimeout(res, 250); });
+    }
   }
 
   var tokens = Object.keys(tokenMap);
@@ -8599,7 +8629,28 @@ async function buildChainFromAngel(idx, spot, atm, step, numS, T, r, baseIV, ske
 }
 
 // ── Build/refresh chain data ──
+var _buildChainDataInFlight = false;
 async function buildChainData() {
+  // ── Overlap guard ──
+  // fetchNSEChain can hang for 10-15s when the NSE proxies are flaky.
+  // If the 30s refresh interval fires again before a previous call
+  // finishes, two concurrent runs would each kick off their own full
+  // Angel One searchScrip batch, multiplying API calls and triggering
+  // Angel One's "exceeding access rate" 403s. Skip a call entirely if
+  // one is already running rather than letting them stack.
+  if (_buildChainDataInFlight) {
+    console.warn('[JARVIS] buildChainData already running — skipping overlapping call');
+    return;
+  }
+  _buildChainDataInFlight = true;
+  try {
+    return await _buildChainDataInner();
+  } finally {
+    _buildChainDataInFlight = false;
+  }
+}
+
+async function _buildChainDataInner() {
   var idx    = (document.getElementById('ocIndex')||{value:'NIFTY'}).value || OC_STATE.index;
   var step   = OC_STATE.stepSize[idx] || 50;
   var ld     = LD[idx==='NIFTY'?'NIFTY50':idx==='BANKNIFTY'?'BANKNIFTY':'SENSEX'];
@@ -8880,7 +8931,11 @@ showPage = function(id, btn) {
   if (id === 'chain') {
     buildOptionChain();
     if (!OC_STATE.ticker) {
-      // 3s refresh — NSE rate limits; BS model can go faster
+      // 15s refresh — Angel One's searchScrip endpoint rate-limits
+      // ("Access denied because exceeding access rate") well before NSE
+      // does, especially before the token cache warms up. The persisted
+      // localStorage cache + per-call cooldown above also help, but the
+      // refresh cadence itself was the main driver of the 403 storm.
       OC_STATE.ticker = setInterval(function(){
         if (!document.getElementById('page-chain').classList.contains('active')) return;
         // Only auto-refresh during market hours
@@ -8889,7 +8944,7 @@ showPage = function(id, btn) {
         var _co = (_cd>=1&&_cd<=5)&&(_cm>=555&&_cm<=935);
         if (_co) buildOptionChain();
         // Outside hours: chain stays frozen, no rebuild
-      }, 5000);
+      }, 15000);
     }
   }
 };
