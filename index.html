@@ -947,7 +947,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <div class="wb-orb">🤖</div>
   <div style="flex:1">
     <div class="wb-g" id="wbG">Good Morning, Piyush!</div>
-    <div class="wb-m" id="wbM">Connecting to Angel One...</div>
+    <div class="wb-m" id="wbM">Loading market data...</div>
   </div>
   <div class="wb-r">
     <div class="wb-ist" id="wbIST">IST: --:--</div>
@@ -6975,6 +6975,11 @@ async function doLogin(){
       console.log('[Supabase result]', JSON.stringify(_sr));
       if(_sr.success) {
         window.JARVIS_USER = _sr.user.username || _su;
+        // Welcome bar / older features key off `loggedUser`, not window.JARVIS_USER.
+        // This path previously never set it, leaving the welcome bar stuck on its
+        // default placeholder text ("Connecting to Angel One...") indefinitely
+        // for every Supabase login, even though login itself succeeded fine.
+        loggedUser = window.JARVIS_USER;
         // Admin override: if username is mhatre, always admin
         var _knownAdmins = ['mhatre','piyush','admin'];
         var _detectedRole = _sr.user.role || 'user';
@@ -16980,9 +16985,37 @@ window.jarvisAutoConnect = async function() {
   // Step 1: Load creds from cloud
   var cloudLoaded = await supaCredLoad();
   console.log('[AutoConnect] Cloud creds loaded:', cloudLoaded);
+  // Step 1b: Restore loggedUser from the persisted Supabase session.
+  // This path runs on page reload when a session already exists — it
+  // never goes through doLogin(), so without this, loggedUser stays ''
+  // forever and anything gated on it (the welcome bar's updateWB(),
+  // the AI day report, theme checks) silently never runs.
+  //
+  // FIX: window.SUPA_USER is populated by a separate async session-restore
+  // process with no guaranteed ordering relative to this function — on a
+  // fast run this check could fire before SUPA_USER exists yet, finding
+  // nothing and never re-checking (this was confirmed happening live: the
+  // restore code below was unreachable-looking but actually just losing
+  // the race). Poll briefly for SUPA_USER instead of checking once.
+  var _waitAttempts = 0;
+  while (!window.SUPA_USER && _waitAttempts < 20) { // up to ~2s
+    await new Promise(function(r){ setTimeout(r, 100); });
+    _waitAttempts++;
+  }
+  if (!loggedUser && window.SUPA_USER) {
+    loggedUser = window.SUPA_USER.full_name || window.SUPA_USER.username || '';
+    if (loggedUser) { try { updateWB(); } catch(e) {} }
+  }
   // Step 2: Trigger autoConnect (already defined in main script)
   if(typeof autoConnect === 'function') {
     await autoConnect();
+  }
+  // Step 2b: Safety net — re-check once more after autoConnect(), in case
+  // SUPA_USER arrived even later than the poll window above allowed for
+  // (e.g. a slow Supabase response on a bad network day).
+  if (!loggedUser && window.SUPA_USER) {
+    loggedUser = window.SUPA_USER.full_name || window.SUPA_USER.username || '';
+    if (loggedUser) { try { updateWB(); } catch(e) {} }
   }
   // Step 3: Show/hide setup panel based on role
   jarvisApplyRoleUI();
