@@ -3017,6 +3017,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="rsi">RSI Reversal Strategy</option>
             <option value="macd">MACD Momentum</option>
             <option value="breakout">Volume Breakout</option>
+            <option value="trendline">Trendline Breakout (pivot+ATR)</option>
           </select>
         </div>
         <div>
@@ -13843,8 +13844,15 @@ function btGeneratePriceData(ticker, days) {
     if (dt.getDay()===0||dt.getDay()===6) continue; // skip weekends
     var trend = Math.sin(i/30)*0.0008; // gentle trend cycles
     var noise = (rng()-0.48)*vol;
+    var open = price;
     price = Math.max(price*(1+trend+noise/price), base*0.7);
-    data.push({ date: dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), close: Math.round(price*100)/100, vol: Math.round(5000000*rng()) });
+    // Synthetic intraday spread around open/close so OHLC-dependent
+    // strategies (like the trendline breakout) have real high/low to
+    // work with — daily backtest only ever had a close series before.
+    var spread = Math.abs(price - open) + vol * 0.3;
+    var high = Math.max(open, price) + spread * rng() * 0.5;
+    var low  = Math.min(open, price) - spread * rng() * 0.5;
+    data.push({ date: dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), open: Math.round(open*100)/100, high: Math.round(high*100)/100, low: Math.round(low*100)/100, close: Math.round(price*100)/100, vol: Math.round(5000000*rng()) });
   }
   return data;
 }
@@ -13859,7 +13867,7 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   var posSize = capital * posPct;
 
   for (var i=14; i<closes.length-1; i++) {
-    var signal = btComputeSignal(closes, i, strategy);
+    var signal = btComputeSignal(closes, i, strategy, data);
     if (!inTrade && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
       inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
     } else if (inTrade) {
@@ -13879,7 +13887,7 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   return trades;
 }
 
-function btComputeSignal(closes, i, strategy) {
+function btComputeSignal(closes, i, strategy, fullData) {
   var slice = closes.slice(Math.max(0,i-20), i+1);
   var ema9  = btEMA(slice, 9);
   var ema21 = btEMA(slice, Math.min(21, slice.length));
@@ -13900,6 +13908,17 @@ function btComputeSignal(closes, i, strategy) {
     var recent = closes.slice(Math.max(0,i-10), i);
     var hi = Math.max.apply(null, recent);
     if (closes[i] > hi * 1.005) return 'BUY';
+  } else if (strategy==='trendline') {
+    // Same pivot+ATR trendline logic as the live Auto Signal Engine's
+    // trendline strategy, applied to this backtest's OHLC bars. Only
+    // the BUY/CE side is mapped here since this backtest's trade loop
+    // is long-only (entry on 'BUY', no separate short/PE handling) —
+    // a down-trendline PE break would need the engine's short-side
+    // P&L logic, which this simplified backtest doesn't have.
+    if (!fullData || i < TL_LOOKBACK*2+3) return 'HOLD';
+    var candles = fullData.slice(0, i+1).map(function(d){ return { high:d.high, low:d.low, close:d.close }; });
+    var breakout = checkTrendlineBreakout(candles.slice(0,-1), closes[i-1], closes[i]);
+    if (breakout && breakout.type === 'CE') return 'BUY';
   }
   return 'HOLD';
 }
