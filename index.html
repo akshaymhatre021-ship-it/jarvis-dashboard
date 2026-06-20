@@ -3257,10 +3257,10 @@ setTimeout(nd2SyncAll, 2000);
         </div>
         <canvas id="ase-chart" height="220" style="width:100%;display:block;border-radius:6px;background:rgba(0,0,0,.25)"></canvas>
         <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00d4ff;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Up-trendline</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00897B;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Up-trendline</span></div>
           <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:var(--r);border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Down-trendline</span></div>
-          <div style="display:flex;align-items:center;gap:5px"><span style="color:var(--g)">▲</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">CE breakout</span></div>
-          <div style="display:flex;align-items:center;gap:5px"><span style="color:var(--r)">▼</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">PE breakout</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><span style="background:#00897B;color:#fff;font-size:8px;font-weight:bold;padding:1px 4px;border-radius:3px">B</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">CE breakout</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><span style="background:var(--r);color:#fff;font-size:8px;font-weight:bold;padding:1px 4px;border-radius:3px">B</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">PE breakout</span></div>
         </div>
       </div>
 
@@ -5077,6 +5077,8 @@ function calcTrendlines(candles) {
     upperNow: upperNow, lowerNow: lowerNow,
     upperPivotVal: lastHigh ? lastHigh.value : null,
     lowerPivotVal: lastLow ? lastLow.value : null,
+    upperPivotIndex: lastHigh ? lastHigh.index : null, // absolute index into the passed-in `candles` array
+    lowerPivotIndex: lastLow ? lastLow.index : null,
     atr: atr
   };
 }
@@ -5103,6 +5105,18 @@ function checkTrendlineBreakout(candles, prevClose, liveClose) {
 // up/down trendlines extended across them (recomputed per-bar using the
 // same ATR-decay so the lines visually match what the strategy used),
 // plus small arrow markers at any breakout bars found along the way.
+// Small helper: draws a rounded rectangle path (native ctx.roundRect
+// support varies across browsers, so do it manually for reliability).
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
+}
+
 function aseDrawTrendlineChart(candles) {
   var canvas = document.getElementById('ase-chart');
   var statusEl = document.getElementById('ase-chart-status');
@@ -5126,13 +5140,19 @@ function aseDrawTrendlineChart(candles) {
 
   // Recompute the trendline at EVERY visible bar (not just the latest) so
   // the line drawn on screen reflects how it actually looked over time,
-  // matching the indicator's backpainting behavior.
-  var upperSeries = [], lowerSeries = [], breakoutMarkers = [];
+  // matching the indicator's backpainting behavior. Track which pivot is
+  // active at each bar so the line can be split into separate segments
+  // whenever the active pivot changes — the reference chart shows short
+  // independent segments per swing, not one continuous line stretched
+  // across unrelated pivots.
+  var upperSeries = [], lowerSeries = [], upperPivotAt = [], lowerPivotAt = [], breakoutMarkers = [];
   for (var vi = 0; vi < visible.length; vi++) {
     var historySlice = candles.slice(0, candles.length - visibleN + vi + 1);
     var tl = calcTrendlines(historySlice);
     upperSeries.push(tl ? tl.upperNow : null);
     lowerSeries.push(tl ? tl.lowerNow : null);
+    upperPivotAt.push(tl ? tl.upperPivotIndex : null); // which pivot bar this value is anchored to
+    lowerPivotAt.push(tl ? tl.lowerPivotIndex : null);
     if (vi > 0) {
       var prevHist = candles.slice(0, candles.length - visibleN + vi);
       var b = checkTrendlineBreakout(prevHist, visible[vi-1].close, visible[vi].close);
@@ -5177,21 +5197,28 @@ function aseDrawTrendlineChart(candles) {
     ctx.fillRect(cx - bodyW/2, top, bodyW, h);
   });
 
-  // Trendlines
-  function drawLine(series, color) {
+  // Trendlines — drawn as disconnected segments, breaking the line
+  // whenever the active pivot changes (a new swing high/low took over).
+  function drawLine(series, pivotAt, color) {
     ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
     ctx.beginPath();
-    var started = false;
+    var started = false, lastPivot = undefined;
     for (var i = 0; i < series.length; i++) {
-      if (series[i] == null) continue;
+      if (series[i] == null) { started = false; lastPivot = undefined; continue; }
       var x = padL + slot*i + slot/2, y = yOf(series[i]);
-      if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+      if (!started || pivotAt[i] !== lastPivot) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+      lastPivot = pivotAt[i];
     }
-    if (started) ctx.stroke();
+    ctx.stroke();
     ctx.setLineDash([]);
   }
-  drawLine(upperSeries, '#00d4ff');
-  drawLine(lowerSeries, '#ff3d5a');
+  drawLine(upperSeries, upperPivotAt, '#00897B');
+  drawLine(lowerSeries, lowerPivotAt, '#ff3d5a');
 
   // Breakout markers
   breakoutMarkers.forEach(function(m){
@@ -5199,8 +5226,19 @@ function aseDrawTrendlineChart(candles) {
     var c = visible[m.idx];
     ctx.fillStyle = m.type === 'CE' ? '#00ff88' : '#ff3d5a';
     ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-    if (m.type === 'CE') ctx.fillText('▲', x, yOf(c.low) + 14);
-    else ctx.fillText('▼', x, yOf(c.high) - 6);
+    if (m.type === 'CE') {
+      var by = yOf(c.low) + 16;
+      ctx.fillStyle = '#00897B';
+      roundRect(ctx, x-7, by-8, 14, 14, 3); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('B', x, by+2);
+    } else {
+      var by2 = yOf(c.high) - 16;
+      ctx.fillStyle = '#ff3d5a';
+      roundRect(ctx, x-7, by2-8, 14, 14, 3); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('B', x, by2+2);
+    }
   });
 
   if (statusEl) {
