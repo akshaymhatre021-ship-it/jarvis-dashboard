@@ -3248,6 +3248,22 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:var(--r);margin-bottom:4px">BUY PE: 5-min close crosses BELOW the down-trendline (pivot-low based) · SL = trendline level at cross · TGT +40% premium</div>
         <div style="color:var(--dim)">Trendline recalculates every 5-min candle close. Requires Angel One historical candle access (needs broker login).</div>
       </div>
+
+      <!-- Live trendline chart -->
+      <div style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px">LIVE CHART — NIFTY 5-MIN</span>
+          <span id="ase-chart-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">—</span>
+        </div>
+        <canvas id="ase-chart" height="220" style="width:100%;display:block;border-radius:6px;background:rgba(0,0,0,.25)"></canvas>
+        <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00d4ff;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Up-trendline</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:var(--r);border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Down-trendline</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><span style="color:var(--g)">▲</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">CE breakout</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><span style="color:var(--r)">▼</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">PE breakout</span></div>
+        </div>
+      </div>
+
       <div id="ase-log" style="margin-top:10px;max-height:120px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></div>
     </div>
   </div>
@@ -5080,6 +5096,117 @@ function checkTrendlineBreakout(candles, prevClose, liveClose) {
     return { type: 'PE', slLevel: tl.lowerNow, line: 'down-break (red)' };
   }
   return null;
+}
+
+// ── Live trendline candlestick chart ──
+// Draws the last `visibleN` 5-min candles as real OHLC bars, plus the
+// up/down trendlines extended across them (recomputed per-bar using the
+// same ATR-decay so the lines visually match what the strategy used),
+// plus small arrow markers at any breakout bars found along the way.
+function aseDrawTrendlineChart(candles) {
+  var canvas = document.getElementById('ase-chart');
+  var statusEl = document.getElementById('ase-chart-status');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 600;
+  var H = canvas.height = canvas.height || 220;
+  var W = canvas.width;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!candles || candles.length < TL_LOOKBACK * 2 + 3) {
+    if (statusEl) statusEl.textContent = candles ? (candles.length + ' candles (need ' + (TL_LOOKBACK*2+3) + '+)') : 'No data';
+    ctx.fillStyle = 'rgba(74,96,128,.9)';
+    ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('Waiting for enough 5-min candles…', W/2, H/2);
+    return;
+  }
+
+  var visibleN = Math.min(50, candles.length);
+  var visible = candles.slice(-visibleN);
+
+  // Recompute the trendline at EVERY visible bar (not just the latest) so
+  // the line drawn on screen reflects how it actually looked over time,
+  // matching the indicator's backpainting behavior.
+  var upperSeries = [], lowerSeries = [], breakoutMarkers = [];
+  for (var vi = 0; vi < visible.length; vi++) {
+    var historySlice = candles.slice(0, candles.length - visibleN + vi + 1);
+    var tl = calcTrendlines(historySlice);
+    upperSeries.push(tl ? tl.upperNow : null);
+    lowerSeries.push(tl ? tl.lowerNow : null);
+    if (vi > 0) {
+      var prevHist = candles.slice(0, candles.length - visibleN + vi);
+      var b = checkTrendlineBreakout(prevHist, visible[vi-1].close, visible[vi].close);
+      if (b) breakoutMarkers.push({ idx: vi, type: b.type });
+    }
+  }
+
+  var padL = 6, padR = 6, padTop = 10, padBottom = 18;
+  var plotW = W - padL - padR, plotH = H - padTop - padBottom;
+
+  var allVals = [];
+  visible.forEach(function(c){ allVals.push(c.high, c.low); });
+  upperSeries.forEach(function(v){ if (v != null) allVals.push(v); });
+  lowerSeries.forEach(function(v){ if (v != null) allVals.push(v); });
+  var minV = Math.min.apply(null, allVals), maxV = Math.max.apply(null, allVals);
+  var range = (maxV - minV) || 1;
+  minV -= range * 0.05; maxV += range * 0.05; range = maxV - minV;
+
+  function yOf(v) { return padTop + plotH - ((v - minV) / range) * plotH; }
+  var slot = plotW / visible.length;
+  var bodyW = Math.max(2, Math.min(10, slot * 0.6));
+
+  // Gridlines (light, 4 horizontal)
+  ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 1;
+  for (var g = 0; g <= 4; g++) {
+    var gy = padTop + (plotH/4)*g;
+    ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(W-padR, gy); ctx.stroke();
+  }
+
+  // Candles
+  visible.forEach(function(c, i){
+    var cx = padL + slot*i + slot/2;
+    var up = c.close >= c.open;
+    ctx.strokeStyle = up ? '#00ff88' : '#ff3d5a';
+    ctx.fillStyle   = up ? '#00ff88' : '#ff3d5a';
+    ctx.lineWidth = 1;
+    // wick
+    ctx.beginPath(); ctx.moveTo(cx, yOf(c.high)); ctx.lineTo(cx, yOf(c.low)); ctx.stroke();
+    // body
+    var oY = yOf(c.open), cY = yOf(c.close);
+    var top = Math.min(oY, cY), h = Math.max(1, Math.abs(cY - oY));
+    ctx.fillRect(cx - bodyW/2, top, bodyW, h);
+  });
+
+  // Trendlines
+  function drawLine(series, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    var started = false;
+    for (var i = 0; i < series.length; i++) {
+      if (series[i] == null) continue;
+      var x = padL + slot*i + slot/2, y = yOf(series[i]);
+      if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+    }
+    if (started) ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  drawLine(upperSeries, '#00d4ff');
+  drawLine(lowerSeries, '#ff3d5a');
+
+  // Breakout markers
+  breakoutMarkers.forEach(function(m){
+    var x = padL + slot*m.idx + slot/2;
+    var c = visible[m.idx];
+    ctx.fillStyle = m.type === 'CE' ? '#00ff88' : '#ff3d5a';
+    ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+    if (m.type === 'CE') ctx.fillText('▲', x, yOf(c.low) + 14);
+    else ctx.fillText('▼', x, yOf(c.high) - 6);
+  });
+
+  if (statusEl) {
+    var lastT = visible[visible.length-1].time;
+    statusEl.textContent = visible.length + ' candles · last ' + String(lastT).slice(-8);
+  }
 }
 
 
@@ -14723,11 +14850,50 @@ function aseEvaluate() {
   var statusEl = document.getElementById('ase-last-check');
   if (statusEl) statusEl.textContent = 'Checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
-  if (ASE_STRATEGY === 'trendline') {
-    aseEvaluateTrendline().catch(function(e){ console.warn('[AutoSignalEngine trendline]', e); });
+  (async function(){
+    // Chart refreshes regardless of which strategy is selected — it's
+    // useful context either way, and required for the trendline strategy.
+    // Awaited here (not fire-and-forget) so ASE_LAST_CANDLES is populated
+    // before the trendline strategy below tries to read it — without this,
+    // the strategy evaluation could run on stale/empty candle data every
+    // cycle, since both used to kick off in parallel with no ordering.
+    try { await aseRefreshChart(); } catch(e) { console.warn('[AutoSignalEngine chart]', e); }
+
+    if (ASE_STRATEGY === 'trendline') {
+      try { await aseEvaluateTrendline(); } catch(e) { console.warn('[AutoSignalEngine trendline]', e); }
+      return;
+    }
+    aseEvaluatePcrEmaVix();
+  })();
+}
+
+// Fetches the latest 5-min Nifty candles (cached 2 min by fetchCandlesTF)
+// and draws them on the chart. Shared by both strategies so the chart
+// updates live no matter which one is active, without duplicate fetches.
+var ASE_LAST_CANDLES = null;
+async function aseRefreshChart() {
+  var statusEl = document.getElementById('ase-chart-status');
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    if (statusEl) statusEl.textContent = 'Connect Angel One to see live candles';
+    aseDrawTrendlineChart(null);
     return;
   }
-  aseEvaluatePcrEmaVix();
+  var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
+  if (!tm) return;
+
+  var prevTF = (typeof SIGNAL_TF !== 'undefined') ? SIGNAL_TF : '5min';
+  if (typeof SIGNAL_TF !== 'undefined') SIGNAL_TF = '5min';
+  var raw;
+  try {
+    raw = await fetchCandlesTF(tm.sym, tm.tok, tm.ex);
+  } finally {
+    if (typeof SIGNAL_TF !== 'undefined') SIGNAL_TF = prevTF;
+  }
+  if (!raw) { return; } // keep showing the last good chart rather than blanking on a transient fetch failure
+
+  var candles = raw.map(function(r){ return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4] }; });
+  ASE_LAST_CANDLES = candles;
+  aseDrawTrendlineChart(candles);
 }
 
 function aseEvaluatePcrEmaVix() {
@@ -14828,28 +14994,14 @@ async function aseEvaluateTrendline() {
     return;
   }
 
-  var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
-  if (!tm) { ptSet2('ase-tl-verdict', 'NO TOKEN', 'var(--r)'); return; }
-
-  // Force the candle fetch to use 5-min regardless of whatever the main
-  // signal engine's timeframe selector is currently set to.
-  var prevTF = (typeof SIGNAL_TF !== 'undefined') ? SIGNAL_TF : '5min';
-  if (typeof SIGNAL_TF !== 'undefined') SIGNAL_TF = '5min';
-  var raw;
-  try {
-    raw = await fetchCandlesTF(tm.sym, tm.tok, tm.ex);
-  } finally {
-    if (typeof SIGNAL_TF !== 'undefined') SIGNAL_TF = prevTF;
-  }
-
-  if (!raw || raw.length < TL_LOOKBACK * 2 + 3) {
+  // Reuse the candles aseRefreshChart() just fetched for the chart above —
+  // avoids a duplicate Angel One historical-candle call every cycle.
+  var candles = ASE_LAST_CANDLES;
+  if (!candles || candles.length < TL_LOOKBACK * 2 + 3) {
     ptSet2('ase-tl-verdict', 'BUILDING CANDLES', 'var(--w)');
-    ptSet2('ase-tl-candles', raw ? raw.length : 0);
+    ptSet2('ase-tl-candles', candles ? candles.length : 0);
     return;
   }
-
-  // Angel One candle rows: [timestamp, open, high, low, close, volume]
-  var candles = raw.map(function(r){ return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4] }; });
   ptSet2('ase-tl-candles', candles.length);
 
   var tl = calcTrendlines(candles.slice(0, -1)); // trendline as of the last CLOSED candle
