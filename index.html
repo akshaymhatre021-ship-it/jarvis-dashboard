@@ -3180,8 +3180,17 @@ setTimeout(nd2SyncAll, 2000);
         <div id="ase-last-check" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);text-align:right">Not running</div>
       </div>
 
-      <!-- Live condition readout -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+      <!-- Strategy selector -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px">
+        <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);white-space:nowrap">STRATEGY:</span>
+        <select id="ase-strategy" onchange="aseSetStrategy(this.value)" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+          <option value="pcr_ema_vix">PCR + EMA21 + VIX</option>
+          <option value="trendline">Trendline Breakout (5-min)</option>
+        </select>
+      </div>
+
+      <!-- Live condition readout: PCR/EMA/VIX strategy -->
+      <div id="ase-readout-pcr" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
         <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
           <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">PCR</div>
           <div id="ase-pcr" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
@@ -3204,11 +3213,40 @@ setTimeout(nd2SyncAll, 2000);
         </div>
       </div>
 
+      <!-- Live condition readout: Trendline strategy -->
+      <div id="ase-readout-trendline" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">UP-TRENDLINE</div>
+          <div id="ase-tl-upper" style="font-family:Orbitron;font-size:13px;color:#00d4ff">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">DOWN-TRENDLINE</div>
+          <div id="ase-tl-lower" style="font-family:Orbitron;font-size:13px;color:var(--r)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">NIFTY LTP</div>
+          <div id="ase-tl-ltp" style="font-family:Orbitron;font-size:13px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">5-MIN CANDLES</div>
+          <div id="ase-tl-candles" style="font-family:Orbitron;font-size:13px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-tl-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+
       <!-- Rules reference -->
-      <div style="background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+      <div id="ase-rules-pcr" style="background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
         <div style="color:#a064ff;margin-bottom:4px">BUY CE: PCR&gt;1.2 · Price&gt;EMA21 · VIX&lt;15 · 9:20–10:30 or 13:30–14:30 · ATM/1-OTM · TGT +40% / SL -30%</div>
         <div style="color:#a064ff;margin-bottom:4px">BUY PE: PCR&lt;0.8 · Price&lt;EMA21 · VIX spike &gt;10% in 15min · ATM/1-OTM</div>
         <div style="color:var(--r)">NO TRADE: PCR 0.9–1.1 · VIX&gt;20 · within 30min of expiry-day open</div>
+      </div>
+      <div id="ase-rules-trendline" style="display:none;background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:#00d4ff;margin-bottom:4px">BUY CE: 5-min close crosses ABOVE the up-trendline (pivot-high based, 14-bar lookback, ATR slope decay) · SL = trendline level at cross · TGT +40% premium</div>
+        <div style="color:var(--r);margin-bottom:4px">BUY PE: 5-min close crosses BELOW the down-trendline (pivot-low based) · SL = trendline level at cross · TGT +40% premium</div>
+        <div style="color:var(--dim)">Trendline recalculates every 5-min candle close. Requires Angel One historical candle access (needs broker login).</div>
       </div>
       <div id="ase-log" style="margin-top:10px;max-height:120px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></div>
     </div>
@@ -4956,6 +4994,94 @@ function calcRSI(prices, period) {
   var rs = gains / (losses || 0.001);
   return 100 - (100 / (1 + rs));
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  TRENDLINE BREAKOUT DETECTOR (5-min candles)
+//  Own reimplementation of the general "pivot + ATR-slope decaying
+//  trendline" technique (this style of indicator is a well-known,
+//  widely-implemented charting concept — not copied from any single
+//  vendor's source). Detects a 14-bar pivot high/low, draws a line
+//  from it that decays by one ATR-derived step per bar, and reports
+//  when the live close price breaks through that line.
+// ══════════════════════════════════════════════════════════════════
+var TL_LOOKBACK = 14; // bars each side required to confirm a pivot
+
+// True Range / ATR from OHLC candles. candles: array of {high, low, close}
+function calcATRFromCandles(candles, period) {
+  if (!candles || candles.length < period + 1) return null;
+  var trs = [];
+  for (var i = 1; i < candles.length; i++) {
+    var h = candles[i].high, l = candles[i].low, pc = candles[i-1].close;
+    var tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
+    trs.push(tr);
+  }
+  var slice = trs.slice(-period);
+  return slice.reduce(function(a,b){return a+b;},0) / slice.length;
+}
+
+// Find the most recent confirmed pivot high/low using a centered window
+// (needs `lookback` bars on both sides, same definition as ta.pivothigh/low).
+function findLastPivot(candles, lookback, isHigh) {
+  // Walk backwards from the latest bar that could possibly be confirmed
+  // (i.e. has `lookback` bars after it) to the oldest possible.
+  for (var i = candles.length - 1 - lookback; i >= lookback; i--) {
+    var val = isHigh ? candles[i].high : candles[i].low;
+    var isPivot = true;
+    for (var j = i - lookback; j <= i + lookback; j++) {
+      if (j === i) continue;
+      var cmp = isHigh ? candles[j].high : candles[j].low;
+      if (isHigh ? (cmp > val) : (cmp < val)) { isPivot = false; break; }
+    }
+    if (isPivot) return { index: i, value: val, barsAgo: (candles.length - 1) - i };
+  }
+  return null;
+}
+
+// Compute the current up-trendline (from last pivot low, sloping up) and
+// down-trendline (from last pivot high, sloping down) at the live bar,
+// using ATR-based slope decay — mirrors the 'Atr' mode slope calc.
+// Returns { upperNow, lowerNow, upperPivotIdx, lowerPivotIdx } or null
+// fields where not enough data exists yet.
+function calcTrendlines(candles) {
+  if (!candles || candles.length < TL_LOOKBACK * 2 + 2) return null;
+  var atr = calcATRFromCandles(candles, TL_LOOKBACK);
+  if (!atr) return null;
+  var slopeStep = atr / TL_LOOKBACK; // mult=1 (default, matches the script)
+
+  var lastHigh = findLastPivot(candles, TL_LOOKBACK, true);
+  var lastLow  = findLastPivot(candles, TL_LOOKBACK, false);
+
+  var upperNow = null, lowerNow = null;
+  // Down-trendline: starts at the pivot HIGH, decays downward by slopeStep per bar since.
+  if (lastHigh) upperNow = lastHigh.value - slopeStep * lastHigh.barsAgo;
+  // Up-trendline: starts at the pivot LOW, rises by slopeStep per bar since.
+  if (lastLow)  lowerNow = lastLow.value + slopeStep * lastLow.barsAgo;
+
+  return {
+    upperNow: upperNow, lowerNow: lowerNow,
+    upperPivotVal: lastHigh ? lastHigh.value : null,
+    lowerPivotVal: lastLow ? lastLow.value : null,
+    atr: atr
+  };
+}
+
+// Check the live price against the current trendlines for a breakout.
+// prevClose/liveClose let us detect the actual CROSS (price was on one
+// side, now on the other) rather than just "is currently beyond the line",
+// matching the script's upos>upos[1] / dnos>dnos[1] edge-trigger behavior.
+// Returns { type:'CE'|'PE', slLevel:Number } or null.
+function checkTrendlineBreakout(candles, prevClose, liveClose) {
+  var tl = calcTrendlines(candles);
+  if (!tl) return null;
+  if (tl.upperNow != null && prevClose <= tl.upperNow && liveClose > tl.upperNow) {
+    return { type: 'CE', slLevel: tl.upperNow, line: 'up-break (blue)' };
+  }
+  if (tl.lowerNow != null && prevClose >= tl.lowerNow && liveClose < tl.lowerNow) {
+    return { type: 'PE', slLevel: tl.lowerNow, line: 'down-break (red)' };
+  }
+  return null;
+}
+
 
 // Get ATM strike (round to nearest 50 for Nifty, 100 for BankNifty)
 function getATMStrike(price, step) {
@@ -14492,14 +14618,37 @@ async function ptCloudLoad() {
 //  qualifying signal is auto-logged as a paper trade (no manual entry).
 // ══════════════════════════════════════════════════════════════════
 var ASE_ON = false;
+var ASE_STRATEGY = 'pcr_ema_vix'; // 'pcr_ema_vix' | 'trendline'
 var ASE_LAST_LOGGED_KEY = null; // de-dupe: avoid re-logging same signal repeatedly
 var ASE_LOG = []; // recent engine decisions, newest first, for the on-screen log
 
 function aseLoadState() {
   try { ASE_ON = localStorage.getItem('jarvis_ase_on') === '1'; } catch(e) {}
+  try { ASE_STRATEGY = localStorage.getItem('jarvis_ase_strategy') || 'pcr_ema_vix'; } catch(e) {}
   var cb = document.getElementById('ase-toggle');
   if (cb) cb.checked = ASE_ON;
+  var sel = document.getElementById('ase-strategy');
+  if (sel) sel.value = ASE_STRATEGY;
   aseUpdateToggleUI();
+  aseApplyStrategyUI();
+}
+
+function aseSetStrategy(val) {
+  ASE_STRATEGY = (val === 'trendline') ? 'trendline' : 'pcr_ema_vix';
+  try { localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY); } catch(e) {}
+  ASE_LAST_LOGGED_KEY = null; // reset de-dupe when switching strategies
+  aseApplyStrategyUI();
+  aseLog('Strategy switched to: ' + (ASE_STRATEGY === 'trendline' ? 'Trendline Breakout (5-min)' : 'PCR + EMA21 + VIX'));
+}
+
+function aseApplyStrategyUI() {
+  var isTl = ASE_STRATEGY === 'trendline';
+  var rp = document.getElementById('ase-readout-pcr'), rt = document.getElementById('ase-readout-trendline');
+  var ruP = document.getElementById('ase-rules-pcr'), ruT = document.getElementById('ase-rules-trendline');
+  if (rp) rp.style.display = isTl ? 'none' : 'grid';
+  if (rt) rt.style.display = isTl ? 'grid' : 'none';
+  if (ruP) ruP.style.display = isTl ? 'none' : 'block';
+  if (ruT) ruT.style.display = isTl ? 'block' : 'none';
 }
 
 function aseToggle() {
@@ -14574,6 +14723,14 @@ function aseEvaluate() {
   var statusEl = document.getElementById('ase-last-check');
   if (statusEl) statusEl.textContent = 'Checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
+  if (ASE_STRATEGY === 'trendline') {
+    aseEvaluateTrendline().catch(function(e){ console.warn('[AutoSignalEngine trendline]', e); });
+    return;
+  }
+  aseEvaluatePcrEmaVix();
+}
+
+function aseEvaluatePcrEmaVix() {
   var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
   var vix = (typeof LD !== 'undefined' && LD.INDIAVIX && LD.INDIAVIX.ltp) ? LD.INDIAVIX.ltp : null;
   var pcr = (typeof OC_STATE !== 'undefined' && OC_STATE.pcr) ? OC_STATE.pcr : null;
@@ -14645,6 +14802,113 @@ function aseEvaluate() {
     aseLog('✅ Auto-logged BUY '+sideToTrade+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+reasons.filter(Boolean).join(', '));
   } else if (res && res.error) {
     aseLog('⚠ Signal found but could not log: ' + res.error);
+  }
+}
+
+// ── TRENDLINE BREAKOUT STRATEGY ──
+// Pulls real 5-min OHLC candles from Angel One, runs the pivot+ATR
+// trendline calc, and auto-logs a paper trade on a confirmed cross.
+// The trendline level itself is in NIFTY index points, not option
+// premium — so the stop-loss is expressed as a % move away from entry
+// equivalent to how far the index would have to retrace to the
+// trendline (rather than a misleading direct rupee figure), then
+// converted to a premium SL the same way the other strategy does.
+var ASE_TL_LAST_CANDLE_TIME = null; // only evaluate once per new closed candle
+
+async function aseEvaluateTrendline() {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  if (!ni || !ni.ltp) { ptSet2('ase-tl-verdict', 'WAITING DATA', 'var(--w)'); return; }
+  ptSet2('ase-tl-ltp', fN(ni.ltp, 0));
+
+  if (!ASE_ON) { ptSet2('ase-tl-verdict', 'OFF', 'var(--dim)'); return; }
+
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    ptSet2('ase-tl-verdict', 'NEED BROKER LOGIN', 'var(--w)');
+    aseLog('Trendline strategy needs Angel One login for 5-min candle history — connect via SETUP.');
+    return;
+  }
+
+  var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
+  if (!tm) { ptSet2('ase-tl-verdict', 'NO TOKEN', 'var(--r)'); return; }
+
+  // Force the candle fetch to use 5-min regardless of whatever the main
+  // signal engine's timeframe selector is currently set to.
+  var prevTF = (typeof SIGNAL_TF !== 'undefined') ? SIGNAL_TF : '5min';
+  if (typeof SIGNAL_TF !== 'undefined') SIGNAL_TF = '5min';
+  var raw;
+  try {
+    raw = await fetchCandlesTF(tm.sym, tm.tok, tm.ex);
+  } finally {
+    if (typeof SIGNAL_TF !== 'undefined') SIGNAL_TF = prevTF;
+  }
+
+  if (!raw || raw.length < TL_LOOKBACK * 2 + 3) {
+    ptSet2('ase-tl-verdict', 'BUILDING CANDLES', 'var(--w)');
+    ptSet2('ase-tl-candles', raw ? raw.length : 0);
+    return;
+  }
+
+  // Angel One candle rows: [timestamp, open, high, low, close, volume]
+  var candles = raw.map(function(r){ return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4] }; });
+  ptSet2('ase-tl-candles', candles.length);
+
+  var tl = calcTrendlines(candles.slice(0, -1)); // trendline as of the last CLOSED candle
+  ptSet2('ase-tl-upper', tl && tl.upperNow != null ? fN(tl.upperNow, 1) : '—');
+  ptSet2('ase-tl-lower', tl && tl.lowerNow != null ? fN(tl.lowerNow, 1) : '—');
+
+  // Only act once per newly closed candle, not on every 30s poll, since
+  // the trendline itself only changes when a new 5-min candle closes.
+  var latestCandleTime = candles[candles.length - 1].time;
+  if (ASE_TL_LAST_CANDLE_TIME === latestCandleTime) {
+    ptSet2('ase-tl-verdict', 'NO NEW CANDLE', 'var(--dim)');
+    return;
+  }
+
+  var prevClose = candles[candles.length - 2].close;
+  var liveClose = candles[candles.length - 1].close;
+  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose);
+
+  if (!breakout) {
+    ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-tl-verdict', 'NO BREAKOUT', 'var(--dim)');
+    return;
+  }
+
+  ptSet2('ase-tl-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var dedupeKey = latestCandleTime + '_' + breakout.type;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+
+  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
+  if (!chainLtp || chainLtp <= 0) {
+    ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
+    aseLog('Trendline breakout found ('+breakout.type+') but no chain price available — skipped.');
+    return;
+  }
+
+  // SL at the trendline level (index points) converted to an equivalent
+  // premium retracement: how far price would have to move back through
+  // the line, as a % of the move from the pivot, applied to premium.
+  var idxMoveAtEntry = Math.abs(ni.ltp - breakout.slLevel);
+  var slPct = Math.min(0.6, Math.max(0.15, idxMoveAtEntry / ni.ltp * 8)); // scaled, clamped 15-60%
+  var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain, same convention as the other strategy
+  var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
+  var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
+  var lotQty = 75;
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    signalType: 'BUY ' + breakout.type,
+    reasons: 'Trendline ' + breakout.line + ' · SL line @ ' + fN(breakout.slLevel,1) + ' · 5-min, 14-bar pivot'
+  });
+
+  ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY = dedupeKey;
+    aseLog('✅ Trendline auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+breakout.line);
+  } else if (res && res.error) {
+    aseLog('⚠ Trendline breakout found but could not log: ' + res.error);
   }
 }
 
