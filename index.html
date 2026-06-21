@@ -3053,6 +3053,8 @@ setTimeout(nd2SyncAll, 2000);
   <!-- Results -->
   <div id="bt-results" style="display:none">
 
+    <div id="bt-data-warning" style="display:none;margin-bottom:10px;padding:10px 12px;background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.3);border-left:3px solid #ffc107;border-radius:7px;font-family:Share Tech Mono;font-size:10px;color:#ffc107"></div>
+
     <!-- P&L Summary KPIs -->
     <div class="panel" style="margin-bottom:10px">
       <div class="ph"><div class="pt" style="color:#a064ff">💰 P&amp;L SUMMARY</div><span id="bt-period-label" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></span></div>
@@ -8200,6 +8202,69 @@ function hexToRgb(hex) {
     b=parseInt(h.substring(4,6),16);
   }
   return r+','+g+','+b;
+}
+
+// ── Real historical candle fetch for backtesting (not the live-dashboard
+// 5-day window fetchCandlesTF uses). Pulls actual Angel One 5-min OHLC
+// over an arbitrary date range, used so backtest results reflect real
+// Nifty price action instead of synthetic/generated data.
+//
+// Angel One's documented limit for FIVE_MINUTE interval is ~90-100
+// calendar days per request (varies by account/period — see SmartAPI
+// forum). We clamp to 90 days per chunk and fetch multiple chunks
+// sequentially if a longer range is requested, concatenating results.
+var BT_FIVE_MIN_MAX_DAYS_PER_REQUEST = 90;
+
+async function fetchHistoricalCandlesRange(tok, exchange, fromDate, toDate) {
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    return { error: 'NOT_CONNECTED', candles: [] };
+  }
+  var fmt = function(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0') + ' ' +
+           String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  };
+  var hdrs = {
+    'Content-Type':'application/json', 'Authorization':'Bearer '+creds.jwt,
+    'X-PrivateKey': creds.apiKey || '', 'X-UserType':'USER', 'X-SourceID':'WEB',
+    'X-ClientLocalIP':'127.0.0.1', 'X-ClientPublicIP':'127.0.0.1',
+    'X-MACAddress':'00:00:00:00:00:00', 'Accept':'application/json'
+  };
+
+  // Split the full range into <=90-day chunks, oldest first.
+  var chunks = [];
+  var chunkStart = new Date(fromDate);
+  while (chunkStart < toDate) {
+    var chunkEnd = new Date(chunkStart);
+    chunkEnd.setDate(chunkEnd.getDate() + BT_FIVE_MIN_MAX_DAYS_PER_REQUEST);
+    if (chunkEnd > toDate) chunkEnd = new Date(toDate);
+    chunks.push([new Date(chunkStart), new Date(chunkEnd)]);
+    chunkStart = new Date(chunkEnd);
+    chunkStart.setMinutes(chunkStart.getMinutes() + 5); // avoid overlapping the boundary candle
+  }
+
+  var allCandles = [];
+  for (var c = 0; c < chunks.length; c++) {
+    var body = JSON.stringify({
+      exchange: exchange || 'NSE', symboltoken: String(tok),
+      interval: 'FIVE_MINUTE', fromdate: fmt(chunks[c][0]), todate: fmt(chunks[c][1])
+    });
+    try {
+      var d = await multiPost(BASE + '/rest/secure/angelbroking/historical/v1/getCandleData', hdrs, body);
+      if (d && d.status && Array.isArray(d.data)) {
+        allCandles = allCandles.concat(d.data);
+      } else if (d && d.message) {
+        console.warn('[Backtest real candles] chunk ' + c + ': ' + d.message);
+      }
+    } catch(e) {
+      console.warn('[Backtest real candles] chunk ' + c + ' failed:', e.message);
+    }
+    // Small gap between chunked requests to stay well clear of rate limits.
+    if (c < chunks.length - 1) await new Promise(function(r){ setTimeout(r, 400); });
+  }
+
+  if (!allCandles.length) return { error: 'NO_DATA', candles: [] };
+  return { error: null, candles: allCandles };
 }
 
 // Patch fetchCandlesForSignal to use current TF interval
@@ -13798,12 +13863,12 @@ function runBacktest() {
     if (bar) bar.style.width = pct + '%';
   }, 400);
 
-  setTimeout(function(){
+  var days = {' 1m':30,'1m':30,'3m':90,'6m':180,'1y':365}[period] || 90;
+
+  function finish(data, usedRealData, warning) {
     clearInterval(iv);
     if (bar) bar.style.width = '100%';
 
-    var days = {' 1m':30,'1m':30,'3m':90,'6m':180,'1y':365}[period] || 90;
-    var data = btGeneratePriceData(ticker, days);
     var trades = btRunStrategy(data, strategy, signal, capital, posPct);
     BT_TRADES = trades;
 
@@ -13816,7 +13881,8 @@ function runBacktest() {
 
     var periodLabels = {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'};
     var pl = document.getElementById('bt-period-label');
-    if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy);
+    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : (strategy === 'trendline' ? ' · synthetic data (no broker connection)' : '');
+    if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy) + dataSourceTag;
 
     btRenderKPIs(capital, trades);
     btDrawChart(equity, niftyBench, days);
@@ -13824,7 +13890,68 @@ function runBacktest() {
     btRenderMonthly(trades);
     btRenderTradeLog(trades);
     btRenderVerdict(capital, trades, ticker, period, strategy);
+
+    if (warning) {
+      var warnEl = document.getElementById('bt-data-warning');
+      if (warnEl) { warnEl.textContent = warning; warnEl.style.display = 'block'; }
+    } else {
+      var warnEl2 = document.getElementById('bt-data-warning');
+      if (warnEl2) warnEl2.style.display = 'none';
+    }
+  }
+
+  // The trendline strategy is the only one that can use REAL historical
+  // data — it needs Angel One's actual 5-min candles to mean anything
+  // (comparing against a live TradingView chart). Every other strategy
+  // here still runs on synthetic daily data, same as before.
+  if (strategy === 'trendline' && ticker === 'NIFTY') {
+    var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
+    var connected = typeof creds !== 'undefined' && creds.jwt && creds.connected;
+    if (!tm || !connected) {
+      setTimeout(function(){
+        var data = btGenerateIntradayPriceData(ticker, days);
+        finish(data, false, '⚠ Not connected to Angel One — showing SYNTHETIC data, not a real backtest. Connect via SETUP to test against real Nifty history.');
+      }, 1500);
+      return;
+    }
+    // Angel One's 5-min history caps around 90-100 days — clamp longer
+    // period selections and say so, rather than silently returning less
+    // data than the period label implies.
+    var realDays = Math.min(days, BT_FIVE_MIN_MAX_DAYS_PER_REQUEST);
+    var toDate = new Date();
+    var fromDate = new Date(toDate);
+    fromDate.setDate(fromDate.getDate() - realDays);
+    fromDate.setHours(9, 0, 0, 0);
+
+    fetchHistoricalCandlesRange(tm.tok, tm.ex, fromDate, toDate).then(function(res){
+      if (res.error || !res.candles.length) {
+        var data = btGenerateIntradayPriceData(ticker, days);
+        finish(data, false, '⚠ Could not fetch real candles (' + (res.error||'no data') + ') — showing SYNTHETIC data instead.');
+        return;
+      }
+      // Angel One rows: [timestamp, open, high, low, close, volume]
+      var data = res.candles.map(function(r){
+        return { date: String(r[0]).slice(0,16).replace('T',' '), open:r[1], high:r[2], low:r[3], close:r[4], vol:r[5] };
+      });
+      var clampWarning = (days > BT_FIVE_MIN_MAX_DAYS_PER_REQUEST)
+        ? '⚠ Angel One\'s 5-min history only covers ~' + BT_FIVE_MIN_MAX_DAYS_PER_REQUEST + ' days — showing real data for that window, not the full ' + (periodLabelFor(period)) + '.'
+        : null;
+      finish(data, true, clampWarning);
+    }).catch(function(e){
+      var data = btGenerateIntradayPriceData(ticker, days);
+      finish(data, false, '⚠ Candle fetch failed (' + e.message + ') — showing SYNTHETIC data instead.');
+    });
+    return;
+  }
+
+  setTimeout(function(){
+    var data = (strategy === 'trendline') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
+    finish(data, false, strategy === 'trendline' ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
   }, 2800);
+}
+
+function periodLabelFor(period) {
+  return {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'}[period] || period;
 }
 
 // Generate synthetic price data for any stock/index
@@ -13857,6 +13984,56 @@ function btGeneratePriceData(ticker, days) {
   return data;
 }
 
+// ── Intraday (5-min) synthetic data, specifically for the Trendline
+// Breakout strategy. The other backtest strategies (JARVIS, EMA cross,
+// RSI, MACD, Volume) are all designed/tuned around one-bar-per-day data
+// and stay on btGeneratePriceData; the trendline strategy's pivot
+// lookback (14 bars) means something completely different on daily
+// bars (28 trading days to confirm a pivot) vs 5-min bars (70 minutes) —
+// using daily bars here was producing only ~2 trades/year instead of
+// the multiple-per-day rhythm seen live on TradingView. This generates
+// real 5-min-spaced candles, capped so the browser doesn't choke on
+// the longer lookback periods.
+var BARS_PER_DAY_5MIN = 75; // NSE 9:15–3:30 = 375 min / 5 = 75 candles/day
+var BT_INTRADAY_MAX_CANDLES = 8000; // ~3 months of 5-min bars; keeps 1y option responsive
+
+function btGenerateIntradayPriceData(ticker, totalDays) {
+  var seed = ticker.split('').reduce(function(a,c){return a+c.charCodeAt(0);},0);
+  var rng = (function(s){ var x=s; return function(){ x=(x*9301+49297)%233280; return x/233280; }; })(seed);
+  var bases = {NIFTY:22000,BANKNIFTY:48000,RELIANCE:1285,TCS:3800,HDFCBANK:1650,INFY:1550,SBIN:820,ICICIBANK:1230,WIPRO:520,TATAMOTORS:980,BAJFINANCE:6800};
+  var base = bases[ticker] || (1000 + rng()*2000);
+  var barVol = base * 0.0009; // ~0.09% per 5-min bar — tuned so daily range roughly matches the daily generator's ~1.2%
+
+  // Estimate trading days needed to hit the candle cap, then walk
+  // backward that many calendar days (skipping weekends) from today.
+  var tradingDaysNeeded = Math.min(Math.ceil(totalDays * 5/7), Math.ceil(BT_INTRADAY_MAX_CANDLES / BARS_PER_DAY_5MIN));
+  var data = [];
+  var price = base;
+  var dayCount = 0, calendarOffset = totalDays;
+  while (dayCount < tradingDaysNeeded && calendarOffset > 0) {
+    var dt = new Date(); dt.setDate(dt.getDate() - calendarOffset);
+    calendarOffset--;
+    if (dt.getDay()===0||dt.getDay()===6) continue;
+    dayCount++;
+    var dayTrend = Math.sin(dayCount/30)*0.00015; // gentle multi-day drift, scaled down to a per-bar rate
+    for (var b=0; b<BARS_PER_DAY_5MIN; b++) {
+      var open = price;
+      var noise = (rng()-0.5)*barVol;
+      price = Math.max(price*(1+dayTrend+noise/price), base*0.7);
+      var spread = Math.abs(price - open) + barVol*0.4;
+      var high = Math.max(open, price) + spread*rng()*0.4;
+      var low  = Math.min(open, price) - spread*rng()*0.4;
+      var hh = 9 + Math.floor((15 + b*5)/60), mm = (15 + b*5) % 60;
+      data.push({
+        date: dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm,
+        open: Math.round(open*100)/100, high: Math.round(high*100)/100, low: Math.round(low*100)/100,
+        close: Math.round(price*100)/100, vol: Math.round(200000*rng())
+      });
+    }
+  }
+  return data;
+}
+
 // Simulate signals based on strategy
 function btRunStrategy(data, strategy, signalType, capital, posPct) {
   if (data.length < 15) return [];
@@ -13873,9 +14050,23 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
     } else if (inTrade) {
       var pnlPct = (closes[i]-entry)/entry;
       var exitReason = '';
-      if (pnlPct >= 0.065) { exitReason = 'TARGET HIT'; }
-      else if (pnlPct <= -0.035) { exitReason = 'STOP LOSS HIT'; }
-      else if (i - entryIdx >= 10) { exitReason = 'TIME EXIT'; }
+      if (strategy === 'trendline') {
+        // Mirrors the live Auto Signal Engine's option-premium convention
+        // (+40%/-30%) rather than the other strategies' index-point %
+        // thresholds. Approximated here via a delta-style multiplier since
+        // this backtest trades the index directly, not actual premiums —
+        // a ~0.12 multiplier roughly maps typical ATM option delta/gamma
+        // sensitivity early in a move, so a 0.12% index move ≈ a real
+        // option's smaller absolute premium swing scaled to a +40% gain.
+        var premiumMultiplier = 3.3;
+        if (pnlPct * premiumMultiplier >= 0.40) { exitReason = 'TARGET HIT'; }
+        else if (pnlPct * premiumMultiplier <= -0.30) { exitReason = 'STOP LOSS HIT'; }
+        else if (i - entryIdx >= 24) { exitReason = 'TIME EXIT'; } // 24 bars = 2hrs on 5-min bars
+      } else {
+        if (pnlPct >= 0.065) { exitReason = 'TARGET HIT'; }
+        else if (pnlPct <= -0.035) { exitReason = 'STOP LOSS HIT'; }
+        else if (i - entryIdx >= 10) { exitReason = 'TIME EXIT'; }
+      }
       if (exitReason) {
         var gross = posSize * pnlPct;
         var net   = gross - Math.round(posSize*0.001);
