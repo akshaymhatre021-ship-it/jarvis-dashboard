@@ -2255,7 +2255,7 @@ setTimeout(nd2SyncAll, 2000);
   <!-- LIVE F&O SIGNAL PANEL -->
   <div class="panel" style="margin-bottom:9px;border-color:rgba(0,212,255,.3)">
     <div class="ph" style="background:linear-gradient(90deg,rgba(0,212,255,.09),transparent)">
-      <div class="pt" style="color:var(--a)">⚡ LIVE F&amp;O SIGNALS — NIFTY:75 | BANKNIFTY:35 | SENSEX:20</div>
+      <div class="pt" style="color:var(--a)">⚡ LIVE F&amp;O SIGNALS — NIFTY:65 | BANKNIFTY:30 | SENSEX:20</div>
       <div style="display:flex;gap:8px;align-items:center">
         <span id="signalStatus" style="font-size:10px;color:var(--dim);font-family:'Share Tech Mono'">Scanning market…</span>
         <button onclick="runSignalEngine();renderLiveFOSignals();" style="padding:4px 12px;background:rgba(0,212,255,.12);border:1px solid var(--a);border-radius:4px;color:var(--a);font-family:Orbitron;font-size:9px;cursor:pointer;letter-spacing:1px">↺ REFRESH</button>
@@ -2268,7 +2268,7 @@ setTimeout(nd2SyncAll, 2000);
         <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-family:'Share Tech Mono'">Nifty: <span style="color:var(--a)" id="sigNiftyVal">—</span></div>
         <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-family:'Share Tech Mono'">Trend: <span id="sigTrend" style="color:var(--w)">—</span></div>
         <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-family:'Share Tech Mono'">RSI: <span id="sigRSI" style="color:var(--w)">—</span></div>
-        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-family:'Share Tech Mono'">Lot: <span style="color:var(--g)" id="sigLotInfo">NIFTY:75 | BN:35 | SX:20</span></div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-family:'Share Tech Mono'">Lot: <span style="color:var(--g)" id="sigLotInfo">NIFTY:65 | BN:30 | SX:20</span></div>
         <div style="display:flex;gap:3px;margin-left:auto">
           <button onclick="setSignalTF('5min',this)" id="tf-5min" style="padding:3px 9px;font-family:Share Tech Mono;font-size:9px;border:1px solid rgba(255,107,53,.4);border-radius:4px;background:rgba(255,107,53,.06);color:#ff6b35;cursor:pointer" title="5-min scalping">5M</button>
           <button onclick="setSignalTF('15min',this)" id="tf-15min" style="padding:3px 9px;font-family:Share Tech Mono;font-size:9px;border:1px solid rgba(0,212,255,.6);border-radius:4px;background:rgba(0,212,255,.15);color:#00d4ff;cursor:pointer;font-weight:700" title="15-min intraday (default)">15M ✓</button>
@@ -2330,7 +2330,7 @@ setTimeout(nd2SyncAll, 2000);
           <option value="week">This Week</option>
           <option value="month" selected>This Month</option>
         </select>
-        <span style="font-size:9px;font-family:'Share Tech Mono';color:var(--dim)">NIFTY:75 | BANKNIFTY:35 | SENSEX:20</span>
+        <span style="font-size:9px;font-family:'Share Tech Mono';color:var(--dim)">NIFTY:65 | BANKNIFTY:30 | SENSEX:20</span>
         <button onclick="showLogTradeModal()" style="padding:3px 10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.35);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">+ LOG TRADE</button>
         <button onclick="exportCallsCSV()" style="padding:3px 10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:4px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">⬇ CSV</button>
         <button onclick="if(confirm('Reset trade log to default seed data?')){localStorage.removeItem('ja_calls_log');CALLS_LOG=CALLS_LOG_DEFAULT.map(function(c){return Object.assign({},c);});saveCallsLog();renderReports();drawMonthChart();}" style="padding:3px 10px;background:rgba(255,204,0,.07);border:1px solid rgba(255,204,0,.3);border-radius:4px;color:var(--w);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">↺ RESET</button>
@@ -2361,7 +2361,7 @@ setTimeout(nd2SyncAll, 2000);
         <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">BUY PRICE ₹</div><input id="lt-buy" type="number" placeholder="120" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none" onfocus="this.style.borderColor='var(--a)'" onblur="this.style.borderColor='var(--border)'"></div>
         <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">TARGET ₹</div><input id="lt-target" type="number" placeholder="200" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none" onfocus="this.style.borderColor='var(--a)'" onblur="this.style.borderColor='var(--border)'"></div>
         <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">STOP LOSS ₹</div><input id="lt-sl" type="number" placeholder="72" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none" onfocus="this.style.borderColor='var(--a)'" onblur="this.style.borderColor='var(--border)'"></div>
-        <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">LOT QTY</div><input id="lt-qty" type="number" placeholder="75" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none" onfocus="this.style.borderColor='var(--a)'" onblur="this.style.borderColor='var(--border)'"></div>
+        <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">LOT QTY</div><input id="lt-qty" type="number" placeholder="65" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none" onfocus="this.style.borderColor='var(--a)'" onblur="this.style.borderColor='var(--border)'"></div>
         <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">EXIT PRICE ₹ (blank=OPEN)</div><input id="lt-exit" type="number" placeholder="Leave blank if still open" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none" onfocus="this.style.borderColor='var(--a)'" onblur="this.style.borderColor='var(--border)'"></div>
         <div><div style="font-size:9px;color:var(--dim);font-family:Share Tech Mono;margin-bottom:3px">STRATEGY</div><select id="lt-strat" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none"><option>Nifty CE Breakout</option><option>BankNifty CE/PE</option><option>Stock CE Options</option><option>12–2 PM Trades</option></select></div>
       </div>
@@ -3336,7 +3336,7 @@ setTimeout(nd2SyncAll, 2000);
         </div>
         <div>
           <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">QUANTITY / LOTS</label>
-          <input id="pt-qty" type="number" placeholder="Units" value="75" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1">
+          <input id="pt-qty" type="number" placeholder="Units" value="65" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1">
         </div>
         <div>
           <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">TARGET (₹)</label>
@@ -5402,7 +5402,7 @@ function generateOptionsSignals() {
 
   // Market not open
   if (hour < 9 || (hour === 9 && min < 20) || hour >= 15) {
-    OPT_STATE.nifty  = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:niftyExpiry, entry:0, target:0, sl:0, lotQty:75 };
+    OPT_STATE.nifty  = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:niftyExpiry, entry:0, target:0, sl:0, lotQty:65 }; // revised 31-Dec-2025
     OPT_STATE.bnifty = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:bnExpiry,    entry:0, target:0, sl:0, lotQty:35 };
     OPT_STATE.sensex = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:sxExpiry,    entry:0, target:0, sl:0, lotQty:20 };
     renderOptionsSignals(); return;
@@ -5461,7 +5461,7 @@ function generateOptionsSignals() {
     var premEst = getChainPrice('NIFTY', useStrike, signal==='pe'?'pe':'ce');
     var tgt = Math.round(premEst * 1.65 / 5) * 5;
     var sl  = Math.round(premEst * 0.58 / 5) * 5;
-    var lotQty = 75;
+    var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025 per NSE/SEBI circular)
 
     OPT_STATE.nifty = {
       signal: signal,
@@ -5601,7 +5601,7 @@ function renderOptionsSignals() {
   if (!box) return;
 
   var signals = [
-    { label:'NIFTY',     state: OPT_STATE.nifty,  color:'#00bcd4', lotQty:75 },
+    { label:'NIFTY',     state: OPT_STATE.nifty,  color:'#00bcd4', lotQty:65 }, // revised 31-Dec-2025
     { label:'BANKNIFTY', state: OPT_STATE.bnifty,  color:'#ff9800', lotQty:35 },
     { label:'SENSEX',    state: OPT_STATE.sensex,  color:'#ab47bc', lotQty:20 }
   ];
@@ -6021,7 +6021,7 @@ function buildLiveFOSignalFromEngine(signal) {
   } else {
     // Default: Nifty
     strike    = Math.round(ltp / 50) * 50;
-    lotQty    = 75;
+    lotQty    = 65; // revised 31-Dec-2025
     expiry    = (typeof getNiftyExpiry === 'function') ? getNiftyExpiry() : '05MAY26';
     instrBase = 'NIFTY';
   }
@@ -6065,7 +6065,7 @@ function renderLiveFOSignals() {
   if (!container) return;
 
   var signals = [
-    { label:'NIFTY',     state: OPT_STATE.nifty,  color:'#00bcd4', lotQty:75 },
+    { label:'NIFTY',     state: OPT_STATE.nifty,  color:'#00bcd4', lotQty:65 }, // revised 31-Dec-2025
     { label:'BANKNIFTY', state: OPT_STATE.bnifty,  color:'#ff9800', lotQty:35 },
     { label:'SENSEX',    state: OPT_STATE.sensex,  color:'#ab47bc', lotQty:20 }
   ];
@@ -8471,7 +8471,7 @@ function renderSignalLog() {
     var isCall = s.type === 'CALL';
     var idxKey = s.instr && s.instr.toUpperCase().includes('BANK') ? 'BANKNIFTY' :
                  s.instr && s.instr.toUpperCase().includes('SENSEX') ? 'SENSEX' : 'NIFTY';
-    var lotQty = idxKey==='BANKNIFTY' ? 35 : idxKey==='SENSEX' ? 20 : 75;
+    var lotQty = idxKey==='BANKNIFTY' ? 30 : idxKey==='SENSEX' ? 20 : 65;
     var step   = idxKey==='NIFTY' ? 50 : 100;
     var ld     = LD[idxKey==='NIFTY'?'NIFTY50':idxKey==='BANKNIFTY'?'BANKNIFTY':'SENSEX'];
     var spot   = ld && ld.ltp ? ld.ltp : (idxKey==='NIFTY'?24650:idxKey==='BANKNIFTY'?52400:81200);
@@ -8527,7 +8527,7 @@ var OC_STATE = {
   atm: 0,
   ticker: null,
   stepSize: { NIFTY:50, BANKNIFTY:100, SENSEX:100 },
-  lotSize:  { NIFTY:75, BANKNIFTY:35,  SENSEX:20  },
+  lotSize:  { NIFTY:65, BANKNIFTY:30,  SENSEX:20  }, // revised 31-Dec-2025 per NSE/SEBI circular
   vix: 14.5   // base VIX — will fluctuate
 };
 
@@ -11072,10 +11072,10 @@ function showLogTradeModal() {
     document.getElementById('lt-buy').value    = ni.entry || '';
     document.getElementById('lt-target').value = ni.target || '';
     document.getElementById('lt-sl').value     = ni.sl || '';
-    document.getElementById('lt-qty').value    = '75';
+    document.getElementById('lt-qty').value    = '65';
   } else {
     ['lt-instr','lt-buy','lt-target','lt-sl','lt-exit'].forEach(function(id){ document.getElementById(id).value=''; });
-    document.getElementById('lt-qty').value = '75';
+    document.getElementById('lt-qty').value = '65';// NIFTY lot size, revised 75→65 effective Jan 2026
   }
   var msg = document.getElementById('lt-msg'); if(msg) msg.style.display='none';
   m.style.display = 'flex';
@@ -11086,7 +11086,7 @@ function submitLogTrade() {
   var buy    = parseFloat(document.getElementById('lt-buy').value);
   var target = parseFloat(document.getElementById('lt-target').value);
   var sl     = parseFloat(document.getElementById('lt-sl').value);
-  var qty    = parseInt(document.getElementById('lt-qty').value) || 75;
+  var qty    = parseInt(document.getElementById('lt-qty').value) || 65; // NIFTY lot size, revised 75→65 effective Jan 2026
   var exit   = parseFloat(document.getElementById('lt-exit').value) || null;
   var strat  = document.getElementById('lt-strat').value;
   var msg    = document.getElementById('lt-msg');
@@ -14097,7 +14097,7 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   var entry = 0, entryDate = '', entryIdx = 0;
   var posSize = capital * posPct;
   // Trendline-specific state: tracks the option side and BS-priced premium
-  var optType = null, entryPremium = 0, strike = 0, lotQty = 75;
+  var optType = null, entryPremium = 0, strike = 0, lotQty = 65, lotsHeld = 1; // NIFTY lot size
 
   // Backtest IV assumption: Angel One has no historical option-premium or
   // historical-VIX API at all (confirmed — only equity/index/futures
@@ -14122,6 +14122,7 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
 
   for (var i=14; i<closes.length-1; i++) {
     var signal = btComputeSignal(closes, i, strategy, data);
+    var numLots = 0;
 
     if (!inTrade) {
       var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
@@ -14131,6 +14132,11 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         optType = signal === 'BUY_CE' ? 'CE' : 'PE';
         strike = Math.round(entry/50)*50; // ATM, Nifty 50-pt strikes
         entryPremium = btOptionPrice(entry, strike, BT_DTE_DAYS, optType.toLowerCase());
+        // Real lot-based sizing: capital*posPct funds whole LOTS, not an
+        // abstract rupee amount — you can only buy options in multiples
+        // of the Nifty lot size (65), never a fractional/arbitrary qty.
+        numLots = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
+        lotsHeld = numLots;
       } else if (strategy !== 'trendline' && strategy !== 'trendline_confirmed' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i; optType = null;
       }
@@ -14158,14 +14164,18 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         else if (pnlPct <= slThreshold) { exitReason = 'STOP LOSS HIT'; }
         else if (i - entryIdx >= 24) { exitReason = 'TIME EXIT'; } // 24 bars = 2hrs on 5-min bars, hasn't hit either threshold yet
         if (exitReason) {
-          var gross = posSize * pnlPct;
-          var net   = gross - Math.round(posSize*0.001);
+          // Real P&L: (premium change) × lot size × number of lots —
+          // not a % of an abstract position size.
+          var gross = (curPremium - entryPremium) * lotQty * lotsHeld;
+          var brokerage = 40 * lotsHeld; // flat ~₹20/leg × 2 legs (entry+exit), rough real-world estimate
+          var net   = gross - brokerage;
+          var posSizeActual = entryPremium * lotQty * lotsHeld;
           trades.push({
             num:trades.length+1, entryDate:entryDate, exitDate:data[i].date,
-            optType: optType, strike: strike,
+            optType: optType, strike: strike, lots: lotsHeld, lotSize: lotQty,
             entry:entryPremium, exit:curPremium, // premium, not index level
             indexEntry: entry, indexExit: closes[i],
-            posSize:posSize, gross:gross, net:net, pnlPct:(pnlPct*100).toFixed(2), result:exitReason
+            posSize:posSizeActual, gross:gross, net:net, pnlPct:(pnlPct*100).toFixed(2), result:exitReason
           });
           inTrade = false;
         }
@@ -14418,7 +14428,7 @@ function btRenderTradeLog(trades) {
     var resBg = t.result==='TARGET HIT'?'rgba(0,255,136,.12)':t.result==='STOP LOSS HIT'?'rgba(255,61,90,.12)':'rgba(255,204,0,.12)';
     var resColor = t.result==='TARGET HIT'?'var(--g)':t.result==='STOP LOSS HIT'?'var(--r)':'var(--w)';
     var sideBadge = t.optType
-      ? '<span style="background:'+(t.optType==='CE'?'rgba(0,255,136,.1)':'rgba(255,61,90,.1)')+';border:1px solid '+(t.optType==='CE'?'rgba(0,255,136,.25)':'rgba(255,61,90,.25)')+';color:'+(t.optType==='CE'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY '+t.optType+' '+t.strike+'</span>'
+      ? '<span style="background:'+(t.optType==='CE'?'rgba(0,255,136,.1)':'rgba(255,61,90,.1)')+';border:1px solid '+(t.optType==='CE'?'rgba(0,255,136,.25)':'rgba(255,61,90,.25)')+';color:'+(t.optType==='CE'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY '+t.optType+' '+t.strike+'</span><div style="font-size:8px;color:var(--dim);margin-top:2px">'+(t.lots||1)+' lot'+((t.lots||1)>1?'s':'')+' × '+(t.lotSize||65)+'</div>'
       : '<span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);color:var(--g);font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY</span>';
     var entryCell = t.optType ? '₹'+t.entry.toFixed(2)+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexEntry).toLocaleString('en-IN')+'</div>' : '₹'+t.entry.toFixed(2);
     var exitCell  = t.optType ? '₹'+t.exit.toFixed(2)+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexExit).toLocaleString('en-IN')+'</div>' : '₹'+t.exit.toFixed(2);
@@ -14435,7 +14445,7 @@ function btRenderTradeLog(trades) {
   }).join('');
 }
 
-function btRenderVerdict(capital, trades, ticker, period, strategy) {
+function btRenderVerdict(capital, trades, ticker, period, strategy, usedRealData) {
   var el = document.getElementById('bt-verdict');
   if (!el) return;
   var wins = trades.filter(function(t){return t.result==='TARGET HIT';}).length;
@@ -14446,6 +14456,10 @@ function btRenderVerdict(capital, trades, ticker, period, strategy) {
   var rating = winRate>=65&&parseFloat(roiPct)>10 ? '🟢 STRONG STRATEGY' : winRate>=50&&parseFloat(roiPct)>0 ? '🟡 AVERAGE STRATEGY' : '🔴 WEAK STRATEGY';
   var ratingColor = winRate>=65&&parseFloat(roiPct)>10 ? 'var(--g)' : winRate>=50&&parseFloat(roiPct)>0 ? 'var(--w)' : 'var(--r)';
   var msg = winRate>=65 ? 'This strategy has demonstrated strong historical performance. The signal quality is high with controlled drawdowns. Consider using this strategy with proper position sizing.' : winRate>=50 ? 'This strategy shows moderate performance. While profitable overall, the win rate leaves room for improvement. Focus on higher-quality setups and tighter stop losses.' : 'This strategy underperformed in this period. Consider optimising the entry criteria, using tighter position sizes, or switching to a different timeframe for better results.';
+
+  var dataDisclaimer = usedRealData
+    ? '✅ This run used REAL Angel One 5-min historical candles — not synthetic data. Option premiums are still Black-Scholes CALCULATED (fixed IV assumption), since Angel One has no historical option-price API. Past performance does not guarantee future results.'
+    : '⚠ This run used SIMULATED/synthetic price data (no real Angel One candles), since either the strategy doesn\'t support real data yet, or no broker connection was available at run time. Treat results as a logic sanity-check only, not a real historical performance test.';
 
   el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(160,100,255,.06),rgba(0,212,255,.03));border:1px solid rgba(160,100,255,.25);border-radius:12px;padding:14px 18px">'
     +'<div style="font-family:Orbitron;font-size:10px;color:#a064ff;letter-spacing:2px;margin-bottom:10px">⚡ BACKTEST VERDICT — '+ticker+'</div>'
@@ -14459,7 +14473,7 @@ function btRenderVerdict(capital, trades, ticker, period, strategy) {
       }).join('')
     +'</div>'
     +'<div style="margin-top:10px;padding:8px 11px;background:rgba(255,204,0,.04);border:1px solid rgba(255,204,0,.2);border-radius:5px;font-family:Share Tech Mono;font-size:9px;color:var(--dim);line-height:1.6">'
-      +'⚠ Backtest is based on simulated synthetic price data using JARVIS indicator logic. Past performance does not guarantee future results. Use for strategy evaluation only, not as a guarantee of profit.'
+      +dataDisclaimer
     +'</div>'
   +'</div>';
 }
@@ -14469,12 +14483,12 @@ function btExportCSV() {
   if (!BT_TRADES.length) { alert('No trades to export. Run a backtest first.'); return; }
   var hasOptions = BT_TRADES.some(function(t){ return t.optType; });
   var header = hasOptions
-    ? ['#','Entry Date','Exit Date','Side','Strike','Entry Premium ₹ (BS calc)','Exit Premium ₹ (BS calc)','Index @ Entry','Index @ Exit','Position Size ₹','Gross P&L','Net P&L','Return %','Result']
+    ? ['#','Entry Date','Exit Date','Side','Strike','Lots','Lot Size','Entry Premium ₹ (BS calc)','Exit Premium ₹ (BS calc)','Index @ Entry','Index @ Exit','Position Size ₹','Gross P&L','Net P&L','Return %','Result']
     : ['#','Entry Date','Exit Date','Entry ₹','Exit ₹','Position Size ₹','Gross P&L','Net P&L','Return %','Result'];
   var rows = [header];
   BT_TRADES.forEach(function(t){
     if (t.optType) {
-      rows.push([t.num,t.entryDate,t.exitDate,t.optType,t.strike,t.entry.toFixed(2),t.exit.toFixed(2),Math.round(t.indexEntry),Math.round(t.indexExit),t.posSize.toFixed(0),t.gross.toFixed(0),t.net.toFixed(0),t.pnlPct,t.result]);
+      rows.push([t.num,t.entryDate,t.exitDate,t.optType,t.strike,t.lots||1,t.lotSize||65,t.entry.toFixed(2),t.exit.toFixed(2),Math.round(t.indexEntry),Math.round(t.indexExit),t.posSize.toFixed(0),t.gross.toFixed(0),t.net.toFixed(0),t.pnlPct,t.result]);
     } else {
       rows.push([t.num,t.entryDate,t.exitDate,t.entry.toFixed(2),t.exit.toFixed(2),t.posSize.toFixed(0),t.gross.toFixed(0),t.net.toFixed(0),t.pnlPct,t.result]);
     }
@@ -14533,7 +14547,7 @@ function ptAddTrade() {
   var instr  = document.getElementById('pt-instr').value.trim();
   var source = document.getElementById('pt-source').value;
   var buy    = parseFloat(document.getElementById('pt-buy').value);
-  var qty    = parseInt(document.getElementById('pt-qty').value)||75;
+  var qty    = parseInt(document.getElementById('pt-qty').value)||65;
   var target = parseFloat(document.getElementById('pt-target').value)||0;
   var sl     = parseFloat(document.getElementById('pt-sl').value)||0;
   var msg    = document.getElementById('pt-add-msg');
@@ -14564,7 +14578,7 @@ function ptAddTrade() {
   setTimeout(function(){ msg.style.display='none'; }, 3000);
   // Clear form
   ['pt-instr','pt-buy','pt-target','pt-sl'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  document.getElementById('pt-qty').value='75';
+  document.getElementById('pt-qty').value='65';// NIFTY lot size, revised 75→65 effective Jan 2026
   ptRefreshUI();
 }
 
@@ -15352,7 +15366,7 @@ function aseEvaluatePcrEmaVix() {
   var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain
   var sl     = Math.round(chainLtp * 0.70 / 5) * 5; // -30% premium loss
   var instr  = 'NIFTY ' + strike + sideToTrade + ' ' + getNiftyExpiry();
-  var lotQty = 75; // NIFTY lot size
+  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025 per NSE/SEBI circular)
 
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
@@ -15443,7 +15457,7 @@ async function aseEvaluateTrendline() {
   var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain, same convention as the other strategy
   var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
   var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
-  var lotQty = 75;
+  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
@@ -15556,7 +15570,7 @@ async function aseEvaluateTrendlineConfirmed() {
   var target = Math.round(chainLtp * 1.40 / 5) * 5;
   var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
   var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
-  var lotQty = 75;
+  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
   var confirmReason = pcrAgrees && emaAgrees ? 'PCR+EMA both agree' : pcrAgrees ? 'PCR agrees' : 'EMA agrees';
 
   var res = ptAddAutoTrade({
@@ -17622,7 +17636,7 @@ window.fo2BuildCall = window.fo2BuildCall || function(indexLabel) {
   var target3  = Math.round(premium * 2.80 / 5) * 5;
   var sl       = Math.round(premium * 0.55 / 5) * 5;
 
-  var lotQty = indexLabel==='BANK NIFTY' ? 35 : indexLabel==='SENSEX' ? 20 : 75;
+  var lotQty = indexLabel==='BANK NIFTY' ? 30 : indexLabel==='SENSEX' ? 20 : 65;
   var grossTgt = (target1 - entry_lo) * lotQty;
   var grossSL  = (entry_lo - sl) * lotQty;
   var rr = grossSL > 0 ? '1:' + (grossTgt/grossSL).toFixed(1) : '1:2';
