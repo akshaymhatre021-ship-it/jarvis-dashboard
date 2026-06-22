@@ -14042,36 +14042,74 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   var inTrade = false;
   var entry = 0, entryDate = '', entryIdx = 0;
   var posSize = capital * posPct;
+  // Trendline-specific state: tracks the option side and BS-priced premium
+  var optType = null, entryPremium = 0, strike = 0, lotQty = 75;
+
+  // Backtest IV assumption: Angel One has no historical option-premium or
+  // historical-VIX API at all (confirmed — only equity/index/futures
+  // candles are offered), so a per-bar real IV isn't available for past
+  // dates. We use a fixed, reasonable IV instead and price every premium
+  // with the same bsPrice() Black-Scholes function the live option chain
+  // uses — a calculated/theoretical price, not an actual traded premium.
+  var BT_ASSUMED_IV = 0.14; // ~14%, a typical calm-market Nifty IV
+  var BT_ASSUMED_DTE_DAYS = 3; // average days-to-weekly-expiry across a random entry
+  var BT_RISK_FREE = 0.07;
 
   for (var i=14; i<closes.length-1; i++) {
     var signal = btComputeSignal(closes, i, strategy, data);
-    if (!inTrade && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
-      inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
+
+    if (!inTrade) {
+      var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
+      var wantPE = (signalType==='all'||signalType==='sell'||signalType==='put');
+      if (strategy === 'trendline' && ((signal==='BUY_CE' && wantCE) || (signal==='BUY_PE' && wantPE))) {
+        inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
+        optType = signal === 'BUY_CE' ? 'CE' : 'PE';
+        strike = Math.round(entry/50)*50; // ATM, Nifty 50-pt strikes
+        var T = BT_ASSUMED_DTE_DAYS/365;
+        entryPremium = bsPrice(entry, strike, T, BT_RISK_FREE, BT_ASSUMED_IV, optType.toLowerCase()).price;
+      } else if (strategy !== 'trendline' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
+        inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i; optType = null;
+      }
     } else if (inTrade) {
-      var pnlPct = (closes[i]-entry)/entry;
       var exitReason = '';
+      var pnlPct;
+
       if (strategy === 'trendline') {
-        // Mirrors the live Auto Signal Engine's option-premium convention
-        // (+40%/-30%) rather than the other strategies' index-point %
-        // thresholds. Approximated here via a delta-style multiplier since
-        // this backtest trades the index directly, not actual premiums —
-        // a ~0.12 multiplier roughly maps typical ATM option delta/gamma
-        // sensitivity early in a move, so a 0.12% index move ≈ a real
-        // option's smaller absolute premium swing scaled to a +40% gain.
-        var premiumMultiplier = 3.3;
-        if (pnlPct * premiumMultiplier >= 0.40) { exitReason = 'TARGET HIT'; }
-        else if (pnlPct * premiumMultiplier <= -0.30) { exitReason = 'STOP LOSS HIT'; }
-        else if (i - entryIdx >= 24) { exitReason = 'TIME EXIT'; } // 24 bars = 2hrs on 5-min bars
+        // Re-price the same option at the CURRENT bar's spot (strike and
+        // expiry fixed at entry, only spot/time-decay move) — this is
+        // what makes the premium move "real" Black-Scholes behavior
+        // (delta + theta decay) rather than a flat multiplier on the
+        // index's % move.
+        var daysElapsed = (i - entryIdx) * (5/60/24); // 5-min bars -> fraction of a day
+        var TT = Math.max((BT_ASSUMED_DTE_DAYS - daysElapsed)/365, 0.0005);
+        var curPremium = bsPrice(closes[i], strike, TT, BT_RISK_FREE, BT_ASSUMED_IV, optType.toLowerCase()).price;
+        pnlPct = (curPremium - entryPremium) / entryPremium;
+        if (pnlPct >= 0.40) { exitReason = 'TARGET HIT'; }
+        else if (pnlPct <= -0.30) { exitReason = 'STOP LOSS HIT'; }
+        else if (i - entryIdx >= 24) { exitReason = 'TIME EXIT'; } // 24 bars = 2hrs on 5-min bars, hasn't hit either threshold yet
+        if (exitReason) {
+          var gross = posSize * pnlPct;
+          var net   = gross - Math.round(posSize*0.001);
+          trades.push({
+            num:trades.length+1, entryDate:entryDate, exitDate:data[i].date,
+            optType: optType, strike: strike,
+            entry:entryPremium, exit:curPremium, // premium, not index level
+            indexEntry: entry, indexExit: closes[i],
+            posSize:posSize, gross:gross, net:net, pnlPct:(pnlPct*100).toFixed(2), result:exitReason
+          });
+          inTrade = false;
+        }
       } else {
+        pnlPct = (closes[i]-entry)/entry;
         if (pnlPct >= 0.065) { exitReason = 'TARGET HIT'; }
         else if (pnlPct <= -0.035) { exitReason = 'STOP LOSS HIT'; }
         else if (i - entryIdx >= 10) { exitReason = 'TIME EXIT'; }
-      }
-      if (exitReason) {
-        var gross = posSize * pnlPct;
-        var net   = gross - Math.round(posSize*0.001);
-        trades.push({ num:trades.length+1, entryDate:entryDate, exitDate:data[i].date, entry:entry, exit:closes[i], posSize:posSize, gross:gross, net:net, pnlPct:(pnlPct*100).toFixed(2), result:exitReason });
-        inTrade = false;
+        if (exitReason) {
+          var gross2 = posSize * pnlPct;
+          var net2   = gross2 - Math.round(posSize*0.001);
+          trades.push({ num:trades.length+1, entryDate:entryDate, exitDate:data[i].date, optType:null, entry:entry, exit:closes[i], posSize:posSize, gross:gross2, net:net2, pnlPct:(pnlPct*100).toFixed(2), result:exitReason });
+          inTrade = false;
+        }
       }
     }
   }
@@ -14101,15 +14139,13 @@ function btComputeSignal(closes, i, strategy, fullData) {
     if (closes[i] > hi * 1.005) return 'BUY';
   } else if (strategy==='trendline') {
     // Same pivot+ATR trendline logic as the live Auto Signal Engine's
-    // trendline strategy, applied to this backtest's OHLC bars. Only
-    // the BUY/CE side is mapped here since this backtest's trade loop
-    // is long-only (entry on 'BUY', no separate short/PE handling) —
-    // a down-trendline PE break would need the engine's short-side
-    // P&L logic, which this simplified backtest doesn't have.
+    // trendline strategy, applied to this backtest's OHLC bars.
+    // Returns BUY_CE / BUY_PE (not just BUY) so the trade loop below
+    // can track which side fired and price a real CE/PE premium for it.
     if (!fullData || i < TL_LOOKBACK*2+3) return 'HOLD';
     var candles = fullData.slice(0, i+1).map(function(d){ return { high:d.high, low:d.low, close:d.close }; });
     var breakout = checkTrendlineBreakout(candles.slice(0,-1), closes[i-1], closes[i]);
-    if (breakout && breakout.type === 'CE') return 'BUY';
+    if (breakout) return breakout.type === 'CE' ? 'BUY_CE' : 'BUY_PE';
   }
   return 'HOLD';
 }
@@ -14289,16 +14325,22 @@ function btRenderTradeLog(trades) {
   var tbody = document.getElementById('bt-trade-log');
   if (!tbody) return;
   if (!trades.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No signals generated in this period. Try a longer lookback or different strategy.</td></tr>'; return; }
-  tbody.innerHTML = trades.map(function(t){
+  var hasOptions = trades.some(function(t){ return t.optType; });
+  tbody.innerHTML = (hasOptions ? '<tr><td colspan="8" style="padding:6px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--w);background:rgba(255,193,7,.06)">⚠ Premiums below are Black-Scholes CALCULATED estimates (fixed 14% IV, ~3 days to expiry assumed) — Angel One has no historical option-price API, so these are not actual traded prices. Index level shown alongside for reference.</td></tr>' : '') + trades.map(function(t){
     var pnlColor = t.net>=0?'var(--g)':'var(--r)';
     var resBg = t.result==='TARGET HIT'?'rgba(0,255,136,.12)':t.result==='STOP LOSS HIT'?'rgba(255,61,90,.12)':'rgba(255,204,0,.12)';
     var resColor = t.result==='TARGET HIT'?'var(--g)':t.result==='STOP LOSS HIT'?'var(--r)':'var(--w)';
+    var sideBadge = t.optType
+      ? '<span style="background:'+(t.optType==='CE'?'rgba(0,255,136,.1)':'rgba(255,61,90,.1)')+';border:1px solid '+(t.optType==='CE'?'rgba(0,255,136,.25)':'rgba(255,61,90,.25)')+';color:'+(t.optType==='CE'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY '+t.optType+' '+t.strike+'</span>'
+      : '<span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);color:var(--g);font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY</span>';
+    var entryCell = t.optType ? '₹'+t.entry.toFixed(2)+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexEntry).toLocaleString('en-IN')+'</div>' : '₹'+t.entry.toFixed(2);
+    var exitCell  = t.optType ? '₹'+t.exit.toFixed(2)+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexExit).toLocaleString('en-IN')+'</div>' : '₹'+t.exit.toFixed(2);
     return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
       +'<td style="padding:7px 10px;color:var(--dim)">'+t.num+'</td>'
       +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+t.entryDate+'</td>'
-      +'<td style="padding:7px 10px"><span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);color:var(--g);font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY</span></td>'
-      +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--a)">₹'+t.entry.toFixed(2)+'</td>'
-      +'<td style="padding:7px 10px;font-family:Share Tech Mono">₹'+t.exit.toFixed(2)+'</td>'
+      +'<td style="padding:7px 10px">'+sideBadge+'</td>'
+      +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--a)">'+entryCell+'</td>'
+      +'<td style="padding:7px 10px;font-family:Share Tech Mono">'+exitCell+'</td>'
       +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:'+pnlColor+'">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net).toLocaleString('en-IN')+'</td>'
       +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:'+pnlColor+'">'+(parseFloat(t.pnlPct)>=0?'+':'')+t.pnlPct+'%</td>'
       +'<td style="padding:7px 10px"><span style="background:'+resBg+';color:'+resColor+';font-size:8px;padding:2px 7px;border-radius:3px;font-family:Share Tech Mono">'+t.result+'</span></td>'
@@ -14338,9 +14380,17 @@ function btRenderVerdict(capital, trades, ticker, period, strategy) {
 // Backtest CSV Export
 function btExportCSV() {
   if (!BT_TRADES.length) { alert('No trades to export. Run a backtest first.'); return; }
-  var rows = [['#','Entry Date','Exit Date','Entry ₹','Exit ₹','Position Size ₹','Gross P&L','Net P&L','Return %','Result']];
+  var hasOptions = BT_TRADES.some(function(t){ return t.optType; });
+  var header = hasOptions
+    ? ['#','Entry Date','Exit Date','Side','Strike','Entry Premium ₹ (BS calc)','Exit Premium ₹ (BS calc)','Index @ Entry','Index @ Exit','Position Size ₹','Gross P&L','Net P&L','Return %','Result']
+    : ['#','Entry Date','Exit Date','Entry ₹','Exit ₹','Position Size ₹','Gross P&L','Net P&L','Return %','Result'];
+  var rows = [header];
   BT_TRADES.forEach(function(t){
-    rows.push([t.num,t.entryDate,t.exitDate,t.entry.toFixed(2),t.exit.toFixed(2),t.posSize.toFixed(0),t.gross.toFixed(0),t.net.toFixed(0),t.pnlPct,t.result]);
+    if (t.optType) {
+      rows.push([t.num,t.entryDate,t.exitDate,t.optType,t.strike,t.entry.toFixed(2),t.exit.toFixed(2),Math.round(t.indexEntry),Math.round(t.indexExit),t.posSize.toFixed(0),t.gross.toFixed(0),t.net.toFixed(0),t.pnlPct,t.result]);
+    } else {
+      rows.push([t.num,t.entryDate,t.exitDate,t.entry.toFixed(2),t.exit.toFixed(2),t.posSize.toFixed(0),t.gross.toFixed(0),t.net.toFixed(0),t.pnlPct,t.result]);
+    }
   });
   var csv = rows.map(function(r){return r.map(function(v){return '"'+v+'"';}).join(',');}).join('\n');
   var blob = new Blob([csv],{type:'text/csv'});
