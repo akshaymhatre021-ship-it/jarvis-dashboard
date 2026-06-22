@@ -5063,6 +5063,12 @@ function calcRSI(prices, period) {
 //  when the live close price breaks through that line.
 // ══════════════════════════════════════════════════════════════════
 var TL_LOOKBACK = 14; // bars each side required to confirm a pivot
+// Used only by the "trendline_confirmed" strategy (both live and
+// backtest) — requires the close to clear the trendline by this many
+// ATRs before counting as a real breakout, filtering out marginal
+// crosses that are more likely to immediately reverse. Tuned from real
+// backtest evidence: see checkTrendlineBreakout's comment for the data.
+var BT_CONFIRMED_MIN_STRENGTH_ATR = 0.20;
 
 // True Range / ATR from OHLC candles. candles: array of {high, low, close}
 function calcATRFromCandles(candles, period) {
@@ -5130,13 +5136,22 @@ function calcTrendlines(candles) {
 // side, now on the other) rather than just "is currently beyond the line",
 // matching the script's upos>upos[1] / dnos>dnos[1] edge-trigger behavior.
 // Returns { type:'CE'|'PE', slLevel:Number } or null.
-function checkTrendlineBreakout(candles, prevClose, liveClose) {
+// minStrengthATR: how far past the line the close must clear, expressed
+// as a multiple of ATR, before counting as a real breakout rather than a
+// marginal tick-over that's more likely to immediately reverse. Backtest
+// evidence (real Angel One 5-min data, 1-month NIFTY trendline_confirmed
+// run): 11 of 29 trades were fast, near-full stop-losses — consistent
+// with weak/marginal crosses that snap back rather than follow through.
+// Default 0 preserves old behavior (any cross counts); pass e.g. 0.15
+// to require the close clears the line by 15% of one ATR.
+function checkTrendlineBreakout(candles, prevClose, liveClose, minStrengthATR) {
   var tl = calcTrendlines(candles);
   if (!tl) return null;
-  if (tl.upperNow != null && prevClose <= tl.upperNow && liveClose > tl.upperNow) {
+  var minMargin = (minStrengthATR || 0) * (tl.atr || 0);
+  if (tl.upperNow != null && prevClose <= tl.upperNow && liveClose > tl.upperNow + minMargin) {
     return { type: 'CE', slLevel: tl.upperNow, line: 'up-break (blue)' };
   }
-  if (tl.lowerNow != null && prevClose >= tl.lowerNow && liveClose < tl.lowerNow) {
+  if (tl.lowerNow != null && prevClose >= tl.lowerNow && liveClose < tl.lowerNow - minMargin) {
     return { type: 'PE', slLevel: tl.lowerNow, line: 'down-break (red)' };
   }
   return null;
@@ -14087,12 +14102,23 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   // Backtest IV assumption: Angel One has no historical option-premium or
   // historical-VIX API at all (confirmed — only equity/index/futures
   // candles are offered), so a per-bar real IV isn't available for past
-  // dates. We use a fixed, reasonable IV instead and price every premium
-  // with the same bsPrice() Black-Scholes function the live option chain
-  // uses — a calculated/theoretical price, not an actual traded premium.
-  var BT_ASSUMED_IV = 0.14; // ~14%, a typical calm-market Nifty IV
-  var BT_ASSUMED_DTE_DAYS = 3; // average days-to-weekly-expiry across a random entry
-  var BT_RISK_FREE = 0.07;
+  // dates. We use the SAME skewed-IV Black-Scholes model getChainPrice()
+  // uses for the live option chain (moneyness-based IV skew, PE bump),
+  // just parameterized for a backtest's spot/strike instead of today's
+  // live LD/OC_STATE — so live trading and backtest pricing now share
+  // one consistent pricing model instead of two different approximations.
+  var BT_BASE_IV = 0.14; // ~14%, a typical calm-market Nifty IV (live VIX history isn't available either)
+  var BT_DTE_DAYS = 3; // average days-to-weekly-expiry across a random entry
+  var BT_RISK_FREE = 0.065; // matches getChainPrice's r
+
+  function btOptionPrice(spot, strike, daysToExpiry, type) {
+    var T = Math.max(daysToExpiry/365, 0.0005);
+    var moneyness = Math.abs(strike - spot)/spot;
+    var skewFactor = 8.0; // NIFTY skew, same constant getChainPrice uses
+    var iv = BT_BASE_IV * (1 + moneyness * skewFactor) * (strike < spot && type==='pe' ? 1.03 : 1.0);
+    iv = Math.max(iv, 0.08);
+    return bsPrice(spot, strike, T, BT_RISK_FREE, iv, type).price;
+  }
 
   for (var i=14; i<closes.length-1; i++) {
     var signal = btComputeSignal(closes, i, strategy, data);
@@ -14104,8 +14130,7 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
         optType = signal === 'BUY_CE' ? 'CE' : 'PE';
         strike = Math.round(entry/50)*50; // ATM, Nifty 50-pt strikes
-        var T = BT_ASSUMED_DTE_DAYS/365;
-        entryPremium = bsPrice(entry, strike, T, BT_RISK_FREE, BT_ASSUMED_IV, optType.toLowerCase()).price;
+        entryPremium = btOptionPrice(entry, strike, BT_DTE_DAYS, optType.toLowerCase());
       } else if (strategy !== 'trendline' && strategy !== 'trendline_confirmed' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i; optType = null;
       }
@@ -14120,11 +14145,17 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         // (delta + theta decay) rather than a flat multiplier on the
         // index's % move.
         var daysElapsed = (i - entryIdx) * (5/60/24); // 5-min bars -> fraction of a day
-        var TT = Math.max((BT_ASSUMED_DTE_DAYS - daysElapsed)/365, 0.0005);
-        var curPremium = bsPrice(closes[i], strike, TT, BT_RISK_FREE, BT_ASSUMED_IV, optType.toLowerCase()).price;
+        var curPremium = btOptionPrice(closes[i], strike, BT_DTE_DAYS - daysElapsed, optType.toLowerCase());
         pnlPct = (curPremium - entryPremium) / entryPremium;
+        // SL tightened to -15% for trendline_confirmed specifically, based
+        // on real 1-month NIFTY 5-min backtest evidence: 11/29 trades were
+        // fast, near-full -30%+ losses (false breakouts snapping back
+        // immediately) — letting those run to -30% before cutting them
+        // cost far more than it needed to. Plain 'trendline' keeps the
+        // original -30% as an unmodified baseline for comparison.
+        var slThreshold = (strategy === 'trendline_confirmed') ? -0.15 : -0.30;
         if (pnlPct >= 0.40) { exitReason = 'TARGET HIT'; }
-        else if (pnlPct <= -0.30) { exitReason = 'STOP LOSS HIT'; }
+        else if (pnlPct <= slThreshold) { exitReason = 'STOP LOSS HIT'; }
         else if (i - entryIdx >= 24) { exitReason = 'TIME EXIT'; } // 24 bars = 2hrs on 5-min bars, hasn't hit either threshold yet
         if (exitReason) {
           var gross = posSize * pnlPct;
@@ -14196,7 +14227,7 @@ function btComputeSignal(closes, i, strategy, fullData) {
     // identical to it — useful signal, not a perfect match.
     if (!fullData || i < TL_LOOKBACK*2+3) return 'HOLD';
     var candles2 = fullData.slice(0, i+1).map(function(d){ return { high:d.high, low:d.low, close:d.close }; });
-    var breakout2 = checkTrendlineBreakout(candles2.slice(0,-1), closes[i-1], closes[i]);
+    var breakout2 = checkTrendlineBreakout(candles2.slice(0,-1), closes[i-1], closes[i], BT_CONFIRMED_MIN_STRENGTH_ATR);
     if (breakout2) {
       var aboveEma = ema21 != null && closes[i] > ema21;
       var emaAgrees = breakout2.type === 'CE' ? aboveEma : !aboveEma;
@@ -15481,7 +15512,7 @@ async function aseEvaluateTrendlineConfirmed() {
 
   var prevClose = candles[candles.length - 2].close;
   var liveClose = candles[candles.length - 1].close;
-  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose);
+  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
 
   if (!breakout) {
     ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
@@ -15520,7 +15551,8 @@ async function aseEvaluateTrendlineConfirmed() {
   }
 
   var idxMoveAtEntry = Math.abs(ni.ltp - breakout.slLevel);
-  var slPct = Math.min(0.6, Math.max(0.15, idxMoveAtEntry / ni.ltp * 8));
+  // Tightened to 8-15% clamp for trendline_confirmed (was 15-60%) based on real backtest evidence that fast false-breakout losses were running close to the old -30-60% range unnecessarily.
+  var slPct = Math.min(0.15, Math.max(0.08, idxMoveAtEntry / ni.ltp * 8));
   var target = Math.round(chainLtp * 1.40 / 5) * 5;
   var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
   var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
