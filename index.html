@@ -3018,6 +3018,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="macd">MACD Momentum</option>
             <option value="breakout">Volume Breakout</option>
             <option value="trendline">Trendline Breakout (pivot+ATR)</option>
+            <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
           </select>
         </div>
         <div>
@@ -3189,6 +3190,7 @@ setTimeout(nd2SyncAll, 2000);
         <select id="ase-strategy" onchange="aseSetStrategy(this.value)" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
           <option value="pcr_ema_vix">PCR + EMA21 + VIX</option>
           <option value="trendline">Trendline Breakout (5-min)</option>
+          <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
         </select>
       </div>
 
@@ -3240,6 +3242,38 @@ setTimeout(nd2SyncAll, 2000);
         </div>
       </div>
 
+      <!-- Live condition readout: Trendline + PCR/EMA Confirmation strategy -->
+      <div id="ase-readout-confirmed" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">UP-TRENDLINE</div>
+          <div id="ase-cf-upper" style="font-family:Orbitron;font-size:13px;color:#00d4ff">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">DOWN-TRENDLINE</div>
+          <div id="ase-cf-lower" style="font-family:Orbitron;font-size:13px;color:var(--r)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">PCR</div>
+          <div id="ase-cf-pcr" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">NIFTY vs EMA21</div>
+          <div id="ase-cf-ema" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">BREAKOUT</div>
+          <div id="ase-cf-breakout" style="font-family:Orbitron;font-size:12px;color:var(--dim)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">CONFIRMED?</div>
+          <div id="ase-cf-confirm" style="font-family:Orbitron;font-size:12px;color:var(--dim)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-cf-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+
       <!-- Rules reference -->
       <div id="ase-rules-pcr" style="background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
         <div style="color:#a064ff;margin-bottom:4px">BUY CE: PCR&gt;1.2 · Price&gt;EMA21 · VIX&lt;15 · 9:20–10:30 or 13:30–14:30 · ATM/1-OTM · TGT +40% / SL -30%</div>
@@ -3250,6 +3284,11 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:#00d4ff;margin-bottom:4px">BUY CE: 5-min close crosses ABOVE the up-trendline (pivot-high based, 14-bar lookback, ATR slope decay) · SL = trendline level at cross · TGT +40% premium</div>
         <div style="color:var(--r);margin-bottom:4px">BUY PE: 5-min close crosses BELOW the down-trendline (pivot-low based) · SL = trendline level at cross · TGT +40% premium</div>
         <div style="color:var(--dim)">Trendline recalculates every 5-min candle close. Requires Angel One historical candle access (needs broker login).</div>
+      </div>
+      <div id="ase-rules-confirmed" style="display:none;background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:#00d4ff;margin-bottom:4px">BUY CE: Trendline up-break AND (PCR&gt;1.0 OR price&gt;EMA21) — breakout must agree with at least one bullish confirmation</div>
+        <div style="color:var(--r);margin-bottom:4px">BUY PE: Trendline down-break AND (PCR&lt;1.0 OR price&lt;EMA21) — breakout must agree with at least one bearish confirmation</div>
+        <div style="color:var(--dim)">Trendline breaks WITHOUT confirmation are logged but skipped (no trade) — this is the filter meant to cut false breakouts and raise win rate vs. trendline-alone.</div>
       </div>
 
       <!-- Live trendline chart -->
@@ -13881,7 +13920,7 @@ function runBacktest() {
 
     var periodLabels = {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'};
     var pl = document.getElementById('bt-period-label');
-    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : (strategy === 'trendline' ? ' · synthetic data (no broker connection)' : '');
+    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed') ? ' · synthetic data (no broker connection)' : '');
     if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy) + dataSourceTag;
 
     btRenderKPIs(capital, trades);
@@ -13904,7 +13943,7 @@ function runBacktest() {
   // data — it needs Angel One's actual 5-min candles to mean anything
   // (comparing against a live TradingView chart). Every other strategy
   // here still runs on synthetic daily data, same as before.
-  if (strategy === 'trendline' && ticker === 'NIFTY') {
+  if ((strategy === 'trendline' || strategy === 'trendline_confirmed') && ticker === 'NIFTY') {
     var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
     var connected = typeof creds !== 'undefined' && creds.jwt && creds.connected;
     if (!tm || !connected) {
@@ -13945,8 +13984,8 @@ function runBacktest() {
   }
 
   setTimeout(function(){
-    var data = (strategy === 'trendline') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
-    finish(data, false, strategy === 'trendline' ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
+    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
+    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
   }, 2800);
 }
 
@@ -14061,20 +14100,20 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
     if (!inTrade) {
       var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
       var wantPE = (signalType==='all'||signalType==='sell'||signalType==='put');
-      if (strategy === 'trendline' && ((signal==='BUY_CE' && wantCE) || (signal==='BUY_PE' && wantPE))) {
+      if ((strategy === 'trendline' || strategy === 'trendline_confirmed') && ((signal==='BUY_CE' && wantCE) || (signal==='BUY_PE' && wantPE))) {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
         optType = signal === 'BUY_CE' ? 'CE' : 'PE';
         strike = Math.round(entry/50)*50; // ATM, Nifty 50-pt strikes
         var T = BT_ASSUMED_DTE_DAYS/365;
         entryPremium = bsPrice(entry, strike, T, BT_RISK_FREE, BT_ASSUMED_IV, optType.toLowerCase()).price;
-      } else if (strategy !== 'trendline' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
+      } else if (strategy !== 'trendline' && strategy !== 'trendline_confirmed' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i; optType = null;
       }
     } else if (inTrade) {
       var exitReason = '';
       var pnlPct;
 
-      if (strategy === 'trendline') {
+      if (strategy === 'trendline' || strategy === 'trendline_confirmed') {
         // Re-price the same option at the CURRENT bar's spot (strike and
         // expiry fixed at entry, only spot/time-decay move) — this is
         // what makes the premium move "real" Black-Scholes behavior
@@ -14146,6 +14185,23 @@ function btComputeSignal(closes, i, strategy, fullData) {
     var candles = fullData.slice(0, i+1).map(function(d){ return { high:d.high, low:d.low, close:d.close }; });
     var breakout = checkTrendlineBreakout(candles.slice(0,-1), closes[i-1], closes[i]);
     if (breakout) return breakout.type === 'CE' ? 'BUY_CE' : 'BUY_PE';
+  } else if (strategy==='trendline_confirmed') {
+    // Same breakout detection as 'trendline', but only fires if EMA21
+    // also agrees with the direction. NOTE: the live engine's confirmed
+    // strategy checks PCR OR EMA — PCR can't be replicated here since
+    // Angel One has no historical option-chain/PCR data at all (same
+    // gap as historical option premiums). This backtest only has EMA
+    // available as a real, computable confirmation signal, so results
+    // here are a partial test of the live strategy's logic, not
+    // identical to it — useful signal, not a perfect match.
+    if (!fullData || i < TL_LOOKBACK*2+3) return 'HOLD';
+    var candles2 = fullData.slice(0, i+1).map(function(d){ return { high:d.high, low:d.low, close:d.close }; });
+    var breakout2 = checkTrendlineBreakout(candles2.slice(0,-1), closes[i-1], closes[i]);
+    if (breakout2) {
+      var aboveEma = ema21 != null && closes[i] > ema21;
+      var emaAgrees = breakout2.type === 'CE' ? aboveEma : !aboveEma;
+      if (emaAgrees) return breakout2.type === 'CE' ? 'BUY_CE' : 'BUY_PE';
+    }
   }
   return 'HOLD';
 }
@@ -15059,21 +15115,28 @@ function aseLoadState() {
 }
 
 function aseSetStrategy(val) {
-  ASE_STRATEGY = (val === 'trendline') ? 'trendline' : 'pcr_ema_vix';
+  var valid = ['pcr_ema_vix', 'trendline', 'trendline_confirmed'];
+  ASE_STRATEGY = valid.indexOf(val) !== -1 ? val : 'pcr_ema_vix';
   try { localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY); } catch(e) {}
   ASE_LAST_LOGGED_KEY = null; // reset de-dupe when switching strategies
   aseApplyStrategyUI();
-  aseLog('Strategy switched to: ' + (ASE_STRATEGY === 'trendline' ? 'Trendline Breakout (5-min)' : 'PCR + EMA21 + VIX'));
+  var labels = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation' };
+  aseLog('Strategy switched to: ' + labels[ASE_STRATEGY]);
 }
 
 function aseApplyStrategyUI() {
-  var isTl = ASE_STRATEGY === 'trendline';
-  var rp = document.getElementById('ase-readout-pcr'), rt = document.getElementById('ase-readout-trendline');
-  var ruP = document.getElementById('ase-rules-pcr'), ruT = document.getElementById('ase-rules-trendline');
-  if (rp) rp.style.display = isTl ? 'none' : 'grid';
-  if (rt) rt.style.display = isTl ? 'grid' : 'none';
-  if (ruP) ruP.style.display = isTl ? 'none' : 'block';
-  if (ruT) ruT.style.display = isTl ? 'block' : 'none';
+  var panels = {
+    pcr_ema_vix:          { readout: 'ase-readout-pcr',        rules: 'ase-rules-pcr' },
+    trendline:            { readout: 'ase-readout-trendline',  rules: 'ase-rules-trendline' },
+    trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' }
+  };
+  Object.keys(panels).forEach(function(key){
+    var isActive = (ASE_STRATEGY === key);
+    var readoutEl = document.getElementById(panels[key].readout);
+    var rulesEl = document.getElementById(panels[key].rules);
+    if (readoutEl) readoutEl.style.display = isActive ? 'grid' : 'none';
+    if (rulesEl) rulesEl.style.display = isActive ? 'block' : 'none';
+  });
 }
 
 function aseToggle() {
@@ -15159,6 +15222,10 @@ function aseEvaluate() {
 
     if (ASE_STRATEGY === 'trendline') {
       try { await aseEvaluateTrendline(); } catch(e) { console.warn('[AutoSignalEngine trendline]', e); }
+      return;
+    }
+    if (ASE_STRATEGY === 'trendline_confirmed') {
+      try { await aseEvaluateTrendlineConfirmed(); } catch(e) { console.warn('[AutoSignalEngine confirmed]', e); }
       return;
     }
     aseEvaluatePcrEmaVix();
@@ -15359,6 +15426,119 @@ async function aseEvaluateTrendline() {
     aseLog('✅ Trendline auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+breakout.line);
   } else if (res && res.error) {
     aseLog('⚠ Trendline breakout found but could not log: ' + res.error);
+  }
+}
+
+// ── TRENDLINE + PCR/EMA CONFIRMATION STRATEGY ──
+// Same trendline breakout detection as the strategy above, but a break
+// only becomes a trade if PCR or EMA21 also agrees with the direction.
+// This is the filter requested specifically to try to push win rate
+// above 50% by cutting weaker/false breakouts that the trendline-alone
+// strategy would otherwise take. Confirmation is OR (PCR agrees OR
+// EMA agrees), not AND — requiring both at once would likely cut signal
+// frequency too far to get a statistically meaningful trade count.
+// Whether this OR threshold is the right strictness is exactly what the
+// backtest is for — it is not guaranteed to clear 50% just because the
+// logic sounds reasonable; only real results confirm that.
+var ASE_CF_LAST_CANDLE_TIME = null;
+
+async function aseEvaluateTrendlineConfirmed() {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  var pcr = (typeof OC_STATE !== 'undefined' && OC_STATE.pcr) ? OC_STATE.pcr : null;
+  if (!ni || !ni.ltp) { ptSet2('ase-cf-verdict', 'WAITING DATA', 'var(--w)'); return; }
+
+  if (!ASE_ON) { ptSet2('ase-cf-verdict', 'OFF', 'var(--dim)'); return; }
+
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    ptSet2('ase-cf-verdict', 'NEED BROKER LOGIN', 'var(--w)');
+    aseLog('Confirmed strategy needs Angel One login for 5-min candle history — connect via SETUP.');
+    return;
+  }
+
+  var candles = ASE_LAST_CANDLES;
+  if (!candles || candles.length < TL_LOOKBACK * 2 + 3) {
+    ptSet2('ase-cf-verdict', 'BUILDING CANDLES', 'var(--w)');
+    return;
+  }
+
+  var tl = calcTrendlines(candles.slice(0, -1));
+  ptSet2('ase-cf-upper', tl && tl.upperNow != null ? fN(tl.upperNow, 1) : '—');
+  ptSet2('ase-cf-lower', tl && tl.lowerNow != null ? fN(tl.lowerNow, 1) : '—');
+  ptSet2('ase-cf-pcr', pcr != null ? pcr.toFixed(2) : '—');
+
+  var emaTxt = '—', aboveEma = null;
+  if (typeof SIGNAL_PRICES !== 'undefined' && SIGNAL_PRICES.length >= 22) {
+    var ema21v = calcEMA(SIGNAL_PRICES, 21);
+    if (ema21v) { aboveEma = ni.ltp > ema21v; emaTxt = aboveEma ? 'ABOVE' : 'BELOW'; }
+  }
+  ptSet2('ase-cf-ema', emaTxt);
+
+  var latestCandleTime = candles[candles.length - 1].time;
+  if (ASE_CF_LAST_CANDLE_TIME === latestCandleTime) {
+    ptSet2('ase-cf-verdict', 'NO NEW CANDLE', 'var(--dim)');
+    return;
+  }
+
+  var prevClose = candles[candles.length - 2].close;
+  var liveClose = candles[candles.length - 1].close;
+  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose);
+
+  if (!breakout) {
+    ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-cf-breakout', 'none', 'var(--dim)');
+    ptSet2('ase-cf-confirm', '—', 'var(--dim)');
+    ptSet2('ase-cf-verdict', 'NO BREAKOUT', 'var(--dim)');
+    return;
+  }
+
+  ptSet2('ase-cf-breakout', breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  // Confirmation check: PCR agrees OR EMA agrees with the breakout direction.
+  var pcrAgrees = breakout.type === 'CE' ? (pcr != null && pcr > 1.0) : (pcr != null && pcr < 1.0);
+  var emaAgrees = breakout.type === 'CE' ? (aboveEma === true) : (aboveEma === false);
+  var confirmed = pcrAgrees || emaAgrees;
+  ptSet2('ase-cf-confirm', confirmed ? 'YES' : 'NO', confirmed ? 'var(--g)' : 'var(--r)');
+
+  if (!confirmed) {
+    ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-cf-verdict', breakout.type + ' BREAK, NO CONFIRM', 'var(--w)');
+    aseLog('Trendline ' + breakout.line + ' fired but NOT confirmed (PCR ' + (pcr!=null?pcr.toFixed(2):'—') + ', EMA ' + emaTxt + ') — skipped.');
+    return;
+  }
+
+  ptSet2('ase-cf-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var dedupeKey = 'CF_' + latestCandleTime + '_' + breakout.type;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+
+  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
+  if (!chainLtp || chainLtp <= 0) {
+    ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
+    aseLog('Confirmed breakout found ('+breakout.type+') but no chain price available — skipped.');
+    return;
+  }
+
+  var idxMoveAtEntry = Math.abs(ni.ltp - breakout.slLevel);
+  var slPct = Math.min(0.6, Math.max(0.15, idxMoveAtEntry / ni.ltp * 8));
+  var target = Math.round(chainLtp * 1.40 / 5) * 5;
+  var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
+  var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
+  var lotQty = 75;
+  var confirmReason = pcrAgrees && emaAgrees ? 'PCR+EMA both agree' : pcrAgrees ? 'PCR agrees' : 'EMA agrees';
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    signalType: 'BUY ' + breakout.type, pcr: pcr,
+    reasons: 'Trendline ' + breakout.line + ' CONFIRMED (' + confirmReason + ') · SL line @ ' + fN(breakout.slLevel,1)
+  });
+
+  ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY = dedupeKey;
+    aseLog('✅ Confirmed auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+confirmReason);
+  } else if (res && res.error) {
+    aseLog('⚠ Confirmed breakout found but could not log: ' + res.error);
   }
 }
 
