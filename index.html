@@ -14285,8 +14285,14 @@ function btNiftyBenchmark(capital, days) {
 }
 
 function btRenderKPIs(capital, trades) {
-  var wins   = trades.filter(function(t){return t.result==='TARGET HIT';}).length;
-  var losses = trades.filter(function(t){return t.result==='STOP LOSS HIT';}).length;
+  // Win/loss is determined by actual P&L sign, not by exit-reason label.
+  // A trade that exits via TIME EXIT but closed profitable is a real win
+  // (and one that exits via TIME EXIT at a loss is a real loss) — only
+  // counting TARGET HIT / STOP LOSS HIT was undercounting both sides
+  // whenever a trade timed out instead of cleanly hitting either
+  // threshold, which understated the true win rate.
+  var wins   = trades.filter(function(t){return t.net > 0;}).length;
+  var losses = trades.filter(function(t){return t.net <= 0;}).length;
   var closed = trades.filter(function(t){return t.result!=='OPEN';});
   var totalPnl = trades.reduce(function(a,t){return a+t.net;},0);
   var finalVal = capital + totalPnl;
@@ -14374,14 +14380,16 @@ function btDrawChart(equity, nifty, days) {
 function btRenderWinLoss(trades) {
   var wins   = trades.filter(function(t){return t.result==='TARGET HIT';});
   var losses = trades.filter(function(t){return t.result==='STOP LOSS HIT';});
-  var timeEx = trades.filter(function(t){return t.result==='TIME EXIT';});
+  var timeExWin = trades.filter(function(t){return t.result==='TIME EXIT' && t.net > 0;});
+  var timeExLoss = trades.filter(function(t){return t.result==='TIME EXIT' && t.net <= 0;});
   var el = document.getElementById('bt-winloss');
   if (!el) return;
   var total = trades.length || 1;
   el.innerHTML = [
     ['TARGET HIT', wins.length, 'var(--g)'],
     ['STOP LOSS', losses.length, 'var(--r)'],
-    ['TIME EXIT', timeEx.length, 'var(--w)']
+    ['TIME EXIT (profit)', timeExWin.length, 'var(--g)'],
+    ['TIME EXIT (loss)', timeExLoss.length, 'var(--r)']
   ].map(function(r){
     var pct = Math.round(r[1]/total*100);
     return '<div style="margin-bottom:8px">'
@@ -14404,7 +14412,7 @@ function btRenderMonthly(trades) {
     if (!months[m]) months[m] = {pnl:0, count:0, wins:0};
     months[m].pnl += t.net;
     months[m].count++;
-    if (t.result==='TARGET HIT') months[m].wins++;
+    if (t.net > 0) months[m].wins++;
   });
   if (!Object.keys(months).length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No trades to summarise</div>'; return; }
   el.innerHTML = Object.keys(months).map(function(m){
@@ -14448,7 +14456,7 @@ function btRenderTradeLog(trades) {
 function btRenderVerdict(capital, trades, ticker, period, strategy, usedRealData) {
   var el = document.getElementById('bt-verdict');
   if (!el) return;
-  var wins = trades.filter(function(t){return t.result==='TARGET HIT';}).length;
+  var wins = trades.filter(function(t){return t.net > 0;}).length;
   var total = trades.length;
   var totalPnl = trades.reduce(function(a,t){return a+t.net;},0);
   var winRate = total ? Math.round(wins/total*100) : 0;
