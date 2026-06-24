@@ -15612,7 +15612,23 @@ if (_origFetchAllForASE) {
   };
 }
 // Also poll independently every 30s as a fallback in case fetchAll isn't firing
-setInterval(function(){ try { aseEvaluate(); } catch(e) {} }, 30000);
+var ASE_HEARTBEAT_COUNT = 0;
+setInterval(function(){
+  ASE_HEARTBEAT_COUNT++;
+  try {
+    aseEvaluate();
+  } catch(e) {
+    console.error('[AutoSignalEngine] interval call threw:', e);
+    try { aseLog('⚠ Engine error: ' + e.message); } catch(e2) {}
+  }
+}, 30000);
+// Visible confirmation the interval itself is alive, independent of
+// whether aseEvaluate succeeds — if this never appears in the on-screen
+// log, the interval itself never registered (likely a script error
+// earlier in this block prevented execution from reaching this line).
+setTimeout(function(){
+  try { aseLog('Engine heartbeat active — auto-checking every 30s.'); } catch(e) {}
+}, 2000);
 
 setTimeout(function(){ try { aseLoadState(); } catch(e) {} }, 500);
 
