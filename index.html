@@ -3019,6 +3019,8 @@ setTimeout(nd2SyncAll, 2000);
             <option value="breakout">Volume Breakout</option>
             <option value="trendline">Trendline Breakout (pivot+ATR)</option>
             <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
+            <option value="quality_breakout">Quality Breakout (ADX + Follow-Through)</option>
+            <option value="nifty_pro_v15">Nifty Pro V1.5 (EMA+VWAP+RSI+HTF)</option>
           </select>
         </div>
         <div>
@@ -3191,6 +3193,8 @@ setTimeout(nd2SyncAll, 2000);
           <option value="pcr_ema_vix">PCR + EMA21 + VIX</option>
           <option value="trendline">Trendline Breakout (5-min)</option>
           <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
+          <option value="quality_breakout">Quality Breakout (Regime-Filtered)</option>
+          <option value="nifty_pro_v15">Nifty Pro V1.5 (EMA+VWAP+RSI+HTF)</option>
         </select>
       </div>
 
@@ -3289,6 +3293,72 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:#00d4ff;margin-bottom:4px">BUY CE: Trendline up-break AND (PCR&gt;1.0 OR price&gt;EMA21) — breakout must agree with at least one bullish confirmation</div>
         <div style="color:var(--r);margin-bottom:4px">BUY PE: Trendline down-break AND (PCR&lt;1.0 OR price&lt;EMA21) — breakout must agree with at least one bearish confirmation</div>
         <div style="color:var(--dim)">Trendline breaks WITHOUT confirmation are logged but skipped (no trade) — this is the filter meant to cut false breakouts and raise win rate vs. trendline-alone.</div>
+      </div>
+
+      <!-- Live condition readout: Quality Breakout strategy -->
+      <div id="ase-readout-quality" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">ADX(14)</div>
+          <div id="ase-qb-adx" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">REGIME</div>
+          <div id="ase-qb-regime" style="font-family:Orbitron;font-size:12px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">BREAKOUT</div>
+          <div id="ase-qb-breakout" style="font-family:Orbitron;font-size:12px;color:var(--dim)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">FOLLOW-THROUGH?</div>
+          <div id="ase-qb-followthrough" style="font-family:Orbitron;font-size:12px;color:var(--dim)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">TRADES TODAY</div>
+          <div id="ase-qb-tradestoday" style="font-family:Orbitron;font-size:14px;color:var(--txt)">0 / 2</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-qb-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+      <div id="ase-rules-quality" style="display:none;background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:#00d4ff;margin-bottom:4px">ENTRY: Trendline breakout (5-min) AND candle closes in outer third of its range (real follow-through, not a wick poke) AND ADX(14)&gt;18 (genuinely trending, not chop)</div>
+        <div style="color:var(--r);margin-bottom:4px">SL: trendline level ± small ATR buffer (where the setup is actually invalidated) · TARGET: 1.75× that risk distance — both derived from the trade, not fixed in advance</div>
+        <div style="color:var(--dim)">Max 2 trades/day · stops trading for the rest of the day after 2 consecutive losses. Built directly from real backtest evidence: 11/29 trendline_confirmed trades were fast false-breakout stop-losses in choppy conditions.</div>
+      </div>
+
+      <!-- Live condition readout: Nifty Pro V1.5 strategy -->
+      <div id="ase-readout-niftypro" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">EMA20 vs EMA50</div>
+          <div id="ase-np-emacross" style="font-family:Orbitron;font-size:12px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VS VWAP</div>
+          <div id="ase-np-vwap" style="font-family:Orbitron;font-size:12px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">RSI(14)</div>
+          <div id="ase-np-rsi" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">15-MIN EMA50</div>
+          <div id="ase-np-htf" style="font-family:Orbitron;font-size:12px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">TRADED TODAY?</div>
+          <div id="ase-np-tradedtoday" style="font-family:Orbitron;font-size:12px;color:var(--txt)">NO</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-np-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+      <div id="ase-rules-niftypro" style="display:none;background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:#00d4ff;margin-bottom:4px">BUY CE: EMA20&gt;EMA50 · price&gt;VWAP · RSI&gt;55 · close&gt;prior candle's high · price&gt;15-min EMA50 (multi-timeframe trend agreement)</div>
+        <div style="color:var(--r);margin-bottom:4px">BUY PE: EMA20&lt;EMA50 · price&lt;VWAP · RSI&lt;45 · close&lt;prior candle's low · price&lt;15-min EMA50</div>
+        <div style="color:var(--dim)">SL: lowest/highest of last 5 candles · TARGET: 2× that risk · ONE trade per day · only between 9:30-11:30 AM. Direct port of a user-supplied Pine Script v6 strategy ("Nifty Pro V1.5"). Needs ~2+ trading days of real 15-min history before the HTF filter activates.</div>
       </div>
 
       <!-- Live trendline chart -->
@@ -5069,6 +5139,13 @@ var TL_LOOKBACK = 14; // bars each side required to confirm a pivot
 // crosses that are more likely to immediately reverse. Tuned from real
 // backtest evidence: see checkTrendlineBreakout's comment for the data.
 var BT_CONFIRMED_MIN_STRENGTH_ATR = 0.20;
+// Quality Breakout's regime filter threshold. Wilder's original ADX work
+// uses 20-25 as the standard trending/non-trending line; 25+ is the
+// conservative end. Settled on 18 — within the legitimate range, but not
+// so strict that a 5-min options strategy can't generate enough trades
+// to be statistically meaningful (real backtest data showed ADX>20 cut
+// 86 of 88 candidate breakouts on a representative synthetic test).
+var QB_ADX_TREND_THRESHOLD = 18;
 
 // True Range / ATR from OHLC candles. candles: array of {high, low, close}
 function calcATRFromCandles(candles, period) {
@@ -5155,6 +5232,185 @@ function checkTrendlineBreakout(candles, prevClose, liveClose, minStrengthATR) {
     return { type: 'PE', slLevel: tl.lowerNow, line: 'down-break (red)' };
   }
   return null;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  QUALITY BREAKOUT (Regime-Filtered) — strategy #4
+//  Built specifically off the real failure pattern found in actual
+//  Angel One 5-min NIFTY backtest data: 11 of 29 trendline_confirmed
+//  trades were fast, near-full stop-losses — consistent with false
+//  breakouts (a wick pokes through the line, then snaps back) taken
+//  during choppy/non-trending conditions. Three changes address that
+//  directly instead of just re-tuning the same entry's thresholds:
+//   1. Candle-quality filter: the breakout candle must CLOSE in the
+//      outer third of its own range (real follow-through), not just
+//      tick through the line on a wick.
+//   2. ADX(14) regime filter: only trade when the market is actually
+//      trending (ADX > 20) — most false breakouts happen in chop,
+//      which ADX is specifically built to detect.
+//   3. Risk-based sizing: SL/target are no longer fixed ±X% on
+//      premium. SL is set at the trendline level (the point the setup
+//      is actually invalidated) plus a small ATR buffer so it isn't
+//      sitting exactly on the noisy line itself; target is a multiple
+//      of that real risk distance (reward:risk ~1.75:1), not a number
+//      picked in advance independent of where the trade actually is.
+// ══════════════════════════════════════════════════════════════════
+
+// Standard 14-period ADX/DI from OHLC candles (Wilder's smoothing).
+// Returns { adx, plusDI, minusDI } for the LAST candle in the array,
+// or null if there isn't enough history yet.
+function calcADX(candles, period) {
+  period = period || 14;
+  if (!candles || candles.length < period * 2 + 1) return null;
+  var plusDM = [], minusDM = [], tr = [];
+  for (var i = 1; i < candles.length; i++) {
+    var upMove = candles[i].high - candles[i-1].high;
+    var downMove = candles[i-1].low - candles[i].low;
+    plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    tr.push(Math.max(
+      candles[i].high - candles[i].low,
+      Math.abs(candles[i].high - candles[i-1].close),
+      Math.abs(candles[i].low - candles[i-1].close)
+    ));
+  }
+  function wilderSmooth(arr, period) {
+    var smoothed = [arr.slice(0, period).reduce(function(a,b){return a+b;}, 0)];
+    for (var i = period; i < arr.length; i++) {
+      smoothed.push(smoothed[smoothed.length-1] - (smoothed[smoothed.length-1]/period) + arr[i]);
+    }
+    return smoothed;
+  }
+  var trS = wilderSmooth(tr, period);
+  var pdmS = wilderSmooth(plusDM, period);
+  var mdmS = wilderSmooth(minusDM, period);
+  var dxSeries = [];
+  for (var j = 0; j < trS.length; j++) {
+    var pdi = trS[j] ? (pdmS[j]/trS[j])*100 : 0;
+    var mdi = trS[j] ? (mdmS[j]/trS[j])*100 : 0;
+    var dx = (pdi+mdi) ? (Math.abs(pdi-mdi)/(pdi+mdi))*100 : 0;
+    dxSeries.push({dx:dx, pdi:pdi, mdi:mdi});
+  }
+  if (dxSeries.length < period) return null;
+  var adxSlice = dxSeries.slice(-period).map(function(d){return d.dx;});
+  var adx = adxSlice.reduce(function(a,b){return a+b;},0) / adxSlice.length;
+  var last = dxSeries[dxSeries.length-1];
+  return { adx: adx, plusDI: last.pdi, minusDI: last.mdi };
+}
+
+// Real follow-through check: did the breakout candle CLOSE near the
+// extreme of its own range (top third for a CE break, bottom third for
+// a PE break), rather than just wicking through the line and pulling
+// back? A candle that closes mid-range or worse is a weak signal even
+// if technically a "break" by close price alone.
+function hasRealFollowThrough(candle, breakoutType) {
+  var range = candle.high - candle.low;
+  if (range <= 0) return false;
+  var closePos = (candle.close - candle.low) / range; // 0 = at low, 1 = at high
+  return breakoutType === 'CE' ? closePos >= 0.66 : closePos <= 0.34;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  NIFTY PRO V1.5 — strategy #5
+//  Direct port of a user-supplied Pine Script v6 strategy (EMA20/50
+//  trend filter + session VWAP + RSI(14) momentum + prior-candle
+//  breakout + a 15-min-timeframe EMA50 multi-timeframe filter).
+//  One trade per day, fixed 5-bar Donchian-style SL, target = 2x risk.
+//  Ported function-for-function from the original Pine logic rather
+//  than reusing the trendline strategies' pivot/ATR machinery, since
+//  this is a genuinely different system with its own entry/exit rules.
+// ══════════════════════════════════════════════════════════════════
+
+// Session VWAP: volume-weighted average of typical price (H+L+C)/3,
+// reset at the start of each trading day — exactly what Pine's
+// ta.vwap(close) does on an intraday chart (resets daily by default).
+// candles need a `vol` field; falls back to unweighted average price
+// if volume is missing/zero for every bar (still directionally useful,
+// just not true VWAP).
+function calcSessionVWAP(candles, dayKeys) {
+  var cumPV = 0, cumVol = 0;
+  var out = [];
+  var curDay = null;
+  for (var i = 0; i < candles.length; i++) {
+    if (dayKeys[i] !== curDay) { cumPV = 0; cumVol = 0; curDay = dayKeys[i]; }
+    var typical = (candles[i].high + candles[i].low + candles[i].close) / 3;
+    var vol = candles[i].vol || 1; // fallback: unweighted if no real volume
+    cumPV += typical * vol;
+    cumVol += vol;
+    out.push(cumVol ? cumPV / cumVol : typical);
+  }
+  return out;
+}
+
+// One-trade-per-day + the 9:30–11:30 session time window from the
+// original script (hour==9&&minute>=30 || hour==10 || (hour==11&&minute<=30)).
+function npIsInTradeWindow(timeStr) {
+  // timeStr like "09:35" or "...T09:35" or "15 Jun 2026 09:35" — pull the HH:MM off the end.
+  var m = String(timeStr).match(/(\d{1,2}):(\d{2})\s*$/);
+  if (!m) return false;
+  var h = parseInt(m[1],10), mins = parseInt(m[2],10);
+  return (h===9 && mins>=30) || (h===10) || (h===11 && mins<=30);
+}
+
+// Computes the Nifty Pro V1.5 signal for bar i. candles must include
+// .vol for real VWAP, and htf50 is the 15-min-timeframe EMA50 value
+// aligned to bar i (pre-computed by the caller — see npAlignHTFEma).
+// Returns { type:'CE'|'PE', sl: <index level>, target: <index level> } or null.
+function npComputeSignal(candles, timeStrings, vwapSeries, htf50Series, i) {
+  if (i < 50) return null; // need EMA50 history
+  var closesArr = candles.slice(0, i+1).map(function(c){ return c.close; });
+  var ema20 = btEMA(closesArr.slice(-20), 20);
+  var ema50 = btEMA(closesArr.slice(-50), 50);
+  var rsi14 = calcRSI(closesArr, 14);
+  var vwapNow = vwapSeries[i];
+  var htfEma = htf50Series[i];
+  if (htfEma == null) return null;
+  if (!npIsInTradeWindow(timeStrings[i] || '')) return null;
+
+  var c = candles[i], prev = candles[i-1];
+  var longSignal  = ema20 > ema50 && c.close > vwapNow && rsi14 > 55 && c.close > prev.high && c.close > htfEma;
+  var shortSignal = ema20 < ema50 && c.close < vwapNow && rsi14 < 45 && c.close < prev.low  && c.close < htfEma;
+
+  if (longSignal) {
+    var last5Low = Math.min.apply(null, candles.slice(Math.max(0,i-4), i+1).map(function(c){return c.low;}));
+    var risk = c.close - last5Low;
+    if (risk <= 0) return null;
+    return { type: 'CE', sl: last5Low, target: c.close + risk * 2.0, risk: risk };
+  }
+  if (shortSignal) {
+    var last5High = Math.max.apply(null, candles.slice(Math.max(0,i-4), i+1).map(function(c){return c.high;}));
+    var risk2 = last5High - c.close;
+    if (risk2 <= 0) return null;
+    return { type: 'PE', sl: last5High, target: c.close - risk2 * 2.0, risk: risk2 };
+  }
+  return null;
+}
+
+// Builds a 15-min-timeframe EMA50 series aligned to each 5-min bar's
+// index, mirroring request.security()'s behavior: each 5-min bar sees
+// the most recently CLOSED 15-min EMA50 value (not a same-bar value,
+// since the 15-min bar containing this 5-min bar hasn't closed yet —
+// using it would be unrealistic lookahead bias the live engine can't
+// actually have either).
+function npAlignHTFEma(candles) {
+  var htf15Closes = [];
+  var alignedSeries = [];
+  var bufferHigh = -Infinity, bufferLow = Infinity, bufferClose = null, barsInBucket = 0;
+  var lastClosedEma = null;
+  for (var i = 0; i < candles.length; i++) {
+    bufferClose = candles[i].close;
+    bufferHigh = Math.max(bufferHigh, candles[i].high);
+    bufferLow = Math.min(bufferLow, candles[i].low);
+    barsInBucket++;
+    // Every 3rd 5-min bar completes one 15-min bar.
+    if (barsInBucket === 3) {
+      htf15Closes.push(bufferClose);
+      if (htf15Closes.length >= 50) lastClosedEma = btEMA(htf15Closes.slice(-50), 50);
+      bufferHigh = -Infinity; bufferLow = Infinity; barsInBucket = 0;
+    }
+    alignedSeries.push(lastClosedEma);
+  }
+  return alignedSeries;
 }
 
 // ── Live trendline candlestick chart ──
@@ -13935,7 +14191,7 @@ function runBacktest() {
 
     var periodLabels = {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'};
     var pl = document.getElementById('bt-period-label');
-    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed') ? ' · synthetic data (no broker connection)' : '');
+    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') ? ' · synthetic data (no broker connection)' : '');
     if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy) + dataSourceTag;
 
     btRenderKPIs(capital, trades);
@@ -13958,7 +14214,7 @@ function runBacktest() {
   // data — it needs Angel One's actual 5-min candles to mean anything
   // (comparing against a live TradingView chart). Every other strategy
   // here still runs on synthetic daily data, same as before.
-  if ((strategy === 'trendline' || strategy === 'trendline_confirmed') && ticker === 'NIFTY') {
+  if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') && ticker === 'NIFTY') {
     var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
     var connected = typeof creds !== 'undefined' && creds.jwt && creds.connected;
     if (!tm || !connected) {
@@ -13999,8 +14255,8 @@ function runBacktest() {
   }
 
   setTimeout(function(){
-    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
-    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
+    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
+    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
   }, 2800);
 }
 
@@ -14089,8 +14345,32 @@ function btGenerateIntradayPriceData(ticker, totalDays) {
 }
 
 // Simulate signals based on strategy
+// Backtest IV assumption: Angel One has no historical option-premium or
+// historical-VIX API at all (confirmed — only equity/index/futures
+// candles are offered), so a per-bar real IV isn't available for past
+// dates. We use the SAME skewed-IV Black-Scholes model getChainPrice()
+// uses for the live option chain (moneyness-based IV skew, PE bump),
+// just parameterized for a backtest's spot/strike instead of today's
+// live LD/OC_STATE — so live trading and backtest pricing now share
+// one consistent pricing model instead of two different approximations.
+// Module-scoped (not nested in btRunStrategy) so every backtest path,
+// including btRunNiftyProV15, shares one pricing implementation.
+var BT_BASE_IV = 0.14; // ~14%, a typical calm-market Nifty IV (live VIX history isn't available either)
+var BT_DTE_DAYS = 3; // average days-to-weekly-expiry across a random entry
+var BT_RISK_FREE = 0.065; // matches getChainPrice's r
+
+function btOptionPrice(spot, strike, daysToExpiry, type) {
+  var T = Math.max(daysToExpiry/365, 0.0005);
+  var moneyness = Math.abs(strike - spot)/spot;
+  var skewFactor = 8.0; // NIFTY skew, same constant getChainPrice uses
+  var iv = BT_BASE_IV * (1 + moneyness * skewFactor) * (strike < spot && type==='pe' ? 1.03 : 1.0);
+  iv = Math.max(iv, 0.08);
+  return bsPrice(spot, strike, T, BT_RISK_FREE, iv, type).price;
+}
+
 function btRunStrategy(data, strategy, signalType, capital, posPct) {
   if (data.length < 15) return [];
+  if (strategy === 'nifty_pro_v15') return btRunNiftyProV15(data, signalType, capital, posPct);
   var closes = data.map(function(d){return d.close;});
   var trades = [];
   var inTrade = false;
@@ -14099,26 +14379,8 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   // Trendline-specific state: tracks the option side and BS-priced premium
   var optType = null, entryPremium = 0, strike = 0, lotQty = 65, lotsHeld = 1; // NIFTY lot size
 
-  // Backtest IV assumption: Angel One has no historical option-premium or
-  // historical-VIX API at all (confirmed — only equity/index/futures
-  // candles are offered), so a per-bar real IV isn't available for past
-  // dates. We use the SAME skewed-IV Black-Scholes model getChainPrice()
-  // uses for the live option chain (moneyness-based IV skew, PE bump),
-  // just parameterized for a backtest's spot/strike instead of today's
-  // live LD/OC_STATE — so live trading and backtest pricing now share
-  // one consistent pricing model instead of two different approximations.
-  var BT_BASE_IV = 0.14; // ~14%, a typical calm-market Nifty IV (live VIX history isn't available either)
-  var BT_DTE_DAYS = 3; // average days-to-weekly-expiry across a random entry
-  var BT_RISK_FREE = 0.065; // matches getChainPrice's r
-
-  function btOptionPrice(spot, strike, daysToExpiry, type) {
-    var T = Math.max(daysToExpiry/365, 0.0005);
-    var moneyness = Math.abs(strike - spot)/spot;
-    var skewFactor = 8.0; // NIFTY skew, same constant getChainPrice uses
-    var iv = BT_BASE_IV * (1 + moneyness * skewFactor) * (strike < spot && type==='pe' ? 1.03 : 1.0);
-    iv = Math.max(iv, 0.08);
-    return bsPrice(spot, strike, T, BT_RISK_FREE, iv, type).price;
-  }
+  var qbTradesOnDay = {}, qbLossStreakBroken = {}; // per-dayKey state for quality_breakout's discipline limits
+  var qbEntrySlPct = 0, qbEntryRewardPct = 0;
 
   for (var i=14; i<closes.length-1; i++) {
     var signal = btComputeSignal(closes, i, strategy, data);
@@ -14127,7 +14389,19 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
     if (!inTrade) {
       var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
       var wantPE = (signalType==='all'||signalType==='sell'||signalType==='put');
-      if ((strategy === 'trendline' || strategy === 'trendline_confirmed') && ((signal==='BUY_CE' && wantCE) || (signal==='BUY_PE' && wantPE))) {
+      var dayKeyNow = String(data[i].date).slice(0,10);
+
+      // Quality Breakout's daily discipline: max 2 trades/day, stop after
+      // 2 consecutive losses that day — checked before taking a new entry
+      // even if the signal/regime/follow-through all otherwise qualify.
+      if (strategy === 'quality_breakout') {
+        if (!qbTradesOnDay[dayKeyNow]) qbTradesOnDay[dayKeyNow] = 0;
+        if (qbTradesOnDay[dayKeyNow] >= 2 || (qbLossStreakBroken[dayKeyNow]||0) >= 2) {
+          signal = 'HOLD'; // discipline limit reached — skip regardless of signal
+        }
+      }
+
+      if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout') && ((signal==='BUY_CE' && wantCE) || (signal==='BUY_PE' && wantPE))) {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
         optType = signal === 'BUY_CE' ? 'CE' : 'PE';
         strike = Math.round(entry/50)*50; // ATM, Nifty 50-pt strikes
@@ -14137,14 +14411,23 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         // of the Nifty lot size (65), never a fractional/arbitrary qty.
         numLots = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
         lotsHeld = numLots;
-      } else if (strategy !== 'trendline' && strategy !== 'trendline_confirmed' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
+        if (strategy === 'quality_breakout' && BT_QB_LAST_SIGNAL) {
+          // Risk-based sizing captured at entry: SL distance = trendline
+          // level + 0.5*ATR buffer, target = 1.75x that same risk — both
+          // derived from where the trade actually is, not fixed in advance.
+          var riskIdxPts = Math.abs(entry - BT_QB_LAST_SIGNAL.slLevel) + BT_QB_LAST_SIGNAL.atr * 0.5;
+          qbEntrySlPct = Math.min(0.35, Math.max(0.10, riskIdxPts / entry * 8));
+          qbEntryRewardPct = qbEntrySlPct * 1.75;
+          qbTradesOnDay[dayKeyNow] = (qbTradesOnDay[dayKeyNow]||0) + 1;
+        }
+      } else if (strategy !== 'trendline' && strategy !== 'trendline_confirmed' && strategy !== 'quality_breakout' && (signalType==='all'||signalType==='buy'||signalType==='call') && signal==='BUY') {
         inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i; optType = null;
       }
     } else if (inTrade) {
       var exitReason = '';
       var pnlPct;
 
-      if (strategy === 'trendline' || strategy === 'trendline_confirmed') {
+      if (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout') {
         // Re-price the same option at the CURRENT bar's spot (strike and
         // expiry fixed at entry, only spot/time-decay move) — this is
         // what makes the premium move "real" Black-Scholes behavior
@@ -14153,16 +14436,24 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         var daysElapsed = (i - entryIdx) * (5/60/24); // 5-min bars -> fraction of a day
         var curPremium = btOptionPrice(closes[i], strike, BT_DTE_DAYS - daysElapsed, optType.toLowerCase());
         pnlPct = (curPremium - entryPremium) / entryPremium;
-        // SL tightened to -15% for trendline_confirmed specifically, based
-        // on real 1-month NIFTY 5-min backtest evidence: 11/29 trades were
-        // fast, near-full -30%+ losses (false breakouts snapping back
-        // immediately) — letting those run to -30% before cutting them
-        // cost far more than it needed to. Plain 'trendline' keeps the
-        // original -30% as an unmodified baseline for comparison.
-        var slThreshold = (strategy === 'trendline_confirmed') ? -0.15 : -0.30;
-        if (pnlPct >= 0.40) { exitReason = 'TARGET HIT'; }
+        // SL/target: quality_breakout uses risk-based sizing captured at
+        // entry (variable per-trade, ~1:1.75 reward:risk). trendline_confirmed
+        // uses a tightened -15% based on real backtest evidence (11/29
+        // trades were fast, near-full -30%+ losses). Plain 'trendline'
+        // keeps the original ±40/-30% as an unmodified baseline.
+        var slThreshold, targetThreshold;
+        if (strategy === 'quality_breakout') {
+          slThreshold = -qbEntrySlPct;
+          targetThreshold = qbEntryRewardPct;
+        } else if (strategy === 'trendline_confirmed') {
+          slThreshold = -0.15; targetThreshold = 0.40;
+        } else {
+          slThreshold = -0.30; targetThreshold = 0.40;
+        }
+        var qbMaxBars = (strategy === 'quality_breakout') ? 30 : 24; // slightly longer leash given the tighter entry filter
+        if (pnlPct >= targetThreshold) { exitReason = 'TARGET HIT'; }
         else if (pnlPct <= slThreshold) { exitReason = 'STOP LOSS HIT'; }
-        else if (i - entryIdx >= 24) { exitReason = 'TIME EXIT'; } // 24 bars = 2hrs on 5-min bars, hasn't hit either threshold yet
+        else if (i - entryIdx >= qbMaxBars) { exitReason = 'TIME EXIT'; }
         if (exitReason) {
           // Real P&L: (premium change) × lot size × number of lots —
           // not a % of an abstract position size.
@@ -14177,6 +14468,12 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
             indexEntry: entry, indexExit: closes[i],
             posSize:posSizeActual, gross:gross, net:net, pnlPct:(pnlPct*100).toFixed(2), result:exitReason
           });
+          if (strategy === 'quality_breakout') {
+            var exitDayKey = String(data[i].date).slice(0,10);
+            if (!qbLossStreakBroken[exitDayKey]) qbLossStreakBroken[exitDayKey] = 0;
+            if (net <= 0) qbLossStreakBroken[exitDayKey]++;
+            else qbLossStreakBroken[exitDayKey] = 0;
+          }
           inTrade = false;
         }
       } else {
@@ -14196,8 +14493,83 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   return trades;
 }
 
+// ── NIFTY PRO V1.5 backtest runner ──
+// Separate from btRunStrategy's per-bar btComputeSignal loop because
+// this strategy needs whole precomputed series (session VWAP, aligned
+// 15-min-timeframe EMA50) rather than a stateless per-bar check — see
+// the block comment above npComputeSignal for the full strategy design.
+function btRunNiftyProV15(data, signalType, capital, posPct) {
+  var closes = data.map(function(d){ return d.close; });
+  // Both date string formats this app produces end in a trailing
+  // "HH:MM" — stripping that leaves a stable per-day grouping key
+  // regardless of whether the date itself is "15 Jun 2026" (synthetic)
+  // or "2026-03-17" (real Angel One data).
+  var dayKeys = data.map(function(d){
+    var s = String(d.date);
+    var m = s.match(/^(.*)\s+\d{1,2}:\d{2}\s*$/);
+    return m ? m[1] : s;
+  });
+  var timeStrings = data.map(function(d){ var m = String(d.date).match(/(\d{1,2}:\d{2})\s*$/); return m ? m[1] : ''; });
+  var vwapSeries = calcSessionVWAP(data, dayKeys);
+  var htf50Series = npAlignHTFEma(data);
+
+  var trades = [];
+  var inTrade = false;
+  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0;
+  var lotQty = 65, lotsHeld = 1;
+  var tradedOnDay = {};
+  var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
+  var wantPE = (signalType==='all'||signalType==='sell'||signalType==='put');
+
+  for (var i = 50; i < data.length - 1; i++) {
+    if (!inTrade) {
+      var dk = dayKeys[i];
+      if (tradedOnDay[dk]) continue; // one trade per day, per the original script
+
+      var sig = npComputeSignal(data, timeStrings, vwapSeries, htf50Series, i);
+      if (!sig) continue;
+      if ((sig.type === 'CE' && !wantCE) || (sig.type === 'PE' && !wantPE)) continue;
+
+      inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
+      optType = sig.type;
+      strike = Math.round(entry/50)*50;
+      entryPremium = btOptionPrice(entry, strike, BT_DTE_DAYS, optType.toLowerCase());
+      lotsHeld = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
+      // Convert the script's index-point SL/target into the equivalent
+      // premium % move, same convention as the other option strategies.
+      var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / entry * 8));
+      sl     = -riskPct;
+      target = riskPct * 2.0; // R:R 1:2, matches strategy.exit(limit = close ± risk*2.0)
+      tradedOnDay[dk] = true;
+    } else {
+      var daysElapsed = (i - entryIdx) * (5/60/24);
+      var curPremium = btOptionPrice(closes[i], strike, BT_DTE_DAYS - daysElapsed, optType.toLowerCase());
+      var pnlPct = (curPremium - entryPremium) / entryPremium;
+      var exitReason = '';
+      if (pnlPct >= target) exitReason = 'TARGET HIT';
+      else if (pnlPct <= sl) exitReason = 'STOP LOSS HIT';
+      else if (i - entryIdx >= 30) exitReason = 'TIME EXIT'; // safety valve — original script has no time exit, but an unbounded hold isn't realistic for a 5-min options backtest
+      if (exitReason) {
+        var gross = (curPremium - entryPremium) * lotQty * lotsHeld;
+        var net   = gross - 40 * lotsHeld;
+        trades.push({
+          num: trades.length+1, entryDate: entryDate, exitDate: data[i].date,
+          optType: optType, strike: strike, lots: lotsHeld, lotSize: lotQty,
+          entry: entryPremium, exit: curPremium,
+          indexEntry: entry, indexExit: closes[i],
+          posSize: entryPremium*lotQty*lotsHeld, gross: gross, net: net,
+          pnlPct: (pnlPct*100).toFixed(2), result: exitReason
+        });
+        inTrade = false;
+      }
+    }
+  }
+  return trades;
+}
+
 function btComputeSignal(closes, i, strategy, fullData) {
   var slice = closes.slice(Math.max(0,i-20), i+1);
+
   var ema9  = btEMA(slice, 9);
   var ema21 = btEMA(slice, Math.min(21, slice.length));
   var rsi   = btRSI(slice, 14);
@@ -14243,9 +14615,32 @@ function btComputeSignal(closes, i, strategy, fullData) {
       var emaAgrees = breakout2.type === 'CE' ? aboveEma : !aboveEma;
       if (emaAgrees) return breakout2.type === 'CE' ? 'BUY_CE' : 'BUY_PE';
     }
+  } else if (strategy==='quality_breakout') {
+    // Same regime-filtered logic as the live engine's Quality Breakout
+    // strategy: trendline break + real candle follow-through + ADX>20
+    // trending regime. BT_QB_LAST_SIGNAL is a side-channel the trade
+    // loop reads right after this call to get the SL level and ATR
+    // needed for risk-based sizing — btComputeSignal only returns a
+    // plain string, so this avoids restructuring that return contract
+    // just for one strategy.
+    BT_QB_LAST_SIGNAL = null;
+    if (!fullData || i < Math.max(TL_LOOKBACK*2+3, 30)) return 'HOLD';
+    var candlesQB = fullData.slice(0, i+1).map(function(d){ return { high:d.high, low:d.low, close:d.close }; });
+    var breakoutQB = checkTrendlineBreakout(candlesQB.slice(0,-1), closes[i-1], closes[i], BT_CONFIRMED_MIN_STRENGTH_ATR);
+    if (!breakoutQB) return 'HOLD';
+    var followThroughQB = hasRealFollowThrough(fullData[i], breakoutQB.type);
+    var adxQB = calcADX(candlesQB.slice(0,-1), 14);
+    var trendingQB = adxQB && adxQB.adx > QB_ADX_TREND_THRESHOLD;
+    if (followThroughQB && trendingQB) {
+      var tlQB = calcTrendlines(candlesQB.slice(0,-1));
+      BT_QB_LAST_SIGNAL = { type: breakoutQB.type, slLevel: breakoutQB.slLevel, atr: tlQB ? tlQB.atr : 5, adx: adxQB.adx };
+      return breakoutQB.type === 'CE' ? 'BUY_CE' : 'BUY_PE';
+    }
   }
   return 'HOLD';
 }
+
+var BT_QB_LAST_SIGNAL = null; // side-channel for quality_breakout's SL/ADX context, see comment above
 
 function btEMA(arr, n) {
   if (arr.length < n) n = arr.length;
@@ -15168,12 +15563,12 @@ function aseLoadState() {
 }
 
 function aseSetStrategy(val) {
-  var valid = ['pcr_ema_vix', 'trendline', 'trendline_confirmed'];
+  var valid = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15'];
   ASE_STRATEGY = valid.indexOf(val) !== -1 ? val : 'pcr_ema_vix';
   try { localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY); } catch(e) {}
   ASE_LAST_LOGGED_KEY = null; // reset de-dupe when switching strategies
   aseApplyStrategyUI();
-  var labels = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation' };
+  var labels = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5' };
   aseLog('Strategy switched to: ' + labels[ASE_STRATEGY]);
 }
 
@@ -15181,7 +15576,9 @@ function aseApplyStrategyUI() {
   var panels = {
     pcr_ema_vix:          { readout: 'ase-readout-pcr',        rules: 'ase-rules-pcr' },
     trendline:            { readout: 'ase-readout-trendline',  rules: 'ase-rules-trendline' },
-    trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' }
+    trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' },
+    quality_breakout:     { readout: 'ase-readout-quality',    rules: 'ase-rules-quality' },
+    nifty_pro_v15:        { readout: 'ase-readout-niftypro',   rules: 'ase-rules-niftypro' }
   };
   Object.keys(panels).forEach(function(key){
     var isActive = (ASE_STRATEGY === key);
@@ -15281,6 +15678,14 @@ function aseEvaluate() {
       try { await aseEvaluateTrendlineConfirmed(); } catch(e) { console.warn('[AutoSignalEngine confirmed]', e); }
       return;
     }
+    if (ASE_STRATEGY === 'quality_breakout') {
+      try { await aseEvaluateQualityBreakout(); } catch(e) { console.warn('[AutoSignalEngine quality]', e); }
+      return;
+    }
+    if (ASE_STRATEGY === 'nifty_pro_v15') {
+      try { await aseEvaluateNiftyProV15(); } catch(e) { console.warn('[AutoSignalEngine niftypro]', e); }
+      return;
+    }
     aseEvaluatePcrEmaVix();
   })();
 }
@@ -15309,7 +15714,7 @@ async function aseRefreshChart() {
   }
   if (!raw) { return; } // keep showing the last good chart rather than blanking on a transient fetch failure
 
-  var candles = raw.map(function(r){ return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4] }; });
+  var candles = raw.map(function(r){ return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4], vol:r[5] }; });
   ASE_LAST_CANDLES = candles;
   aseDrawTrendlineChart(candles);
 }
@@ -15593,6 +15998,248 @@ async function aseEvaluateTrendlineConfirmed() {
     aseLog('✅ Confirmed auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+confirmReason);
   } else if (res && res.error) {
     aseLog('⚠ Confirmed breakout found but could not log: ' + res.error);
+  }
+}
+
+// ── QUALITY BREAKOUT (Regime-Filtered) ──
+// See the strategy block comment above calcADX (near checkTrendlineBreakout)
+// for the full rationale: built directly from real backtest evidence that
+// 11/29 trendline_confirmed trades were fast false-breakout stop-losses,
+// consistent with chop. Adds an ADX regime filter, a real-follow-through
+// candle check, risk-based SL/target sizing, and daily discipline limits.
+var ASE_QB_LAST_CANDLE_TIME = null;
+
+function aseQualityDailyState() {
+  var todayKey = getIST().toLocaleDateString('en-CA');
+  var todays = (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).filter(function(t){
+    return t.dayKey === todayKey && t.reasons && t.reasons.indexOf('QualityBreakout') !== -1;
+  });
+  var closedToday = todays.filter(function(t){ return t.status !== 'OPEN'; });
+  var streak = 0;
+  for (var i = closedToday.length - 1; i >= 0; i--) {
+    if (closedToday[i].result === 'LOSS') streak++; else break;
+  }
+  return { tradesToday: todays.length, lossStreak: streak };
+}
+
+async function aseEvaluateQualityBreakout() {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  if (!ni || !ni.ltp) { ptSet2('ase-qb-verdict', 'WAITING DATA', 'var(--w)'); return; }
+
+  if (!ASE_ON) { ptSet2('ase-qb-verdict', 'OFF', 'var(--dim)'); return; }
+
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    ptSet2('ase-qb-verdict', 'NEED BROKER LOGIN', 'var(--w)');
+    aseLog('Quality Breakout needs Angel One login for 5-min candle history — connect via SETUP.');
+    return;
+  }
+
+  var candles = ASE_LAST_CANDLES;
+  if (!candles || candles.length < Math.max(TL_LOOKBACK * 2 + 3, 30)) {
+    ptSet2('ase-qb-verdict', 'BUILDING CANDLES', 'var(--w)');
+    return;
+  }
+
+  var daily = aseQualityDailyState();
+  ptSet2('ase-qb-tradestoday', daily.tradesToday + ' / 2');
+
+  var adxRes = calcADX(candles.slice(0, -1), 14);
+  ptSet2('ase-qb-adx', adxRes ? adxRes.adx.toFixed(1) : '—');
+  var trending = adxRes && adxRes.adx > QB_ADX_TREND_THRESHOLD;
+  ptSet2('ase-qb-regime', trending ? 'TRENDING' : 'CHOPPY', trending ? 'var(--g)' : 'var(--w)');
+
+  var latestCandleTime = candles[candles.length - 1].time;
+  if (ASE_QB_LAST_CANDLE_TIME === latestCandleTime) {
+    ptSet2('ase-qb-verdict', 'NO NEW CANDLE', 'var(--dim)');
+    return;
+  }
+
+  if (daily.tradesToday >= 2) {
+    ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-qb-verdict', 'DAILY LIMIT (2) REACHED', 'var(--w)');
+    return;
+  }
+  if (daily.lossStreak >= 2) {
+    ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-qb-verdict', 'STOPPED: 2 LOSSES TODAY', 'var(--r)');
+    return;
+  }
+
+  var prevClose = candles[candles.length - 2].close;
+  var liveClose = candles[candles.length - 1].close;
+  var breakoutCandle = candles[candles.length - 1];
+  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
+
+  if (!breakout) {
+    ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-qb-breakout', 'none', 'var(--dim)');
+    ptSet2('ase-qb-followthrough', '—', 'var(--dim)');
+    ptSet2('ase-qb-verdict', 'NO BREAKOUT', 'var(--dim)');
+    return;
+  }
+  ptSet2('ase-qb-breakout', breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var followThrough = hasRealFollowThrough(breakoutCandle, breakout.type);
+  ptSet2('ase-qb-followthrough', followThrough ? 'YES' : 'NO', followThrough ? 'var(--g)' : 'var(--r)');
+
+  if (!trending) {
+    ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-qb-verdict', breakout.type + ' BREAK, CHOPPY — SKIPPED', 'var(--w)');
+    aseLog('Breakout ' + breakout.line + ' found but ADX=' + (adxRes?adxRes.adx.toFixed(1):'—') + ' (≤20, choppy) — skipped.');
+    return;
+  }
+  if (!followThrough) {
+    ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-qb-verdict', breakout.type + ' BREAK, WEAK CLOSE — SKIPPED', 'var(--w)');
+    aseLog('Breakout ' + breakout.line + ' found but candle closed mid-range (no follow-through) — skipped.');
+    return;
+  }
+
+  ptSet2('ase-qb-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var dedupeKey = 'QB_' + latestCandleTime + '_' + breakout.type;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+
+  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
+  if (!chainLtp || chainLtp <= 0) {
+    ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+    aseLog('Quality breakout found ('+breakout.type+') but no chain price available — skipped.');
+    return;
+  }
+
+  var tlForATR = calcTrendlines(candles.slice(0, -2));
+  var atrBuffer = (tlForATR && tlForATR.atr) ? tlForATR.atr * 0.5 : 5;
+  var riskIdxPts = Math.abs(ni.ltp - breakout.slLevel) + atrBuffer;
+  var riskPct = Math.min(0.35, Math.max(0.10, riskIdxPts / ni.ltp * 8));
+  var rewardPct = riskPct * 1.75; // reward:risk ~1.75:1
+  var sl     = Math.round(chainLtp * (1 - riskPct) / 5) * 5;
+  var target = Math.round(chainLtp * (1 + rewardPct) / 5) * 5;
+  var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
+  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    signalType: 'BUY ' + breakout.type,
+    reasons: 'QualityBreakout ' + breakout.line + ' · ADX ' + adxRes.adx.toFixed(1) + ' (trending) · follow-through confirmed · R:R 1:1.75 · SL line @ ' + fN(breakout.slLevel,1)
+  });
+
+  ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY = dedupeKey;
+    aseLog('✅ Quality Breakout auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.75) — ADX '+adxRes.adx.toFixed(1));
+  } else if (res && res.error) {
+    aseLog('⚠ Quality breakout found but could not log: ' + res.error);
+  }
+}
+
+// ── NIFTY PRO V1.5 ──
+// Direct port of the user-supplied Pine Script v6 strategy. See the
+// block comment above npComputeSignal for the full design notes.
+var ASE_NP_LAST_CANDLE_TIME = null;
+
+function aseNpTradedToday() {
+  var todayKey = getIST().toLocaleDateString('en-CA');
+  return (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).some(function(t){
+    return t.dayKey === todayKey && t.reasons && t.reasons.indexOf('NiftyProV15') !== -1;
+  });
+}
+
+async function aseEvaluateNiftyProV15() {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  if (!ni || !ni.ltp) { ptSet2('ase-np-verdict', 'WAITING DATA', 'var(--w)'); return; }
+
+  if (!ASE_ON) { ptSet2('ase-np-verdict', 'OFF', 'var(--dim)'); return; }
+
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    ptSet2('ase-np-verdict', 'NEED BROKER LOGIN', 'var(--w)');
+    aseLog('Nifty Pro V1.5 needs Angel One login for 5-min/15-min candle history — connect via SETUP.');
+    return;
+  }
+
+  var candles = ASE_LAST_CANDLES;
+  if (!candles || candles.length < 55) {
+    ptSet2('ase-np-verdict', 'BUILDING CANDLES', 'var(--w)');
+    return;
+  }
+
+  var latestCandleTime = candles[candles.length - 1].time;
+  if (ASE_NP_LAST_CANDLE_TIME === latestCandleTime) {
+    ptSet2('ase-np-verdict', 'NO NEW CANDLE', 'var(--dim)');
+    return;
+  }
+
+  var tradedToday = aseNpTradedToday();
+  ptSet2('ase-np-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
+
+  var dayKeys = candles.map(function(c){ return String(c.time).slice(0,10); });
+  var timeStrings = candles.map(function(c){ return String(c.time).slice(11,16); });
+  var vwapSeries = calcSessionVWAP(candles, dayKeys);
+  var htf50Series = npAlignHTFEma(candles);
+
+  var i = candles.length - 1;
+  var closesArr = candles.slice(0, i+1).map(function(c){ return c.close; });
+  var ema20 = btEMA(closesArr.slice(-20), 20);
+  var ema50 = btEMA(closesArr.slice(-50), 50);
+  var rsi14 = calcRSI(closesArr, 14);
+  ptSet2('ase-np-emacross', ema20 > ema50 ? 'EMA20 > EMA50' : 'EMA20 < EMA50', ema20 > ema50 ? 'var(--g)' : 'var(--r)');
+  ptSet2('ase-np-vwap', candles[i].close > vwapSeries[i] ? 'ABOVE' : 'BELOW', candles[i].close > vwapSeries[i] ? 'var(--g)' : 'var(--r)');
+  ptSet2('ase-np-rsi', rsi14.toFixed(1));
+  ptSet2('ase-np-htf', htf50Series[i] != null ? fN(htf50Series[i],1) : 'NOT ENOUGH 15m HISTORY YET', htf50Series[i] != null ? 'var(--txt)' : 'var(--w)');
+
+  if (tradedToday) {
+    ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-np-verdict', 'ALREADY TRADED TODAY', 'var(--w)');
+    return;
+  }
+  if (htf50Series[i] == null) {
+    ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-np-verdict', 'BUILDING 15m HISTORY', 'var(--w)');
+    return;
+  }
+
+  var sig = npComputeSignal(candles, timeStrings, vwapSeries, htf50Series, i);
+  if (!sig) {
+    ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-np-verdict', 'NO SIGNAL', 'var(--dim)');
+    return;
+  }
+
+  ptSet2('ase-np-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var dedupeKey = 'NP_' + latestCandleTime + '_' + sig.type;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+
+  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var chainLtp = getChainPrice('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
+  if (!chainLtp || chainLtp <= 0) {
+    ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
+    aseLog('Nifty Pro V1.5 signal found ('+sig.type+') but no chain price available — skipped.');
+    return;
+  }
+
+  // Convert the index-point risk into an equivalent premium % (same
+  // approach as the other strategies), target = 2x that risk per the
+  // original script's strategy.exit(limit = close + risk*2.0).
+  var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / ni.ltp * 8));
+  var rewardPct = riskPct * 2.0; // R:R 1:2, matches the original Pine script exactly
+  var sl     = Math.round(chainLtp * (1 - riskPct) / 5) * 5;
+  var target = Math.round(chainLtp * (1 + rewardPct) / 5) * 5;
+  var instr  = 'NIFTY ' + strike + sig.type + ' ' + getNiftyExpiry();
+  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    signalType: 'BUY ' + sig.type,
+    reasons: 'NiftyProV15 · EMA20/50+VWAP+RSI+15mHTF aligned · R:R 1:2 · index SL @ ' + fN(sig.sl,1)
+  });
+
+  ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY = dedupeKey;
+    aseLog('✅ Nifty Pro V1.5 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2) — one trade/day used');
+  } else if (res && res.error) {
+    aseLog('⚠ Nifty Pro V1.5 signal found but could not log: ' + res.error);
   }
 }
 
