@@ -8681,7 +8681,7 @@ function aoWsSetStatus(text, color) {
 
 // Connects (or reconnects) the WebSocket using the JWT/API key/feed
 // token already stored in `creds` from the existing REST login flow.
-function aoWsConnect() {
+function aoWsConnect(isManual) {
   if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
     aoWsLog('Cannot connect — no active Angel One session. Connect via SETUP first.');
     aoWsSetStatus('NOT CONNECTED', 'var(--dim)');
@@ -8691,7 +8691,23 @@ function aoWsConnect() {
     aoWsLog('Already connected/connecting — skipping duplicate connect.');
     return;
   }
-  AO_WS_RECONNECT_ATTEMPTS = 0; // fresh manual attempt — don't inherit a prior auto-retry's give-up state
+  // Only a genuine USER-initiated click (the CONNECT button, which omits
+  // the argument and so isManual is undefined/truthy-checked below)
+  // resets the attempt counter. Previously this reset on EVERY call,
+  // including the ones aoWsScheduleReconnect() makes internally after
+  // its delay — which meant the counter could never climb past 1 and
+  // the 5-attempt cap never actually engaged (confirmed live: the
+  // on-screen log showed "attempt 1 of 5" repeating forever instead of
+  // counting up and eventually stopping).
+  if (isManual !== false) {
+    AO_WS_RECONNECT_ATTEMPTS = 0;
+    try {
+      var label = mktLabel();
+      if (label === 'CLOSED' || label === 'WEEKEND') {
+        aoWsLog('ℹ Market is ' + label + ' right now — Angel One live data/streaming endpoints may reject or behave inconsistently outside trading hours (9:15 AM-3:30 PM IST, Mon-Fri). Connection attempts below may fail for that reason rather than a real bug.');
+      }
+    } catch(e) {}
+  }
 
   aoWsSetStatus('CONNECTING…', 'var(--w)');
   var url = 'wss://smartapisocket.angelone.in/smart-stream';
@@ -8794,7 +8810,7 @@ function aoWsScheduleReconnect() {
   AO_WS_RECONNECT_ATTEMPTS++;
   var delay = Math.min(1000 * Math.pow(2, AO_WS_RECONNECT_ATTEMPTS), AO_WS_RECONNECT_MAX_DELAY);
   aoWsLog('Reconnecting in ' + Math.round(delay/1000) + 's (attempt ' + AO_WS_RECONNECT_ATTEMPTS + ' of 5)…');
-  setTimeout(function(){ aoWsConnect(); }, delay);
+  setTimeout(function(){ aoWsConnect(false); }, delay);
 }
 
 function aoWsDisconnect() {
