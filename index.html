@@ -4584,6 +4584,25 @@ var creds = {
   connected: false
 };
 
+// ── Real public IP detection ──
+// Angel One's API headers (X-ClientPublicIP) were previously sent as a
+// hardcoded placeholder '127.0.0.1' everywhere. That was harmless while
+// the account had no IP restriction, but once IP whitelisting is active
+// on the account (as it now is), some endpoints appear to validate this
+// header against the real connecting IP — a mismatched placeholder can
+// plausibly trigger 400s that have nothing to do with the request body
+// itself. Cached for the session so this is only fetched once.
+var REAL_PUBLIC_IP = null;
+async function getRealPublicIP() {
+  if (REAL_PUBLIC_IP) return REAL_PUBLIC_IP;
+  try {
+    var r = await fetch('https://api.ipify.org?format=json');
+    var d = await r.json();
+    if (d && d.ip) { REAL_PUBLIC_IP = d.ip; return REAL_PUBLIC_IP; }
+  } catch(e) { console.warn('[JARVIS] Could not detect real public IP, falling back to placeholder:', e.message); }
+  return '127.0.0.1'; // fallback — same as the old hardcoded behavior if detection fails
+}
+
 // ── Token map — NSE symbols + correct 2025 index tokens ──
 var TM = {
   RELIANCE   : { tok:'2885',  ex:'NSE', sym:'RELIANCE-EQ'   },
@@ -4746,10 +4765,11 @@ var BASE = 'https://apiconnect.angelbroking.com';
 // ── Angel Login (gets JWT from MPIN + TOTP) ──
 async function angelLogin() {
   if (!creds.apiKey || !creds.clientId || !creds.mpin) return false;
+  var realIp = await getRealPublicIP();
   var hdrs = {
     'Content-Type':'application/json',
     'X-UserType':'USER','X-SourceID':'WEB',
-    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':'127.0.0.1',
+    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':realIp,
     'X-MACAddress':'00:00:00:00:00:00',
     'X-PrivateKey': creds.apiKey
   };
@@ -4802,11 +4822,12 @@ async function angelQuote(exchangeTokens, mode) {
     normalized[ex] = Array.isArray(toks) ? toks.map(String) : [String(toks)];
   });
   var body = JSON.stringify({ mode: mode, exchangeTokens: normalized });
+  var realIp = await getRealPublicIP();
   var hdrs = {
     'Content-Type':'application/json',
     'Authorization':'Bearer ' + creds.jwt,
     'X-UserType':'USER','X-SourceID':'WEB',
-    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':'127.0.0.1',
+    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':realIp,
     'X-MACAddress':'00:00:00:00:00:00',
     'X-PrivateKey': creds.apiKey,
     'Accept':'application/json'
@@ -4827,10 +4848,11 @@ async function angelQuote(exchangeTokens, mode) {
 async function angelHistory(token, exchange, interval, from, to) {
   if (!creds.jwt) return null;
   var body = JSON.stringify({ exchange:exchange, symboltoken:token, interval:interval, fromdate:from, todate:to });
+  var realIp = await getRealPublicIP();
   var hdrs = {
     'Content-Type':'application/json','Authorization':'Bearer ' + creds.jwt,
     'X-UserType':'USER','X-SourceID':'WEB',
-    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':'127.0.0.1',
+    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':realIp,
     'X-MACAddress':'00:00:00:00:00:00','X-PrivateKey': creds.apiKey
   };
   var histUrl = BASE + '/rest/secure/angelbroking/historical/v1/getCandleData';
@@ -8502,10 +8524,11 @@ async function fetchCandlesTF(sym, tok, exchange) {
       exchange: exchange || 'NSE', symboltoken: String(tok),
       interval: cfg.interval, fromdate: fmt(fromDate), todate: fmt(toDate)
     });
+    var realIp = await getRealPublicIP();
     var hdrs = {
       'Content-Type':'application/json', 'Authorization':'Bearer '+creds.jwt,
       'X-PrivateKey': creds.apiKey || '', 'X-UserType':'USER', 'X-SourceID':'WEB',
-      'X-ClientLocalIP':'127.0.0.1', 'X-ClientPublicIP':'127.0.0.1',
+      'X-ClientLocalIP':'127.0.0.1', 'X-ClientPublicIP':realIp,
       'X-MACAddress':'00:00:00:00:00:00', 'Accept':'application/json'
     };
     var d = await multiPost(BASE + '/rest/secure/angelbroking/historical/v1/getCandleData', hdrs, body);
@@ -8550,10 +8573,11 @@ async function fetchHistoricalCandlesRange(tok, exchange, fromDate, toDate) {
            String(d.getDate()).padStart(2,'0') + ' ' +
            String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   };
+  var realIp = await getRealPublicIP();
   var hdrs = {
     'Content-Type':'application/json', 'Authorization':'Bearer '+creds.jwt,
     'X-PrivateKey': creds.apiKey || '', 'X-UserType':'USER', 'X-SourceID':'WEB',
-    'X-ClientLocalIP':'127.0.0.1', 'X-ClientPublicIP':'127.0.0.1',
+    'X-ClientLocalIP':'127.0.0.1', 'X-ClientPublicIP':realIp,
     'X-MACAddress':'00:00:00:00:00:00', 'Accept':'application/json'
   };
 
@@ -8667,6 +8691,7 @@ function aoWsConnect() {
     aoWsLog('Already connected/connecting — skipping duplicate connect.');
     return;
   }
+  AO_WS_RECONNECT_ATTEMPTS = 0; // fresh manual attempt — don't inherit a prior auto-retry's give-up state
 
   aoWsSetStatus('CONNECTING…', 'var(--w)');
   var url = 'wss://smartapisocket.angelone.in/smart-stream';
@@ -8756,9 +8781,19 @@ function aoWsConnect() {
 }
 
 function aoWsScheduleReconnect() {
+  // Hard cap — if Angel One's WebSocket has rejected the connection 5
+  // times in a row, retrying further won't help (the cause is account
+  // tier / auth / network level, not transient) and just floods the
+  // console and on-screen log forever. User can press CONNECT again
+  // manually to retry once the underlying issue is actually fixed.
+  if (AO_WS_RECONNECT_ATTEMPTS >= 5) {
+    aoWsLog('⛔ Gave up after 5 failed attempts. This usually means the connection is being rejected at the network/account level, not a transient drop — press CONNECT to retry manually once you have checked your Angel One account settings.');
+    aoWsSetStatus('FAILED (gave up)', 'var(--r)');
+    return;
+  }
   AO_WS_RECONNECT_ATTEMPTS++;
   var delay = Math.min(1000 * Math.pow(2, AO_WS_RECONNECT_ATTEMPTS), AO_WS_RECONNECT_MAX_DELAY);
-  aoWsLog('Reconnecting in ' + Math.round(delay/1000) + 's (attempt ' + AO_WS_RECONNECT_ATTEMPTS + ')…');
+  aoWsLog('Reconnecting in ' + Math.round(delay/1000) + 's (attempt ' + AO_WS_RECONNECT_ATTEMPTS + ' of 5)…');
   setTimeout(function(){ aoWsConnect(); }, delay);
 }
 
@@ -9451,11 +9486,12 @@ async function angelSearchOptToken(symbol) {
   if (!creds || !creds.jwt) return null;
   if (Date.now() < _angelRateLimitedUntil) return null; // cooling down, don't even try
   var searchUrl = BASE + '/rest/secure/angelbroking/order/v1/searchScrip';
+  var realIp = await getRealPublicIP();
   var hdrs = {
     'Content-Type':'application/json',
     'Authorization':'Bearer ' + creds.jwt,
     'X-UserType':'USER','X-SourceID':'WEB',
-    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':'127.0.0.1',
+    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':realIp,
     'X-MACAddress':'00:00:00:00:00:00',
     'X-PrivateKey': creds.apiKey
   };
