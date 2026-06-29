@@ -2161,7 +2161,7 @@ setTimeout(nd2SyncAll, 2000);
       <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)" id="ws-token-count">0 tokens streaming</span>
     </div>
     <div id="ws-status-log" style="max-height:90px;overflow-y:auto;padding:0 14px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></div>
-    <div style="padding:0 14px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim);line-height:1.5">Streams real Angel One ticks directly — no polling delay, no synthetic fake-tick noise between refreshes. Replaces nothing automatically: existing REST polling keeps running as a fallback, but any strike/spot marked "live" below is now coming from the real-time feed.</div>
+    <div style="padding:0 14px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim);line-height:1.5">⚠ Experimental — currently fails to connect even with correct IP whitelisting and during live market hours (tested). Cause not yet identified; likely needs direct confirmation from Angel One support on whether browser-based streaming requires separate account-level activation. The option chain above does NOT depend on this — it's accurate via the existing REST data path regardless of this panel's status.</div>
   </div>
 
   <!-- Stats bar -->
