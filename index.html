@@ -15942,8 +15942,17 @@ async function ptCloudLoad() {
     if (r && r.data && r.data[0] && r.data[0].content) {
       var cloud = JSON.parse(r.data[0].content);
       if (cloud && cloud.version === 2) {
-        // Cloud copy wins if it has more trades than the local copy (newer device)
-        if (!PT_PORTFOLIO || (cloud.trades||[]).length >= (PT_PORTFOLIO.trades||[]).length) {
+        // FIX: previously used >= here, which meant an EQUAL trade count
+        // (e.g. both 0) counted as "cloud wins" and overwrote local data
+        // wholesale — silently erasing a trade added moments earlier on
+        // this same device if its debounced ptSyncCloud() hadn't finished
+        // pushing to the server yet before this ran (e.g. right after a
+        // page refresh). Strictly > only lets the cloud copy win when it
+        // is demonstrably ahead (a genuinely different/newer device),
+        // never when counts are merely equal.
+        if (!PT_PORTFOLIO || (cloud.trades||[]).length > (PT_PORTFOLIO.trades||[]).length) {
+          var localCountBefore = PT_PORTFOLIO ? (PT_PORTFOLIO.trades||[]).length : 0;
+          console.log('[PaperTrading] Cloud copy ('+(cloud.trades||[]).length+' trades) replacing local copy ('+localCountBefore+' trades) on load.');
           PT_PORTFOLIO = cloud;
           ptSave();
           ptRefreshUI();
@@ -16183,7 +16192,7 @@ function aseEvaluatePcrEmaVix() {
   // De-dupe: only log once per distinct signal until conditions change materially
   var dayKey = getIST().toLocaleDateString('en-CA');
   var dedupeKey = dayKey + '_' + sideToTrade + '_' + Math.round(ni.ltp/50)*50;
-  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 'NIFTY');
   var chainLtp = getChainPrice('NIFTY', strike, sideToTrade === 'CE' ? 'ce' : 'pe');
@@ -16265,7 +16274,7 @@ async function aseEvaluateTrendline() {
   ptSet2('ase-tl-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
   var dedupeKey = latestCandleTime + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 'NIFTY');
   var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
@@ -16380,7 +16389,7 @@ async function aseEvaluateTrendlineConfirmed() {
   ptSet2('ase-cf-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
   var dedupeKey = 'CF_' + latestCandleTime + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 'NIFTY');
   var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
@@ -16511,7 +16520,7 @@ async function aseEvaluateQualityBreakout() {
   ptSet2('ase-qb-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
   var dedupeKey = 'QB_' + latestCandleTime + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 'NIFTY');
   var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
@@ -16621,7 +16630,7 @@ async function aseEvaluateNiftyProV15() {
   ptSet2('ase-np-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
   var dedupeKey = 'NP_' + latestCandleTime + '_' + sig.type;
-  if (ASE_LAST_LOGGED_KEY === dedupeKey) return;
+  if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 'NIFTY');
   var chainLtp = getChainPrice('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
