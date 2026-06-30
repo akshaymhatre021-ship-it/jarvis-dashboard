@@ -3211,6 +3211,7 @@ setTimeout(nd2SyncAll, 2000);
           <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
           <option value="quality_breakout">Quality Breakout (Regime-Filtered)</option>
           <option value="nifty_pro_v15">Nifty Pro V1.5 (EMA+VWAP+RSI+HTF)</option>
+          <option value="pipeline_test">⚙ PIPELINE TEST (fires every cycle, alternates CE/PE)</option>
         </select>
       </div>
 
@@ -3375,6 +3376,30 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:#00d4ff;margin-bottom:4px">BUY CE: EMA20&gt;EMA50 · price&gt;VWAP · RSI&gt;55 · close&gt;prior candle's high · price&gt;15-min EMA50 (multi-timeframe trend agreement)</div>
         <div style="color:var(--r);margin-bottom:4px">BUY PE: EMA20&lt;EMA50 · price&lt;VWAP · RSI&lt;45 · close&lt;prior candle's low · price&lt;15-min EMA50</div>
         <div style="color:var(--dim)">SL: lowest/highest of last 5 candles · TARGET: 2× that risk · ONE trade per day · only between 9:30-11:30 AM. Direct port of a user-supplied Pine Script v6 strategy ("Nifty Pro V1.5"). Needs ~2+ trading days of real 15-min history before the HTF filter activates.</div>
+      </div>
+
+      <!-- Live condition readout: Pipeline Test strategy -->
+      <div id="ase-readout-pipelinetest" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">CYCLE COUNT</div>
+          <div id="ase-pt-cyclecount" style="font-family:Orbitron;font-size:16px;color:var(--txt)">0</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">NEXT SIDE</div>
+          <div id="ase-pt-nextside" style="font-family:Orbitron;font-size:14px;color:var(--txt)">CE</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">TRADES LOGGED THIS SESSION</div>
+          <div id="ase-pt-tradeslogged" style="font-family:Orbitron;font-size:16px;color:var(--g)">0</div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-pt-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+      <div id="ase-rules-pipelinetest" style="display:none;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.3);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:var(--r);margin-bottom:4px;font-weight:bold">⚠ NOT A REAL TRADING STRATEGY — fires a BUY CE or BUY PE on every single engine cycle (~every 30s), alternating sides, completely ignoring market conditions.</div>
+        <div style="color:var(--dim)">Built specifically to verify the full data pipeline end-to-end: auto-log → Open Positions → Trade History → Day-Wise Breakdown → P&L Dashboard → Performance vs Nifty Benchmark. Switch back to a real strategy when done testing — leaving this on will rapidly fill your paper trading history with meaningless trades and burn through fake capital fast (each trade target/SL is also fixed and arbitrary, not derived from any real signal).</div>
       </div>
 
       <!-- Live trendline chart -->
@@ -9016,7 +9041,7 @@ function runSignalEngine() {
   var rsi   = calcRSI(SIGNAL_PRICES, 14);
   var trend = chg > 0.3 ? 'BULLISH' : chg < -0.3 ? 'BEARISH' : 'NEUTRAL';
   var expiry = getNearestExpiry();
-  var strike = getATMStrike(ltp, 'NIFTY');
+  var strike = getATMStrike(ltp, 50);
 
   // Update info bar
   var tEl = document.getElementById('sigTrend');
@@ -15985,13 +16010,16 @@ function aseLoadState() {
 }
 
 function aseSetStrategy(val) {
-  var valid = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15'];
+  var valid = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'pipeline_test'];
   ASE_STRATEGY = valid.indexOf(val) !== -1 ? val : 'pcr_ema_vix';
   try { localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY); } catch(e) {}
   ASE_LAST_LOGGED_KEY = null; // reset de-dupe when switching strategies
   aseApplyStrategyUI();
-  var labels = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5' };
+  var labels = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', pipeline_test:'⚙ PIPELINE TEST (not a real strategy)' };
   aseLog('Strategy switched to: ' + labels[ASE_STRATEGY]);
+  if (ASE_STRATEGY === 'pipeline_test') {
+    aseLog('⚠ Pipeline test mode active — will log a real (fake-signal) paper trade roughly every cycle. Switch back to a real strategy when done testing.');
+  }
 }
 
 function aseApplyStrategyUI() {
@@ -16000,7 +16028,8 @@ function aseApplyStrategyUI() {
     trendline:            { readout: 'ase-readout-trendline',  rules: 'ase-rules-trendline' },
     trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' },
     quality_breakout:     { readout: 'ase-readout-quality',    rules: 'ase-rules-quality' },
-    nifty_pro_v15:        { readout: 'ase-readout-niftypro',   rules: 'ase-rules-niftypro' }
+    nifty_pro_v15:        { readout: 'ase-readout-niftypro',   rules: 'ase-rules-niftypro' },
+    pipeline_test:        { readout: 'ase-readout-pipelinetest', rules: 'ase-rules-pipelinetest' }
   };
   Object.keys(panels).forEach(function(key){
     var isActive = (ASE_STRATEGY === key);
@@ -16108,6 +16137,10 @@ function aseEvaluate() {
       try { await aseEvaluateNiftyProV15(); } catch(e) { console.warn('[AutoSignalEngine niftypro]', e); }
       return;
     }
+    if (ASE_STRATEGY === 'pipeline_test') {
+      try { aseEvaluatePipelineTest(); } catch(e) { console.warn('[AutoSignalEngine pipelinetest]', e); }
+      return;
+    }
     aseEvaluatePcrEmaVix();
   })();
 }
@@ -16194,7 +16227,7 @@ function aseEvaluatePcrEmaVix() {
   var dedupeKey = dayKey + '_' + sideToTrade + '_' + Math.round(ni.ltp/50)*50;
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
-  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPrice('NIFTY', strike, sideToTrade === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) { aseLog('Signal found ('+sideToTrade+') but no chain price available — skipped.'); return; }
 
@@ -16276,7 +16309,7 @@ async function aseEvaluateTrendline() {
   var dedupeKey = latestCandleTime + '_' + breakout.type;
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
-  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
@@ -16391,7 +16424,7 @@ async function aseEvaluateTrendlineConfirmed() {
   var dedupeKey = 'CF_' + latestCandleTime + '_' + breakout.type;
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
-  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
@@ -16522,7 +16555,7 @@ async function aseEvaluateQualityBreakout() {
   var dedupeKey = 'QB_' + latestCandleTime + '_' + breakout.type;
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
-  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
@@ -16632,7 +16665,7 @@ async function aseEvaluateNiftyProV15() {
   var dedupeKey = 'NP_' + latestCandleTime + '_' + sig.type;
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
-  var strike = getATMStrike(ni.ltp, 'NIFTY');
+  var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPrice('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
@@ -16662,6 +16695,62 @@ async function aseEvaluateNiftyProV15() {
     aseLog('✅ Nifty Pro V1.5 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2) — one trade/day used');
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V1.5 signal found but could not log: ' + res.error);
+  }
+}
+
+// ── PIPELINE TEST (not a real trading strategy) ──
+// Fires a BUY CE or BUY PE on every single evaluation cycle, alternating
+// sides, with no market-condition checks at all — purpose-built to
+// verify the full pipeline end-to-end: auto-log → Open Positions →
+// Trade History → Day-Wise Breakdown → P&L Dashboard → Performance vs
+// Nifty Benchmark, without waiting for a real strategy's signal to
+// happen to fire (which can take hours/days and makes the cloud-sync
+// race condition fixed earlier very hard to reproduce on demand).
+var ASE_PIPELINE_TEST_CYCLE = 0;
+var ASE_PIPELINE_TEST_LOGGED = 0;
+
+function aseEvaluatePipelineTest() {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  if (!ni || !ni.ltp) { ptSet2('ase-pt-verdict', 'WAITING DATA', 'var(--w)'); return; }
+  if (!ASE_ON) { ptSet2('ase-pt-verdict', 'OFF', 'var(--dim)'); return; }
+
+  ASE_PIPELINE_TEST_CYCLE++;
+  ptSet2('ase-pt-cyclecount', ASE_PIPELINE_TEST_CYCLE);
+
+  var side = (ASE_PIPELINE_TEST_CYCLE % 2 === 1) ? 'CE' : 'PE';
+  ptSet2('ase-pt-nextside', side === 'CE' ? 'PE' : 'CE'); // shows what fires NEXT cycle, not this one
+  ptSet2('ase-pt-verdict', 'BUY ' + side, side === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var strike = getATMStrike(ni.ltp, 50);
+  // Real chain price where available (so this exercises the real
+  // pricing path, not just fabricated numbers); falls back to a fixed
+  // placeholder premium if the chain isn't ready yet, so the pipeline
+  // test never silently does nothing just because the option chain
+  // hasn't loaded — getting SOMETHING into Open Positions immediately
+  // is the entire point of this mode.
+  var chainLtp = null;
+  try { chainLtp = getChainPrice('NIFTY', strike, side.toLowerCase()); } catch(e) {}
+  if (!chainLtp || chainLtp <= 0) chainLtp = 100; // arbitrary fixed fallback premium
+
+  var target = Math.round(chainLtp * 1.20 / 5) * 5; // arbitrary fixed +20%/-15% - not derived from any real signal, by design
+  var sl     = Math.round(chainLtp * 0.85 / 5) * 5;
+  var instr  = 'NIFTY ' + strike + side + ' ' + (typeof getNiftyExpiry === 'function' ? getNiftyExpiry() : '');
+  var lotQty = 65;
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    signalType: 'BUY ' + side,
+    reasons: 'PIPELINE TEST (not a real signal) · cycle #' + ASE_PIPELINE_TEST_CYCLE
+  });
+
+  if (res && res.trade) {
+    ASE_PIPELINE_TEST_LOGGED++;
+    ptSet2('ase-pt-tradeslogged', ASE_PIPELINE_TEST_LOGGED);
+    aseLog('✅ [TEST] Logged BUY '+side+' '+instr+' @ ₹'+chainLtp+' (cycle #'+ASE_PIPELINE_TEST_CYCLE+') — check Open Positions now.');
+  } else if (res && res.error) {
+    aseLog('⚠ [TEST] Could not log: ' + res.error);
+  } else {
+    aseLog('⚠ [TEST] ptAddAutoTrade returned unexpected result: ' + JSON.stringify(res));
   }
 }
 
