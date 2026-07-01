@@ -15483,6 +15483,28 @@ function ptShowExitModal(id) {
   ptCloseTrade(id, parseFloat(exitStr));
 }
 
+// ── Resolve the live LTP for a paper trade ──
+// Paper trades store option contract names (e.g. "NIFTY 23950CE 7 Jul 2026")
+// in t.instr, but LD only holds spot/index/equity prices (NIFTY50, BANKNIFTY,
+// INDIAVIX, stocks) — never option premiums. Looking LD[t.instr] up directly
+// always misses, so it silently fell back to the entry price and Live/P&L
+// never moved. The live option chain (OC_STATE via getChainPrice) is the
+// actual source of truth for option LTPs — same source the F&O signal panel
+// already uses — so parse the strike/type out of instr and query that instead.
+function ptGetLivePrice(t) {
+  var parsed = ptParseStrikeType(t.instr);
+  if (!parsed) return t.buy; // not an option contract (e.g. equity) — no chain lookup possible
+  var strikeNum = parseInt(parsed.strike, 10);
+  if (isNaN(strikeNum)) return t.buy;
+  var instrUp = String(t.instr).toUpperCase();
+  var idxKey = instrUp.indexOf('BANKNIFTY') !== -1 ? 'BANKNIFTY'
+             : instrUp.indexOf('SENSEX')    !== -1 ? 'SENSEX'
+             : 'NIFTY';
+  var sideType = parsed.type === 'CE' ? 'ce' : 'pe';
+  var live = getChainPrice(idxKey, strikeNum, sideType);
+  return (live && live > 0) ? live : t.buy;
+}
+
 function ptRefreshUI() {
   if (!PT_PORTFOLIO) ptInit();
   var p = PT_PORTFOLIO;
@@ -15491,13 +15513,13 @@ function ptRefreshUI() {
 
   // Calc unrealised P&L from open trades using live prices
   var unrealised = openTrades.reduce(function(a,t){
-    var live = LD && LD[t.instr] && LD[t.instr].ltp ? LD[t.instr].ltp : t.buy;
+    var live = ptGetLivePrice(t);
     return a + (live - t.buy) * t.qty;
   },0);
 
   var realisedPnl = closedTrades.reduce(function(a,t){return a+(t.net||0);},0);
   var totalPnl = realisedPnl + unrealised;
-  var portfolioVal = p.cash + openTrades.reduce(function(a,t){ var live = LD && LD[t.instr] && LD[t.instr].ltp ? LD[t.instr].ltp : t.buy; return a + live * t.qty; },0);
+  var portfolioVal = p.cash + openTrades.reduce(function(a,t){ var live = ptGetLivePrice(t); return a + live * t.qty; },0);
   var retPct = ((portfolioVal - p.startCapital) / p.startCapital * 100).toFixed(2);
   var pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
 
@@ -15531,7 +15553,7 @@ function ptRefreshUI() {
       openEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open positions. Add a paper trade above ↑</div>';
     } else {
       openEl.innerHTML = openTrades.map(function(t){
-        var live = LD && LD[t.instr] && LD[t.instr].ltp ? LD[t.instr].ltp : t.buy;
+        var live = ptGetLivePrice(t);
         var upnl = (live - t.buy) * t.qty;
         var upnlPct = ((live - t.buy)/t.buy*100).toFixed(2);
         var uColor = upnl>=0 ? 'var(--g)' : 'var(--r)';
