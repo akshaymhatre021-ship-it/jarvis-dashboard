@@ -1011,7 +1011,8 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
 
 <div class="nav">
   <button class="nav-tab active" onclick="showPage('dash',this)">📊 DASHBOARD</button>
-  <button class="nav-tab" onclick="showPage('fo',this)">📈 F&amp;O CALLS</button>
+  <!-- F&O CALLS tab removed from nav per user request. Page markup/logic
+       left intact (harmless, just unreachable) in case it's wanted back. -->
   <button class="nav-tab" onclick="showPage('chain',this)">🔗 OPT CHAIN</button>
   <button class="nav-tab" onclick="showPage('tools',this)">🛠 TOOLS</button>
   <button class="nav-tab" onclick="showPage('stockpick',this)">🔍 STOCK PICKUP</button>
@@ -19266,9 +19267,20 @@ window.jarvisApplyRoleUI = function() {
     || (window.SUPA_USER && window.SUPA_USER.role === 'admin')
     || localStorage.getItem('jarvis_role') === 'admin';
   console.log('[RoleUI] isAdmin:', isAdmin, 'JARVIS_ROLE:', window.JARVIS_ROLE, 'SUPA_USER.role:', window.SUPA_USER && window.SUPA_USER.role);
-  // Setup panel: admin only
+  // Setup panel: admin only. Previously this forced style.display='block'
+  // for admins on every load/login, which — since it's an inline style —
+  // silently overrode the .setup-panel.show CSS class that toggleSetup()
+  // uses. Result: the panel could never actually be closed; clicking
+  // SETUP removed the 'show' class but the inline 'block' stayed in
+  // effect, so it kept reappearing on every page load / auth check.
+  // Fix: only ever force it closed (non-admin). For admins, clear any
+  // stale inline style and let the .show class (toggled by the SETUP
+  // button) be the sole source of truth, defaulting to closed.
   var setup = document.getElementById('setupPanel');
-  if(setup) setup.style.display = isAdmin ? 'block' : 'none';
+  if(setup) {
+    if(isAdmin) { setup.style.removeProperty('display'); }
+    else { setup.style.display = 'none'; setup.classList.remove('show'); }
+  }
   // Admin tab: admin only
   var adminBtn = document.getElementById('adminTabBtn');
   if(adminBtn) adminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
