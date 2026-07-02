@@ -3406,11 +3406,11 @@ setTimeout(nd2SyncAll, 2000);
       <!-- Live trendline chart -->
       <div style="margin-top:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px">LIVE CHART — NIFTY 5-MIN</span>
+          <span id="ase-chart-title" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);letter-spacing:1px">LIVE CHART — NIFTY 5-MIN</span>
           <span id="ase-chart-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">—</span>
         </div>
         <canvas id="ase-chart" height="220" style="width:100%;display:block;border-radius:6px;background:rgba(0,0,0,.25)"></canvas>
-        <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+        <div id="ase-chart-legend" style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00897B;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Up-trendline</span></div>
           <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:var(--r);border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Down-trendline</span></div>
           <div style="display:flex;align-items:center;gap:5px"><span style="background:#00897B;color:#fff;font-size:8px;font-weight:bold;padding:1px 4px;border-radius:3px">B</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">CE breakout</span></div>
@@ -3440,6 +3440,17 @@ setTimeout(nd2SyncAll, 2000);
             <option value="F&O Call">F&amp;O Call</option>
             <option value="Stock Pickup">Stock Pickup</option>
             <option value="Manual">Manual</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STRATEGY</label>
+          <select id="pt-strategy" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
+            <option value="manual">Manual / Other</option>
+            <option value="pcr_ema_vix">PCR + EMA21 + VIX</option>
+            <option value="trendline">Trendline Breakout (5-min)</option>
+            <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
+            <option value="quality_breakout">Quality Breakout (Regime-Filtered)</option>
+            <option value="nifty_pro_v15">Nifty Pro V1.5</option>
           </select>
         </div>
         <div>
@@ -3477,11 +3488,22 @@ setTimeout(nd2SyncAll, 2000);
   <!-- Trade History -->
   <div class="panel" style="margin-bottom:10px">
     <div class="ph"><div class="pt">📜 TRADE HISTORY</div><span id="pt-closed-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 closed trades</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 0">
+      <select id="pt-hist-filter-date" onchange="ptRefreshUI()" style="background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+        <option value="">All Dates</option>
+      </select>
+      <select id="pt-hist-filter-strategy" onchange="ptRefreshUI()" style="background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+        <option value="">All Strategies</option>
+      </select>
+    </div>
     <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:600px">
+      <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:820px">
         <thead><tr style="background:rgba(0,0,0,.3)">
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">INSTRUMENT</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">SOURCE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">STRATEGY</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">DATE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">BUY TIME</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT TIME</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">BUY ₹</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT ₹</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">QTY</th>
@@ -3490,7 +3512,7 @@ setTimeout(nd2SyncAll, 2000);
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
         </tr></thead>
         <tbody id="pt-history-body">
-          <tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
+          <tr><td colspan="11" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
         </tbody>
       </table>
     </div>
@@ -5494,10 +5516,75 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Simple EMA *series* (one value per bar, not just the final value) so it
+// can be plotted evolving across the visible candles the same way the
+// trendline series does. Seeds with an SMA of the first `period` closes.
+function emaSeriesOf(closes, period) {
+  var out = new Array(closes.length).fill(null);
+  if (closes.length < period) return out;
+  var k = 2 / (period + 1);
+  var seed = 0;
+  for (var i = 0; i < period; i++) seed += closes[i];
+  seed /= period;
+  out[period - 1] = seed;
+  var ema = seed;
+  for (var i = period; i < closes.length; i++) {
+    ema = closes[i] * k + ema * (1 - k);
+    out[i] = ema;
+  }
+  return out;
+}
+
+// Which visual mode each Auto Signal Engine strategy gets on the live chart.
+// 'breakout' = pivot trendlines + CE/PE breakout markers (the original view,
+// genuinely what trendline/trendline_confirmed/quality_breakout trade off).
+// 'ema1' / 'ema2' overlay the moving averages that strategy actually uses.
+// 'plain' = candles only (pipeline test isn't a real signal).
+function aseChartModeFor(strategy) {
+  if (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout') return 'breakout';
+  if (strategy === 'pcr_ema_vix') return 'ema1';
+  if (strategy === 'nifty_pro_v15') return 'ema2';
+  return 'plain';
+}
+
+// Keeps the chart title + legend in sync with whichever strategy is
+// selected — previously these were static text, so the chart always looked
+// like the trendline-breakout view no matter which strategy you'd picked.
+function aseUpdateChartChrome(strategy) {
+  var titleEl = document.getElementById('ase-chart-title');
+  var legendEl = document.getElementById('ase-chart-legend');
+  var mode = aseChartModeFor(strategy);
+  var titles = {
+    breakout: 'LIVE CHART — NIFTY 5-MIN (Trendline Breakout)',
+    ema1: 'LIVE CHART — NIFTY 5-MIN (Price vs EMA21)',
+    ema2: 'LIVE CHART — NIFTY 5-MIN (EMA20/EMA50)',
+    plain: 'LIVE CHART — NIFTY 5-MIN (Pipeline Test — no overlay)'
+  };
+  if (titleEl) titleEl.textContent = titles[mode];
+  if (!legendEl) return;
+  if (mode === 'breakout') {
+    legendEl.innerHTML =
+      '<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00897B;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Up-trendline</span></div>'
+      +'<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:var(--r);border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Down-trendline</span></div>'
+      +'<div style="display:flex;align-items:center;gap:5px"><span style="background:#00897B;color:#fff;font-size:8px;font-weight:bold;padding:1px 4px;border-radius:3px">B</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">CE breakout</span></div>'
+      +'<div style="display:flex;align-items:center;gap:5px"><span style="background:var(--r);color:#fff;font-size:8px;font-weight:bold;padding:1px 4px;border-radius:3px">B</span><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">PE breakout</span></div>';
+  } else if (mode === 'ema1') {
+    legendEl.innerHTML = '<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00d4ff;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">EMA21 — CE bias needs price above, PE bias needs price below</span></div>';
+  } else if (mode === 'ema2') {
+    legendEl.innerHTML =
+      '<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#00d4ff;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">EMA20</span></div>'
+      +'<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:3px;background:#ff6b35;border-radius:2px"></div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">EMA50</span></div>';
+  } else {
+    legendEl.innerHTML = '<div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Pipeline test fires on every cycle regardless of chart conditions — no indicator overlay applies.</div>';
+  }
+}
+
 function aseDrawTrendlineChart(candles) {
   var canvas = document.getElementById('ase-chart');
   var statusEl = document.getElementById('ase-chart-status');
   if (!canvas) return;
+  var strategy = (typeof ASE_STRATEGY !== 'undefined') ? ASE_STRATEGY : 'trendline';
+  var mode = aseChartModeFor(strategy);
   var ctx = canvas.getContext('2d');
   canvas.width = canvas.offsetWidth || 600;
   var H = canvas.height = canvas.height || 220;
@@ -5515,27 +5602,42 @@ function aseDrawTrendlineChart(candles) {
   var visibleN = Math.min(50, candles.length);
   var visible = candles.slice(-visibleN);
 
-  // Recompute the trendline at EVERY visible bar (not just the latest) so
-  // the line drawn on screen reflects how it actually looked over time,
-  // matching the indicator's backpainting behavior. Track which pivot is
-  // active at each bar so the line can be split into separate segments
-  // whenever the active pivot changes — the reference chart shows short
-  // independent segments per swing, not one continuous line stretched
-  // across unrelated pivots.
   var upperSeries = [], lowerSeries = [], upperPivotAt = [], lowerPivotAt = [], breakoutMarkers = [];
-  for (var vi = 0; vi < visible.length; vi++) {
-    var historySlice = candles.slice(0, candles.length - visibleN + vi + 1);
-    var tl = calcTrendlines(historySlice);
-    upperSeries.push(tl ? tl.upperNow : null);
-    lowerSeries.push(tl ? tl.lowerNow : null);
-    upperPivotAt.push(tl ? tl.upperPivotIndex : null); // which pivot bar this value is anchored to
-    lowerPivotAt.push(tl ? tl.lowerPivotIndex : null);
-    if (vi > 0) {
-      var prevHist = candles.slice(0, candles.length - visibleN + vi);
-      var b = checkTrendlineBreakout(prevHist, visible[vi-1].close, visible[vi].close);
-      if (b) breakoutMarkers.push({ idx: vi, type: b.type });
+  var emaSeries1 = null, emaSeries2 = null;
+
+  if (mode === 'breakout') {
+    // Recompute the trendline at EVERY visible bar (not just the latest) so
+    // the line drawn on screen reflects how it actually looked over time,
+    // matching the indicator's backpainting behavior. Track which pivot is
+    // active at each bar so the line can be split into separate segments
+    // whenever the active pivot changes — the reference chart shows short
+    // independent segments per swing, not one continuous line stretched
+    // across unrelated pivots.
+    for (var vi = 0; vi < visible.length; vi++) {
+      var historySlice = candles.slice(0, candles.length - visibleN + vi + 1);
+      var tl = calcTrendlines(historySlice);
+      upperSeries.push(tl ? tl.upperNow : null);
+      lowerSeries.push(tl ? tl.lowerNow : null);
+      upperPivotAt.push(tl ? tl.upperPivotIndex : null); // which pivot bar this value is anchored to
+      lowerPivotAt.push(tl ? tl.lowerPivotIndex : null);
+      if (vi > 0) {
+        var prevHist = candles.slice(0, candles.length - visibleN + vi);
+        var b = checkTrendlineBreakout(prevHist, visible[vi-1].close, visible[vi].close);
+        if (b) breakoutMarkers.push({ idx: vi, type: b.type });
+      }
     }
+  } else if (mode === 'ema1') {
+    // PCR + EMA21 + VIX strategy — overlay the EMA21 the strategy actually gates on.
+    var closesAll = candles.map(function(c){ return c.close; });
+    var fullEma = emaSeriesOf(closesAll, 21);
+    emaSeries1 = fullEma.slice(-visibleN);
+  } else if (mode === 'ema2') {
+    // Nifty Pro V1.5 — overlay EMA20 and EMA50.
+    var closesAll2 = candles.map(function(c){ return c.close; });
+    emaSeries1 = emaSeriesOf(closesAll2, 20).slice(-visibleN);
+    emaSeries2 = emaSeriesOf(closesAll2, 50).slice(-visibleN);
   }
+  // mode === 'plain' (pipeline test): no overlay series computed at all.
 
   var padL = 6, padR = 6, padTop = 10, padBottom = 18;
   var plotW = W - padL - padR, plotH = H - padTop - padBottom;
@@ -5544,6 +5646,8 @@ function aseDrawTrendlineChart(candles) {
   visible.forEach(function(c){ allVals.push(c.high, c.low); });
   upperSeries.forEach(function(v){ if (v != null) allVals.push(v); });
   lowerSeries.forEach(function(v){ if (v != null) allVals.push(v); });
+  if (emaSeries1) emaSeries1.forEach(function(v){ if (v != null) allVals.push(v); });
+  if (emaSeries2) emaSeries2.forEach(function(v){ if (v != null) allVals.push(v); });
   var minV = Math.min.apply(null, allVals), maxV = Math.max.apply(null, allVals);
   var range = (maxV - minV) || 1;
   minV -= range * 0.05; maxV += range * 0.05; range = maxV - minV;
@@ -5583,40 +5687,49 @@ function aseDrawTrendlineChart(candles) {
     for (var i = 0; i < series.length; i++) {
       if (series[i] == null) { started = false; lastPivot = undefined; continue; }
       var x = padL + slot*i + slot/2, y = yOf(series[i]);
-      if (!started || pivotAt[i] !== lastPivot) {
+      if (!started || (pivotAt && pivotAt[i] !== lastPivot)) {
         ctx.moveTo(x, y);
         started = true;
       } else {
         ctx.lineTo(x, y);
       }
-      lastPivot = pivotAt[i];
+      if (pivotAt) lastPivot = pivotAt[i];
     }
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  drawLine(upperSeries, upperPivotAt, '#00897B');
-  drawLine(lowerSeries, lowerPivotAt, '#ff3d5a');
 
-  // Breakout markers
-  breakoutMarkers.forEach(function(m){
-    var x = padL + slot*m.idx + slot/2;
-    var c = visible[m.idx];
-    ctx.fillStyle = m.type === 'CE' ? '#00ff88' : '#ff3d5a';
-    ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-    if (m.type === 'CE') {
-      var by = yOf(c.low) + 16;
-      ctx.fillStyle = '#00897B';
-      roundRect(ctx, x-7, by-8, 14, 14, 3); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('B', x, by+2);
-    } else {
-      var by2 = yOf(c.high) - 16;
-      ctx.fillStyle = '#ff3d5a';
-      roundRect(ctx, x-7, by2-8, 14, 14, 3); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('B', x, by2+2);
-    }
-  });
+  if (mode === 'breakout') {
+    drawLine(upperSeries, upperPivotAt, '#00897B');
+    drawLine(lowerSeries, lowerPivotAt, '#ff3d5a');
+
+    // Breakout markers
+    breakoutMarkers.forEach(function(m){
+      var x = padL + slot*m.idx + slot/2;
+      var c = visible[m.idx];
+      ctx.fillStyle = m.type === 'CE' ? '#00ff88' : '#ff3d5a';
+      ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+      if (m.type === 'CE') {
+        var by = yOf(c.low) + 16;
+        ctx.fillStyle = '#00897B';
+        roundRect(ctx, x-7, by-8, 14, 14, 3); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+        ctx.fillText('B', x, by+2);
+      } else {
+        var by2 = yOf(c.high) - 16;
+        ctx.fillStyle = '#ff3d5a';
+        roundRect(ctx, x-7, by2-8, 14, 14, 3); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+        ctx.fillText('B', x, by2+2);
+      }
+    });
+  } else if (mode === 'ema1') {
+    drawLine(emaSeries1, null, '#00d4ff');
+  } else if (mode === 'ema2') {
+    drawLine(emaSeries1, null, '#00d4ff'); // EMA20
+    drawLine(emaSeries2, null, '#ff6b35'); // EMA50
+  }
+  // mode === 'plain': candles only, nothing further to draw.
 
   if (statusEl) {
     var lastT = visible[visible.length-1].time;
@@ -15416,6 +15529,7 @@ function ptAddTrade() {
   if (!PT_PORTFOLIO) ptInit();
   var instr  = document.getElementById('pt-instr').value.trim();
   var source = document.getElementById('pt-source').value;
+  var strategy = document.getElementById('pt-strategy') ? document.getElementById('pt-strategy').value : 'manual';
   var buy    = parseFloat(document.getElementById('pt-buy').value);
   var qty    = parseInt(document.getElementById('pt-qty').value)||65;
   var target = parseFloat(document.getElementById('pt-target').value)||0;
@@ -15432,12 +15546,12 @@ function ptAddTrade() {
     msg.textContent='⚠ Insufficient cash. Available: ₹'+Math.round(PT_PORTFOLIO.cash).toLocaleString('en-IN')+', Required: ₹'+Math.round(cost).toLocaleString('en-IN'); return;
   }
   var trade = {
-    id: Date.now(), instr: instr, source: source, buy: buy, qty: qty,
+    id: Date.now(), instr: instr, source: source, strategy: strategy, buy: buy, qty: qty,
     cost: cost, target: target, sl: sl, status: 'OPEN', exit: null,
     date: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
     dayKey: new Date().toLocaleDateString('en-CA'),
     time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-    exitDate: null
+    exitDate: null, exitTime: null
   };
   PT_PORTFOLIO.cash -= cost;
   PT_PORTFOLIO.trades.push(trade);
@@ -15464,13 +15578,13 @@ function ptAddAutoTrade(opts) {
   var dayKey = now.toLocaleDateString('en-CA'); // YYYY-MM-DD, stable sort key
   var trade = {
     id: Date.now() + Math.floor(Math.random()*1000),
-    instr: opts.instr, source: 'AUTO SIGNAL', auto: true,
+    instr: opts.instr, source: 'AUTO SIGNAL', strategy: opts.strategy || (typeof ASE_STRATEGY !== 'undefined' ? ASE_STRATEGY : 'auto'), auto: true,
     buy: opts.buy, qty: opts.qty, cost: cost,
     target: opts.target, sl: opts.sl, status: 'OPEN', exit: null,
     date: now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
     dayKey: dayKey,
     time: now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-    exitDate: null,
+    exitDate: null, exitTime: null,
     signalType: opts.signalType || '',  // 'BUY CE' / 'BUY PE'
     pcr: opts.pcr, vix: opts.vix, reasons: opts.reasons || ''
   };
@@ -15497,6 +15611,7 @@ function ptCloseTrade(id, exitPrice, skipRefresh) {
     t.status = gross >= 0 ? 'PROFIT' : 'LOSS';
     t.result = gross >= 0 ? 'PROFIT' : 'LOSS';
     t.exitDate = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    t.exitTime = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     t.dayKey = t.dayKey || new Date().toLocaleDateString('en-CA');
     PT_PORTFOLIO.cash += exitPrice * t.qty - Math.round(t.qty * 0.55);
     return t;
@@ -15597,6 +15712,15 @@ function ptToggleTrail(id) {
   ptRefreshUI();
 }
 
+function ptStrategyLabel(key) {
+  var labels = {
+    pcr_ema_vix: 'PCR+EMA21+VIX', trendline: 'Trendline Breakout', trendline_confirmed: 'Trendline+Confirm',
+    quality_breakout: 'Quality Breakout', nifty_pro_v15: 'Nifty Pro V1.5', pipeline_test: 'Pipeline Test',
+    manual: 'Manual', auto: 'Auto (unspecified)'
+  };
+  return labels[key] || key || 'Manual';
+}
+
 function ptRefreshUI() {
   if (!PT_PORTFOLIO) ptInit();
   ptCheckAutoExits();
@@ -15658,6 +15782,8 @@ function ptRefreshUI() {
               +'<div style="width:8px;height:8px;border-radius:50%;background:var(--g);animation:pulse 1.5s infinite;box-shadow:0 0 6px var(--g)"></div>'
               +'<span style="font-family:Orbitron;font-size:12px;font-weight:700;color:var(--a)">'+t.instr+'</span>'
               +'<span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+t.source+'</span>'
+              +'<span style="font-family:Share Tech Mono;font-size:9px;color:#a064ff">'+ptStrategyLabel(t.strategy)+'</span>'
+              +'<span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">🕐 '+(t.time||'—')+'</span>'
             +'</div>'
             +'<div style="display:flex;align-items:center;gap:6px">'
               +'<span style="font-family:Orbitron;font-size:13px;color:'+uColor+'">'+(upnl>=0?'+':'')+'₹'+Math.round(upnl).toLocaleString('en-IN')+'</span>'
@@ -15684,18 +15810,57 @@ function ptRefreshUI() {
     }
   }
 
+  // Trade History filters — populate dropdowns from what's actually in history,
+  // then filter the closed list before rendering (dashboard/day-wise charts
+  // below still use the full unfiltered closedTrades, only this table filters)
+  var dateFilterEl = document.getElementById('pt-hist-filter-date');
+  var stratFilterEl = document.getElementById('pt-hist-filter-strategy');
+  if (dateFilterEl) {
+    var curDateVal = dateFilterEl.value;
+    var distinctDates = []; // [{key, label}], newest first
+    closedTrades.forEach(function(t){
+      var key = t.dayKey || t.date;
+      if (key && !distinctDates.some(function(d){return d.key===key;})) distinctDates.push({key:key, label:t.date||key});
+    });
+    distinctDates.sort(function(a,b){ return a.key < b.key ? 1 : -1; });
+    dateFilterEl.innerHTML = '<option value="">All Dates</option>' + distinctDates.map(function(d){
+      return '<option value="'+d.key+'">'+d.label+'</option>';
+    }).join('');
+    dateFilterEl.value = distinctDates.some(function(d){return d.key===curDateVal;}) ? curDateVal : '';
+  }
+  if (stratFilterEl) {
+    var curStratVal = stratFilterEl.value;
+    var distinctStrats = []; // keys
+    closedTrades.forEach(function(t){
+      var key = t.strategy || 'manual';
+      if (distinctStrats.indexOf(key) === -1) distinctStrats.push(key);
+    });
+    stratFilterEl.innerHTML = '<option value="">All Strategies</option>' + distinctStrats.map(function(k){
+      return '<option value="'+k+'">'+ptStrategyLabel(k)+'</option>';
+    }).join('');
+    stratFilterEl.value = distinctStrats.indexOf(curStratVal) !== -1 ? curStratVal : '';
+  }
+  var filteredClosed = closedTrades.filter(function(t){
+    if (dateFilterEl && dateFilterEl.value && (t.dayKey||t.date) !== dateFilterEl.value) return false;
+    if (stratFilterEl && stratFilterEl.value && (t.strategy||'manual') !== stratFilterEl.value) return false;
+    return true;
+  });
+
   // Closed history
   var hbody = document.getElementById('pt-history-body');
   if (hbody) {
-    if (!closedTrades.length) {
-      hbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No closed trades yet</td></tr>';
+    if (!filteredClosed.length) {
+      hbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
     } else {
-      hbody.innerHTML = closedTrades.slice().reverse().map(function(t){
+      hbody.innerHTML = filteredClosed.slice().reverse().map(function(t){
         var pColor = (t.net||0)>=0?'var(--g)':'var(--r)';
         var rBg = t.result==='PROFIT'?'rgba(0,255,136,.12)':'rgba(255,61,90,.12)';
         return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
           +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:var(--a)">'+t.instr+'</td>'
-          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+t.source+(t.autoExitReason?' <span style="color:var(--a)">· '+t.autoExitReason+'</span>':'')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:#a064ff">'+ptStrategyLabel(t.strategy)+(t.autoExitReason?' <span style="color:var(--dim)">· '+t.autoExitReason+'</span>':'')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.date||'—')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.time||'—')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.exitTime||'—')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--a)">₹'+t.buy.toFixed(2)+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono">₹'+(t.exit||0).toFixed(2)+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--dim)">'+t.qty+'</td>'
@@ -16124,6 +16289,7 @@ function aseLoadState() {
   if (sel) sel.value = ASE_STRATEGY;
   aseUpdateToggleUI();
   aseApplyStrategyUI();
+  if (typeof aseUpdateChartChrome === 'function') aseUpdateChartChrome(ASE_STRATEGY);
 }
 
 function aseSetStrategy(val) {
@@ -16132,6 +16298,12 @@ function aseSetStrategy(val) {
   try { localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY); } catch(e) {}
   ASE_LAST_LOGGED_KEY = null; // reset de-dupe when switching strategies
   aseApplyStrategyUI();
+  aseUpdateChartChrome(ASE_STRATEGY);
+  // Redraw immediately from the last-fetched candles rather than waiting up
+  // to 30s for the next engine cycle — previously the chart always showed
+  // the same trendline-breakout view regardless of the selected strategy,
+  // so switching strategy here now visibly changes what's drawn right away.
+  if (typeof ASE_LAST_CANDLES !== 'undefined' && ASE_LAST_CANDLES) aseDrawTrendlineChart(ASE_LAST_CANDLES);
   var labels = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', pipeline_test:'⚙ PIPELINE TEST (not a real strategy)' };
   aseLog('Strategy switched to: ' + labels[ASE_STRATEGY]);
   if (ASE_STRATEGY === 'pipeline_test') {
@@ -16354,7 +16526,7 @@ function aseEvaluatePcrEmaVix() {
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025 per NSE/SEBI circular)
 
   var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'pcr_ema_vix',
     signalType: 'BUY ' + sideToTrade, pcr: pcr, vix: vix, reasons: reasons.filter(Boolean).join(' | ')
   });
 
@@ -16445,7 +16617,7 @@ async function aseEvaluateTrendline() {
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
   var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'trendline',
     signalType: 'BUY ' + breakout.type,
     reasons: 'Trendline ' + breakout.line + ' · SL line @ ' + fN(breakout.slLevel,1) + ' · 5-min, 14-bar pivot'
   });
@@ -16559,7 +16731,7 @@ async function aseEvaluateTrendlineConfirmed() {
   var confirmReason = pcrAgrees && emaAgrees ? 'PCR+EMA both agree' : pcrAgrees ? 'PCR agrees' : 'EMA agrees';
 
   var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'trendline_confirmed',
     signalType: 'BUY ' + breakout.type, pcr: pcr,
     reasons: 'Trendline ' + breakout.line + ' CONFIRMED (' + confirmReason + ') · SL line @ ' + fN(breakout.slLevel,1)
   });
@@ -16691,7 +16863,7 @@ async function aseEvaluateQualityBreakout() {
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
   var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'quality_breakout',
     signalType: 'BUY ' + breakout.type,
     reasons: 'QualityBreakout ' + breakout.line + ' · ADX ' + adxRes.adx.toFixed(1) + ' (trending) · follow-through confirmed · R:R 1:1.75 · SL line @ ' + fN(breakout.slLevel,1)
   });
@@ -16801,7 +16973,7 @@ async function aseEvaluateNiftyProV15() {
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
   var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'nifty_pro_v15',
     signalType: 'BUY ' + sig.type,
     reasons: 'NiftyProV15 · EMA20/50+VWAP+RSI+15mHTF aligned · R:R 1:2 · index SL @ ' + fN(sig.sl,1)
   });
@@ -16855,7 +17027,7 @@ function aseEvaluatePipelineTest() {
   var lotQty = 65;
 
   var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl,
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'pipeline_test',
     signalType: 'BUY ' + side,
     reasons: 'PIPELINE TEST (not a real signal) · cycle #' + ASE_PIPELINE_TEST_CYCLE
   });
