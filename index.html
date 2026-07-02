@@ -10028,28 +10028,48 @@ async function buildOptionChain() {
   renderOptionChain();
 }
 
+// ── Chain refresh ticker ──
+// Used to only run while the Option Chain tab was on screen, which meant
+// OC_STATE (the source ptGetLivePrice reads from) went stale the moment you
+// left that tab — Open Positions would show frozen prices until you visited
+// Option Chain again. Now the ticker also stays alive while paper trading has
+// open positions, regardless of which tab is active, so Live/P&L keep moving
+// in the background.
+function ptHasOpenTrades() {
+  return !!(PT_PORTFOLIO && PT_PORTFOLIO.trades && PT_PORTFOLIO.trades.some(function(t){return t.status==='OPEN';}));
+}
+function ensureChainTicker() {
+  if (OC_STATE.ticker) return;
+  // 15s refresh — Angel One's searchScrip endpoint rate-limits
+  // ("Access denied because exceeding access rate") well before NSE
+  // does, especially before the token cache warms up. The persisted
+  // localStorage cache + per-call cooldown above also help, but the
+  // refresh cadence itself was the main driver of the 403 storm.
+  OC_STATE.ticker = setInterval(function(){
+    var chainPage = document.getElementById('page-chain');
+    var chainActive = chainPage && chainPage.classList.contains('active');
+    if (!chainActive && !ptHasOpenTrades()) return; // nothing needs live chain data right now
+    // Only auto-refresh during market hours
+    var _ci = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+    var _cd = _ci.getDay(), _cm = _ci.getHours()*60+_ci.getMinutes();
+    var _co = (_cd>=1&&_cd<=5)&&(_cm>=555&&_cm<=935);
+    if (_co) {
+      buildOptionChain().then(function(){
+        // Refresh Open Positions numbers right after the chain updates,
+        // so Live/P&L move even if the paper trading tab isn't the active tab.
+        if (ptHasOpenTrades()) { try { ptRefreshUI(); } catch(e) {} }
+      });
+    }
+  }, 15000);
+}
+
 // ── Hook into showPage for chain ──
 var _origShowPage = showPage;
 showPage = function(id, btn) {
   _origShowPage(id, btn);
   if (id === 'chain') {
     buildOptionChain();
-    if (!OC_STATE.ticker) {
-      // 15s refresh — Angel One's searchScrip endpoint rate-limits
-      // ("Access denied because exceeding access rate") well before NSE
-      // does, especially before the token cache warms up. The persisted
-      // localStorage cache + per-call cooldown above also help, but the
-      // refresh cadence itself was the main driver of the 403 storm.
-      OC_STATE.ticker = setInterval(function(){
-        if (!document.getElementById('page-chain').classList.contains('active')) return;
-        // Only auto-refresh during market hours
-        var _ci = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-        var _cd = _ci.getDay(), _cm = _ci.getHours()*60+_ci.getMinutes();
-        var _co = (_cd>=1&&_cd<=5)&&(_cm>=555&&_cm<=935);
-        if (_co) buildOptionChain();
-        // Outside hours: chain stays frozen, no rebuild
-      }, 15000);
-    }
+    ensureChainTicker();
   }
 };
 // ═══════════════════════════════════════════════════════════════
@@ -14569,7 +14589,15 @@ function advTab(name, btn) {
   });
   document.querySelectorAll('#page-advanced .nav .nav-tab').forEach(function(b){ b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
-  if (name === 'paper') ptRefreshUI();
+  if (name === 'paper') {
+    ptRefreshUI();
+    ensureChainTicker();
+    // Prime OC_STATE immediately rather than waiting up to 15s for the
+    // next ticker tick, then refresh the position cards with fresh prices.
+    if (typeof buildOptionChain === 'function') {
+      buildOptionChain().then(function(){ try { ptRefreshUI(); } catch(e) {} });
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -15414,6 +15442,7 @@ function ptAddTrade() {
   PT_PORTFOLIO.trades.push(trade);
   ptSave();
   ptSyncCloud();
+  if (typeof ensureChainTicker === 'function') ensureChainTicker();
   msg.style.cssText='display:block;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.3);color:var(--g);padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px';
   msg.textContent='✅ Paper trade added! Cost: ₹'+Math.round(cost).toLocaleString('en-IN');
   setTimeout(function(){ msg.style.display='none'; }, 3000);
@@ -15448,12 +15477,13 @@ function ptAddAutoTrade(opts) {
   PT_PORTFOLIO.trades.push(trade);
   ptSave();
   ptSyncCloud();
+  if (typeof ensureChainTicker === 'function') ensureChainTicker();
   ptRefreshUI();
   return { trade: trade };
 }
 
 
-function ptCloseTrade(id, exitPrice) {
+function ptCloseTrade(id, exitPrice, skipRefresh) {
   if (!PT_PORTFOLIO) return;
   PT_PORTFOLIO.trades = PT_PORTFOLIO.trades.map(function(t){
     if (t.id !== id) return t;
@@ -15472,7 +15502,7 @@ function ptCloseTrade(id, exitPrice) {
   });
   ptSave();
   ptSyncCloud();
-  ptRefreshUI();
+  if (!skipRefresh) ptRefreshUI(); // skipRefresh=true when called from ptCheckAutoExits, which already runs inside a ptRefreshUI pass
 }
 
 function ptShowExitModal(id) {
@@ -15505,8 +15535,70 @@ function ptGetLivePrice(t) {
   return (live && live > 0) ? live : t.buy;
 }
 
+// ── Auto exit + trailing stop-loss engine ──
+// Previously target/SL were purely informational — trades stayed open
+// forever until you clicked "Close Trade" manually, even after price blew
+// past the target or crashed through the SL. That's exactly the CE-runs-up
+// -then-reverses scenario: nothing locked in the gain, so a trade that was
+// once well in profit could round-trip into a loss.
+// This runs on every refresh (including the background 15s ticker) and:
+//   1. Tracks each trade's high-water mark (best live price seen so far).
+//   2. If trailing is enabled (t.trailSL, default ON), once the trade is at
+//      least PT_TRAIL_ARM_PCT of the way to target, it ratchets the SL up
+//      to lock in PT_TRAIL_LOCK_PCT of the peak gain. SL only ever moves up,
+//      never down, and never above target.
+//   3. Auto-closes the trade the moment live price hits target or SL.
+var PT_TRAIL_ARM_PCT  = 0.25; // must be 25% of the way to target before SL starts trailing
+var PT_TRAIL_LOCK_PCT = 0.60; // lock in 60% of the peak gain as the new SL floor
+function ptCheckAutoExits() {
+  if (!PT_PORTFOLIO) return;
+  var closedAny = false;
+  PT_PORTFOLIO.trades.forEach(function(t){
+    if (t.status !== 'OPEN') return;
+    var live = ptGetLivePrice(t);
+    if (!live || live <= 0) return;
+
+    t.highWater = Math.max(t.highWater || t.buy, live);
+    if (t.trailSL !== false && t.target > t.buy) { // trailing default ON unless explicitly disabled
+      var armLevel = t.buy + (t.target - t.buy) * PT_TRAIL_ARM_PCT;
+      if (t.highWater >= armLevel) {
+        var candidateSL = t.buy + (t.highWater - t.buy) * PT_TRAIL_LOCK_PCT;
+        candidateSL = Math.min(candidateSL, t.target - 0.05); // never trail past target
+        candidateSL = Math.round(candidateSL * 20) / 20; // nearest ₹0.05
+        if (candidateSL > t.sl) {
+          if (t.slOriginal === undefined) t.slOriginal = t.sl;
+          t.sl = candidateSL;
+          t.slTrailed = true;
+        }
+      }
+    }
+
+    if (live <= t.sl) {
+      var reason = t.slTrailed ? 'TRAIL SL' : 'AUTO SL';
+      ptCloseTrade(t.id, live, true);
+      t.autoExitReason = reason;
+      closedAny = true;
+    } else if (live >= t.target) {
+      ptCloseTrade(t.id, live, true);
+      t.autoExitReason = 'AUTO TARGET';
+      closedAny = true;
+    }
+  });
+  if (closedAny) ptSave();
+}
+
+function ptToggleTrail(id) {
+  if (!PT_PORTFOLIO) return;
+  var t = PT_PORTFOLIO.trades.find(function(x){ return x.id === id; });
+  if (!t) return;
+  t.trailSL = t.trailSL === false ? true : false; // default ON, so first click turns it OFF
+  ptSave();
+  ptRefreshUI();
+}
+
 function ptRefreshUI() {
   if (!PT_PORTFOLIO) ptInit();
+  ptCheckAutoExits();
   var p = PT_PORTFOLIO;
   var openTrades = p.trades.filter(function(t){return t.status==='OPEN';});
   var closedTrades = p.trades.filter(function(t){return t.status!=='OPEN';});
@@ -15576,12 +15668,14 @@ function ptRefreshUI() {
             +'<span style="color:var(--dim)">Live: <span style="color:var(--txt)">₹'+live.toFixed(2)+'</span></span>'
             +'<span style="color:var(--dim)">Qty: <span style="color:var(--txt)">'+t.qty+'</span></span>'
             +'<span style="color:var(--dim)">Target: <span style="color:var(--g)">₹'+t.target+'</span></span>'
-            +'<span style="color:var(--dim)">SL: <span style="color:var(--r)">₹'+t.sl+'</span></span>'
+            +'<span style="color:var(--dim)">SL: <span style="color:var(--r)">₹'+t.sl+(t.slTrailed?' 🔒':'')+'</span></span>'
             +'<span style="color:var(--dim)">To Target: <span style="color:var(--g)">'+distTgt+'</span></span>'
             +'<span style="color:var(--dim)">To SL: <span style="color:var(--r)">'+distSl+'</span></span>'
           +'</div>'
-          +'<div style="display:flex;gap:6px">'
+          + (t.slTrailed ? '<div style="font-family:Share Tech Mono;font-size:9px;color:var(--g);margin-bottom:8px">🔒 Trailing SL active — locked up from original ₹'+(t.slOriginal!==undefined?t.slOriginal:t.sl)+' as price ran in your favour. Won\'t move back down.</div>' : '')
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
             +'<button onclick="ptShowExitModal('+t.id+')" style="padding:4px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">✅ CLOSE TRADE</button>'
+            +'<button onclick="ptToggleTrail('+t.id+')" title="Auto-ratchets your SL up to lock in profit as price runs toward target, and auto-closes on target/SL hit" style="padding:4px 12px;background:'+(t.trailSL!==false?'rgba(0,255,136,.08)':'rgba(255,255,255,.04)')+';border:1px solid '+(t.trailSL!==false?'rgba(0,255,136,.3)':'var(--border)')+';border-radius:4px;color:'+(t.trailSL!==false?'var(--g)':'var(--dim)')+';font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">'+(t.trailSL!==false?'🔒 TRAIL SL: ON':'🔓 TRAIL SL: OFF')+'</button>'
             +'<button onclick="ptDeleteTrade('+t.id+')" style="padding:4px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🗑 DELETE</button>'
           +'</div>'
         +'</div>';
@@ -15600,7 +15694,7 @@ function ptRefreshUI() {
         var rBg = t.result==='PROFIT'?'rgba(0,255,136,.12)':'rgba(255,61,90,.12)';
         return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
           +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:var(--a)">'+t.instr+'</td>'
-          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+t.source+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+t.source+(t.autoExitReason?' <span style="color:var(--a)">· '+t.autoExitReason+'</span>':'')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--a)">₹'+t.buy.toFixed(2)+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono">₹'+(t.exit||0).toFixed(2)+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--dim)">'+t.qty+'</td>'
