@@ -1019,6 +1019,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <button class="nav-tab" onclick="showPage('stockreport',this)">📑 STOCK REPORT</button>
   <button class="nav-tab" onclick="showPage('mf',this)">💰 MUT. FUNDS</button>
   <button class="nav-tab" onclick="showPage('advanced',this)" style="border-color:rgba(160,100,255,.3);color:#a064ff;">⚡ ADVANCED</button>
+  <button class="nav-tab" onclick="showPage('stockadv',this)" style="border-color:rgba(0,255,136,.3);color:var(--g);">📈 STOCK ADVANCE</button>
   <button class="nav-tab" onclick="showPage('dashv2',this)" style="border-color:rgba(0,212,255,.3);color:#00d4ff;background:rgba(0,212,255,.04);">✨ DASH V2</button>
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
@@ -3113,14 +3114,15 @@ setTimeout(nd2SyncAll, 2000);
         <div class="pt" id="bt-tradelog-title">📋 SIMULATED TRADE LOG</div>
         <button onclick="btExportCSV()" style="padding:3px 10px;background:rgba(160,100,255,.08);border:1px solid #a064ff;border-radius:4px;color:#a064ff;font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
       </div>
+      <div id="bt-tradelog-disclaimer" style="display:none;padding:6px 14px;font-family:Share Tech Mono;font-size:9px;color:var(--w);background:rgba(255,193,7,.06)"></div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:600px">
           <thead><tr style="background:rgba(0,0,0,.3)">
             <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">#</th>
             <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">DATE</th>
             <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">SIGNAL</th>
-            <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY</th>
-            <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT</th>
+            <th id="bt-th-entry" style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY</th>
+            <th id="bt-th-exit" style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT</th>
             <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">P&amp;L ₹</th>
             <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RETURN%</th>
             <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
@@ -3599,6 +3601,210 @@ setTimeout(nd2SyncAll, 2000);
 
 </div>
 <!-- ══ END ADVANCED PAGE ══ -->
+
+<!-- ══ STOCK ADVANCE PAGE ══ -->
+<div class="page" id="page-stockadv">
+
+<!-- Sub-tabs -->
+<div class="nav" style="margin-bottom:12px">
+  <button class="nav-tab active" id="stockadv-tab-backtest" onclick="stockAdvTab('backtest',this)" style="color:var(--g);border-color:rgba(0,255,136,.3)">📊 STOCK BACKTESTING</button>
+  <button class="nav-tab" id="stockadv-tab-paper" onclick="stockAdvTab('paper',this)">📋 STOCK PAPER TRADING</button>
+</div>
+
+<!-- ══ STOCK BACKTESTING — prefills & runs in the main Backtesting Engine ══ -->
+<div id="stockadv-page-backtest">
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt" style="color:var(--g)">📊 BACKTEST A STOCK STRATEGY</div>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Runs on the main Backtesting Engine — the full report opens there</span>
+    </div>
+    <div style="padding:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STOCK SYMBOL</label>
+          <input id="sbt-ticker" type="text" placeholder="e.g. RELIANCE, TCS, INFY" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STRATEGY</label>
+          <select id="sbt-strategy" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
+            <option value="jarvis">JARVIS Standard (EMA+RSI)</option>
+            <option value="ema_cross">EMA Crossover Only</option>
+            <option value="rsi">RSI Reversal Strategy</option>
+            <option value="macd">MACD Momentum</option>
+            <option value="breakout">Volume Breakout</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">PERIOD</label>
+          <select id="sbt-period" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
+            <option value="1m">1 Month</option>
+            <option value="3m" selected>3 Months</option>
+            <option value="6m">6 Months</option>
+            <option value="1y">1 Year</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">CAPITAL (₹)</label>
+          <input id="sbt-capital" type="number" value="100000" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1000" step="1000">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">POSITION SIZE (%)</label>
+          <input id="sbt-pos" type="number" value="20" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1" max="100">
+        </div>
+      </div>
+      <div id="sbt-msg" style="display:none;padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px;margin-bottom:8px"></div>
+      <button onclick="runStockBacktest()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,212,255,.05));border:1px solid var(--g);border-radius:7px;color:var(--g);font-family:Orbitron;font-size:11px;letter-spacing:2px;cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 0 18px rgba(0,255,136,.25)'" onmouseout="this.style.boxShadow='none'">
+        🚀 RUN BACKTEST — OPENS FULL REPORT
+      </button>
+      <div style="margin-top:10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
+        Uses the same Backtesting Engine as the ⚡ Advanced tab (real Angel One daily candles when available for the symbol you enter, synthetic data as fallback) — you'll be taken there for the full KPIs, equity curve, win/loss breakdown, monthly P&amp;L and trade log.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STOCK PAPER TRADING ══ -->
+<div id="stockadv-page-paper" style="display:none">
+
+  <!-- Portfolio Header -->
+  <div id="spt-header" style="background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,212,255,.03));border:1px solid rgba(0,255,136,.2);border-left:4px solid var(--g);border-radius:12px;padding:14px 18px;margin-bottom:10px;position:relative;overflow:hidden">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--g),var(--a),var(--g))"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-family:Orbitron;font-size:11px;color:var(--g);letter-spacing:2px;margin-bottom:4px">📋 STOCK PAPER TRADING — VIRTUAL PORTFOLIO</div>
+        <div style="font-family:Share Tech Mono;font-size:10px;color:var(--dim)">Practice buying/shorting stocks without real money • Separate portfolio from F&amp;O paper trading</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="sptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
+        <button onclick="sptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px">
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">PORTFOLIO VALUE</div>
+        <div id="spt-value" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">₹10,00,000</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">TOTAL P&amp;L</div>
+        <div id="spt-pnl" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">+₹0</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">RETURN %</div>
+        <div id="spt-ret" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">0.00%</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">vs NIFTY</div>
+        <div id="spt-vs-nifty" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--a)">—</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">WIN RATE</div>
+        <div id="spt-winrate" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--w)">—</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">CASH BALANCE</div>
+        <div id="spt-cash" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--a)">₹10,00,000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Trade -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">➕ LOG STOCK TRADE</div>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Any NSE symbol — buy (long) or sell (short)</span>
+    </div>
+    <div style="padding:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STOCK SYMBOL</label>
+          <input id="spt-instr" type="text" placeholder="e.g. RELIANCE, TCS, INFY" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">SIDE</label>
+          <select id="spt-side" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
+            <option value="BUY">BUY (Long)</option>
+            <option value="SELL">SELL (Short)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STRATEGY</label>
+          <select id="spt-strategy" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
+            <option value="manual">Manual / Other</option>
+            <option value="jarvis">JARVIS Standard (EMA+RSI)</option>
+            <option value="ema_cross">EMA Crossover Only</option>
+            <option value="rsi">RSI Reversal Strategy</option>
+            <option value="macd">MACD Momentum</option>
+            <option value="breakout">Volume Breakout</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">ENTRY PRICE (₹)</label>
+          <input id="spt-buy" type="number" placeholder="Entry price" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="0" step="0.05">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">QUANTITY (SHARES)</label>
+          <input id="spt-qty" type="number" placeholder="Shares" value="1" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">TARGET (₹)</label>
+          <input id="spt-target" type="number" placeholder="Target" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="0" step="0.05">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STOP LOSS (₹)</label>
+          <input id="spt-sl" type="number" placeholder="Stop loss" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="0" step="0.05">
+        </div>
+      </div>
+      <div id="spt-add-msg" style="display:none;padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px;margin-bottom:8px"></div>
+      <button onclick="sptAddTrade()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,212,255,.05));border:1px solid var(--g);border-radius:7px;color:var(--g);font-family:Orbitron;font-size:11px;letter-spacing:2px;cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 0 18px rgba(0,255,136,.25)'" onmouseout="this.style.boxShadow='none'">
+        + ADD STOCK TRADE
+      </button>
+    </div>
+  </div>
+
+  <!-- Open Positions -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">🔓 OPEN POSITIONS</div><span id="spt-open-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 positions</span></div>
+    <div id="spt-open-list" style="padding:10px">
+      <div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open positions. Add a stock trade above ↑</div>
+    </div>
+  </div>
+
+  <!-- Trade History -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">📜 TRADE HISTORY</div><span id="spt-closed-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 closed trades</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 0">
+      <select id="spt-hist-filter-date" onchange="sptRefreshUI()" style="background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+        <option value="">All Dates</option>
+      </select>
+      <select id="spt-hist-filter-strategy" onchange="sptRefreshUI()" style="background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+        <option value="">All Strategies</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:880px">
+        <thead><tr style="background:rgba(0,0,0,.3)">
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">STOCK</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">SIDE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">STRATEGY</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">DATE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY TIME</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT TIME</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY ₹</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT ₹</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">QTY</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">NET P&amp;L ₹</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RETURN %</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
+        </tr></thead>
+        <tbody id="spt-history-body">
+          <tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+</div>
+<!-- ══ END STOCK ADVANCE PAGE ══ -->
 
 <div class="page" id="page-admin">
 
@@ -7622,6 +7828,10 @@ function showPage(id,btn){
       if(id==='advanced'){
         try{ ptInit(); ptRefreshUI(); }catch(e){}
         try{ advTab('backtest', document.getElementById('adv-tab-backtest')); }catch(e){}
+      }
+      if(id==='stockadv'){
+        try{ sptInit(); sptRefreshUI(); }catch(e){}
+        try{ stockAdvTab('backtest', document.getElementById('stockadv-tab-backtest')); }catch(e){}
       }
       if(id==='finadvice'){
         // Redraw pie chart on tab switch in case canvas was zero-width on first load
@@ -15404,9 +15614,28 @@ function btRenderMonthly(trades) {
 function btRenderTradeLog(trades) {
   var tbody = document.getElementById('bt-trade-log');
   if (!tbody) return;
-  if (!trades.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No signals generated in this period. Try a longer lookback or different strategy.</td></tr>'; return; }
   var hasOptions = trades.some(function(t){ return t.optType; });
-  tbody.innerHTML = (hasOptions ? '<tr><td colspan="8" style="padding:6px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--w);background:rgba(255,193,7,.06)">⚠ Premiums below are Black-Scholes CALCULATED estimates (fixed 14% IV, ~3 days to expiry assumed) — Angel One has no historical option-price API, so these are not actual traded prices. Index level shown alongside for reference.</td></tr>' : '') + trades.map(function(t){
+  // Previously this warning was the tbody's first <tr> — as soon as you
+  // scrolled down to see later trades (row 16+), the disclaimer scrolled
+  // out of view above and the entry/exit numbers looked like real fills
+  // with no context. It now lives in the panel header, which stays visible
+  // the whole time you're scrolling through rows, and the column headers
+  // themselves are labelled "(est.)" as a second, always-visible cue.
+  var discEl = document.getElementById('bt-tradelog-disclaimer');
+  var thEntry = document.getElementById('bt-th-entry');
+  var thExit = document.getElementById('bt-th-exit');
+  if (discEl) {
+    if (hasOptions) {
+      discEl.style.display = 'block';
+      discEl.innerHTML = '⚠ ENTRY/EXIT premiums below are Black-Scholes CALCULATED estimates (fixed ~14% IV, ~3 days to expiry assumed) — Angel One has no historical option-price API, so these are not actual traded prices. This is why they won\'t match the real live premiums shown in Paper Trading, which reads the live option chain. Index level shown alongside each premium for reference.';
+    } else {
+      discEl.style.display = 'none';
+    }
+  }
+  if (thEntry) thEntry.textContent = hasOptions ? 'ENTRY (est.)' : 'ENTRY';
+  if (thExit) thExit.textContent = hasOptions ? 'EXIT (est.)' : 'EXIT';
+  if (!trades.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No signals generated in this period. Try a longer lookback or different strategy.</td></tr>'; return; }
+  tbody.innerHTML = trades.map(function(t){
     var pnlColor = t.net>=0?'var(--g)':'var(--r)';
     var resBg = t.result==='TARGET HIT'?'rgba(0,255,136,.12)':t.result==='STOP LOSS HIT'?'rgba(255,61,90,.12)':'rgba(255,204,0,.12)';
     var resColor = t.result==='TARGET HIT'?'var(--g)':t.result==='STOP LOSS HIT'?'var(--r)':'var(--w)';
@@ -16208,6 +16437,474 @@ function ptExportCSV() {
 (function(){
   try { ptInit(); } catch(e) {}
   try { ptCloudLoad(); } catch(e) {}
+})();
+
+// ══════════════════════════════════════════════════════════════════
+//  STOCK ADVANCE — sub-tab switching
+// ══════════════════════════════════════════════════════════════════
+function stockAdvTab(name, btn) {
+  ['backtest','paper'].forEach(function(t){
+    var el = document.getElementById('stockadv-page-'+t);
+    if (el) el.style.display = t===name ? 'block' : 'none';
+  });
+  document.querySelectorAll('#page-stockadv .nav .nav-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  if (name === 'paper') {
+    sptInit();
+    sptRefreshUI();
+    sptEnsureTicker();
+  }
+}
+
+// ── Stock Backtesting: reuses the main Backtesting Engine wholesale ──
+// Rather than duplicate ~700 lines of KPI/chart/trade-log rendering, this
+// prefills the real engine's inputs and runs it there, then takes you to
+// see the full report. Same trusted engine, same output, no drift between
+// two versions of the same logic.
+function runStockBacktest() {
+  var ticker = document.getElementById('sbt-ticker').value.trim().toUpperCase();
+  var msg = document.getElementById('sbt-msg');
+  if (!ticker) {
+    msg.style.cssText='display:block;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);color:var(--r);padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px';
+    msg.textContent='⚠ Enter a stock symbol first (e.g. RELIANCE, TCS, INFY).';
+    return;
+  }
+  var btTicker = document.getElementById('bt-ticker');
+  var btPeriod = document.getElementById('bt-period');
+  var btStrategy = document.getElementById('bt-strategy');
+  var btCapital = document.getElementById('bt-capital');
+  var btPos = document.getElementById('bt-pos');
+  if (btTicker) btTicker.value = ticker;
+  if (btPeriod) btPeriod.value = document.getElementById('sbt-period').value;
+  if (btStrategy) btStrategy.value = document.getElementById('sbt-strategy').value;
+  if (btCapital) btCapital.value = document.getElementById('sbt-capital').value;
+  if (btPos) btPos.value = document.getElementById('sbt-pos').value;
+
+  var advBtn = document.querySelector('[onclick*="showPage(\'advanced\'"]');
+  showPage('advanced', advBtn);
+  advTab('backtest', document.getElementById('adv-tab-backtest'));
+  if (typeof runBacktest === 'function') runBacktest();
+  setTimeout(function(){
+    var target = document.getElementById('bt-kpi-value') || document.getElementById('adv-page-backtest');
+    if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 150);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  STOCK PAPER TRADING — independent virtual portfolio for cash-equity
+//  buy/sell (long/short), separate from the F&O options paper trading
+//  portfolio above. Mirrors that system's structure (same trailing-SL
+//  auto-exit engine, same history filters) but adapted for stocks:
+//   - Free-text symbol entry (any NSE ticker), not option instrument names.
+//   - A SIDE (BUY/SELL) field so short-selling P&L can be modelled too.
+//   - Live price resolution first checks LD (already-tracked heatmap
+//     symbols), then falls back to an on-demand Angel One quote fetch via
+//     the same TM/TM_EXT token map + angelQuote() the Stock Pickup search
+//     uses — so any valid NSE symbol you type gets live tracking, not just
+//     the ~16 heatmap stocks.
+// ══════════════════════════════════════════════════════════════════
+
+var SPT_PORTFOLIO = null;
+var SPT_LIVE_CACHE = {}; // symbol -> {ltp, ts}, for symbols not covered by LD
+var SPT_TICKER = null;
+
+function sptInit() {
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('jarvis_spt_portfolio')); } catch(e) {}
+  if (stored && stored.version === 1) {
+    SPT_PORTFOLIO = stored;
+  } else {
+    SPT_PORTFOLIO = {
+      version: 1,
+      startDate: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+      cash: PT_INITIAL,
+      startCapital: PT_INITIAL,
+      trades: [],
+      niftyRef: (LD && LD.NIFTY50 && LD.NIFTY50.ltp) ? LD.NIFTY50.ltp : 22000
+    };
+    sptSave();
+  }
+}
+
+function sptSave() {
+  if (!SPT_PORTFOLIO) return;
+  try { localStorage.setItem('jarvis_spt_portfolio', JSON.stringify(SPT_PORTFOLIO)); } catch(e) {}
+}
+
+function sptReset() {
+  if (!confirm('Reset the virtual stock portfolio to ₹10,00,000? All stock trades will be cleared. (Your F&O paper trading portfolio is unaffected.)')) return;
+  localStorage.removeItem('jarvis_spt_portfolio');
+  SPT_PORTFOLIO = null;
+  sptInit();
+  sptRefreshUI();
+}
+
+function sptStrategyLabel(key) {
+  var labels = {
+    jarvis: 'JARVIS Standard', ema_cross: 'EMA Crossover', rsi: 'RSI Reversal',
+    macd: 'MACD Momentum', breakout: 'Volume Breakout', manual: 'Manual'
+  };
+  return labels[key] || key || 'Manual';
+}
+
+function sptSet(id, text, color) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  if (color) el.style.color = color;
+}
+
+function sptHasOpenTrades() {
+  return !!(SPT_PORTFOLIO && SPT_PORTFOLIO.trades && SPT_PORTFOLIO.trades.some(function(t){return t.status==='OPEN';}));
+}
+
+// On-demand live quote for symbols LD doesn't already track (LD only
+// auto-refreshes the fixed ~16-stock heatmap list). Uses the same
+// TM/TM_EXT symbol→token map and angelQuote() call the Stock Pickup
+// search already relies on, so it works for any resolvable NSE symbol.
+async function sptFetchLiveQuote(symbol) {
+  try {
+    var entry = (typeof TM !== 'undefined' && TM[symbol]) || (typeof TM_EXT !== 'undefined' && TM_EXT[symbol]);
+    if (!entry || typeof creds === 'undefined' || !creds || !creds.jwt || typeof angelQuote !== 'function') return null;
+    var qData = await angelQuote({ [entry.ex]: [entry.tok] }, 'LTP');
+    if (qData && qData.fetched && qData.fetched[0] && qData.fetched[0].ltp) return parseFloat(qData.fetched[0].ltp);
+  } catch(e) {}
+  return null;
+}
+
+function sptGetLivePrice(t) {
+  if (LD && LD[t.instr] && LD[t.instr].ltp) return LD[t.instr].ltp;
+  if (SPT_LIVE_CACHE[t.instr] && SPT_LIVE_CACHE[t.instr].ltp) return SPT_LIVE_CACHE[t.instr].ltp;
+  return t.buy;
+}
+
+// Background refresh for symbols not already kept warm by the heatmap —
+// same idea as ensureChainTicker() for options.
+function sptEnsureTicker() {
+  if (SPT_TICKER) return;
+  SPT_TICKER = setInterval(function(){
+    if (!sptHasOpenTrades()) return;
+    var symbols = [];
+    SPT_PORTFOLIO.trades.forEach(function(t){
+      if (t.status === 'OPEN' && symbols.indexOf(t.instr) === -1) symbols.push(t.instr);
+    });
+    symbols.forEach(function(sym){
+      if (LD && LD[sym] && LD[sym].ltp) return; // heatmap already keeps this fresh
+      sptFetchLiveQuote(sym).then(function(px){
+        if (px) { SPT_LIVE_CACHE[sym] = {ltp: px, ts: Date.now()}; sptRefreshUI(); }
+      });
+    });
+  }, 15000);
+}
+
+function sptAddTrade() {
+  if (!SPT_PORTFOLIO) sptInit();
+  var instr = document.getElementById('spt-instr').value.trim().toUpperCase();
+  var side = document.getElementById('spt-side').value;
+  var strategy = document.getElementById('spt-strategy').value;
+  var buy = parseFloat(document.getElementById('spt-buy').value);
+  var qty = parseInt(document.getElementById('spt-qty').value) || 1;
+  var target = parseFloat(document.getElementById('spt-target').value) || 0;
+  var sl = parseFloat(document.getElementById('spt-sl').value) || 0;
+  var msg = document.getElementById('spt-add-msg');
+
+  function showMsg(text, bad) {
+    msg.style.cssText = 'display:block;background:'+(bad?'rgba(255,61,90,.08)':'rgba(0,255,136,.07)')+';border:1px solid '+(bad?'rgba(255,61,90,.3)':'rgba(0,255,136,.3)')+';color:'+(bad?'var(--r)':'var(--g)')+';padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px';
+    msg.textContent = text;
+  }
+
+  if (!instr || !buy) { showMsg('⚠ Fill Stock Symbol and Entry Price.', true); return; }
+  if (side === 'BUY'  && target && target <= buy) { showMsg('⚠ For a BUY (long), Target should be above Entry Price.', true); return; }
+  if (side === 'BUY'  && sl && sl >= buy)          { showMsg('⚠ For a BUY (long), Stop Loss should be below Entry Price.', true); return; }
+  if (side === 'SELL' && target && target >= buy)  { showMsg('⚠ For a SELL (short), Target should be below Entry Price.', true); return; }
+  if (side === 'SELL' && sl && sl <= buy)           { showMsg('⚠ For a SELL (short), Stop Loss should be above Entry Price.', true); return; }
+
+  var cost = buy * qty; // for SELL this is treated as blocked notional margin, not a real cash cost
+  if (cost > SPT_PORTFOLIO.cash) {
+    showMsg('⚠ Insufficient virtual cash/margin. Available: ₹'+Math.round(SPT_PORTFOLIO.cash).toLocaleString('en-IN')+', Required: ₹'+Math.round(cost).toLocaleString('en-IN'), true); return;
+  }
+
+  var trade = {
+    id: Date.now(), instr: instr, side: side, strategy: strategy, buy: buy, qty: qty,
+    cost: cost, target: target, sl: sl, status: 'OPEN', exit: null,
+    date: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    dayKey: new Date().toLocaleDateString('en-CA'),
+    time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+    exitDate: null, exitTime: null
+  };
+  SPT_PORTFOLIO.cash -= cost;
+  SPT_PORTFOLIO.trades.push(trade);
+  sptSave();
+  sptEnsureTicker();
+  showMsg('✅ Stock trade added! ' + (side==='SELL' ? 'Margin blocked' : 'Cost') + ': ₹'+Math.round(cost).toLocaleString('en-IN'));
+  setTimeout(function(){ msg.style.display='none'; }, 3000);
+  ['spt-instr','spt-buy','spt-target','spt-sl'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('spt-qty').value = '1';
+  sptRefreshUI();
+}
+
+function sptCloseTrade(id, exitPrice, skipRefresh) {
+  if (!SPT_PORTFOLIO) return;
+  SPT_PORTFOLIO.trades = SPT_PORTFOLIO.trades.map(function(t){
+    if (t.id !== id) return t;
+    var dir = t.side === 'SELL' ? -1 : 1;
+    var gross = dir * (exitPrice - t.buy) * t.qty;
+    var brokerage = Math.round(Math.max(20, (t.buy*t.qty + exitPrice*t.qty) * 0.0003)); // approx flat-discount brokerage, both legs
+    var net = gross - brokerage;
+    t.exit = exitPrice;
+    t.gross = gross;
+    t.net = net;
+    t.pnlPct = (dir * (exitPrice - t.buy)/t.buy*100).toFixed(2);
+    t.status = gross >= 0 ? 'PROFIT' : 'LOSS';
+    t.result = t.status;
+    t.exitDate = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    t.exitTime = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    t.dayKey = t.dayKey || new Date().toLocaleDateString('en-CA');
+    SPT_PORTFOLIO.cash += t.cost + net; // release blocked cost/margin + net P&L
+    return t;
+  });
+  sptSave();
+  if (!skipRefresh) sptRefreshUI();
+}
+
+function sptShowExitModal(id) {
+  var t = SPT_PORTFOLIO && SPT_PORTFOLIO.trades.find(function(x){return x.id===id;});
+  if (!t) return;
+  var exitStr = prompt('Close stock trade: '+t.instr+' ('+t.side+')\nEntry ₹'+t.buy+' × '+t.qty+'\n\nEnter exit price (₹):');
+  if (!exitStr || isNaN(parseFloat(exitStr))) return;
+  sptCloseTrade(id, parseFloat(exitStr));
+}
+
+function sptDeleteTrade(id) {
+  if (!SPT_PORTFOLIO) return;
+  if (!confirm('Delete this stock trade?')) return;
+  var t = SPT_PORTFOLIO.trades.find(function(x){return x.id===id;});
+  if (t && t.status==='OPEN') SPT_PORTFOLIO.cash += t.cost;
+  SPT_PORTFOLIO.trades = SPT_PORTFOLIO.trades.filter(function(x){return x.id!==id;});
+  sptSave();
+  sptRefreshUI();
+}
+
+function sptToggleTrail(id) {
+  if (!SPT_PORTFOLIO) return;
+  var t = SPT_PORTFOLIO.trades.find(function(x){ return x.id === id; });
+  if (!t) return;
+  t.trailSL = t.trailSL === false ? true : false;
+  sptSave();
+  sptRefreshUI();
+}
+
+// Same trailing-SL / auto-exit engine as the options portfolio (reuses the
+// shared PT_TRAIL_ARM_PCT / PT_TRAIL_LOCK_PCT constants), generalised with
+// a `dir` sign so it works symmetrically for BUY (long) and SELL (short).
+function sptCheckAutoExits() {
+  if (!SPT_PORTFOLIO) return;
+  var closedAny = false;
+  SPT_PORTFOLIO.trades.forEach(function(t){
+    if (t.status !== 'OPEN') return;
+    var live = sptGetLivePrice(t);
+    if (!live || live <= 0) return;
+    var dir = t.side === 'SELL' ? -1 : 1; // +1: favourable = price up. -1: favourable = price down.
+
+    if (dir === 1) t.highWater = Math.max(t.highWater || t.buy, live);
+    else t.lowWater = Math.min((t.lowWater != null ? t.lowWater : t.buy), live);
+    var bestSeen = dir === 1 ? t.highWater : t.lowWater;
+
+    if (t.trailSL !== false && t.target && dir*(t.target - t.buy) > 0) {
+      var armLevel = t.buy + dir * Math.abs(t.target - t.buy) * PT_TRAIL_ARM_PCT;
+      var armed = dir === 1 ? bestSeen >= armLevel : bestSeen <= armLevel;
+      if (armed) {
+        var candidateSL = t.buy + dir * Math.abs(bestSeen - t.buy) * PT_TRAIL_LOCK_PCT;
+        candidateSL = dir === 1 ? Math.min(candidateSL, t.target - 0.05) : Math.max(candidateSL, t.target + 0.05);
+        candidateSL = Math.round(candidateSL * 20) / 20;
+        var improved = dir === 1 ? candidateSL > t.sl : candidateSL < t.sl;
+        if (improved) {
+          if (t.slOriginal === undefined) t.slOriginal = t.sl;
+          t.sl = candidateSL;
+          t.slTrailed = true;
+        }
+      }
+    }
+
+    var slHit = t.sl && (dir === 1 ? live <= t.sl : live >= t.sl);
+    var targetHit = t.target && (dir === 1 ? live >= t.target : live <= t.target);
+    if (slHit) {
+      sptCloseTrade(t.id, live, true);
+      t.autoExitReason = t.slTrailed ? 'TRAIL SL' : 'AUTO SL';
+      closedAny = true;
+    } else if (targetHit) {
+      sptCloseTrade(t.id, live, true);
+      t.autoExitReason = 'AUTO TARGET';
+      closedAny = true;
+    }
+  });
+  if (closedAny) sptSave();
+}
+
+function sptRefreshUI() {
+  if (!SPT_PORTFOLIO) sptInit();
+  sptCheckAutoExits();
+  var p = SPT_PORTFOLIO;
+  var openTrades = p.trades.filter(function(t){return t.status==='OPEN';});
+  var closedTrades = p.trades.filter(function(t){return t.status!=='OPEN';});
+
+  var unrealised = openTrades.reduce(function(a,t){
+    var live = sptGetLivePrice(t);
+    var dir = t.side === 'SELL' ? -1 : 1;
+    return a + dir * (live - t.buy) * t.qty;
+  },0);
+  var realisedPnl = closedTrades.reduce(function(a,t){return a+(t.net||0);},0);
+  var totalPnl = realisedPnl + unrealised;
+  var portfolioVal = p.cash + unrealised + openTrades.reduce(function(a,t){ return a + t.cost; },0);
+  var retPct = ((portfolioVal - p.startCapital) / p.startCapital * 100).toFixed(2);
+  var pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
+
+  var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
+  var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
+  var vsNifty = (parseFloat(retPct) - parseFloat(niftyRet)).toFixed(2);
+  var vsColor = parseFloat(vsNifty) >= 0 ? 'var(--g)' : 'var(--r)';
+
+  var wins = closedTrades.filter(function(t){return t.result==='PROFIT';}).length;
+  var winRate = closedTrades.length ? Math.round(wins/closedTrades.length*100)+'%' : '—';
+
+  sptSet('spt-value','₹'+Math.round(portfolioVal).toLocaleString('en-IN'),totalPnl>=0?'var(--g)':'var(--r)');
+  sptSet('spt-pnl',(totalPnl>=0?'+':'')+' ₹'+Math.round(totalPnl).toLocaleString('en-IN'),pnlColor);
+  sptSet('spt-ret',(parseFloat(retPct)>=0?'+':'')+retPct+'%',pnlColor);
+  sptSet('spt-vs-nifty',(parseFloat(vsNifty)>=0?'+':'')+vsNifty+'%',vsColor);
+  sptSet('spt-winrate',winRate,winRate==='—'?'var(--a)':wins/Math.max(closedTrades.length,1)>=0.5?'var(--g)':'var(--r)');
+  sptSet('spt-cash','₹'+Math.round(p.cash).toLocaleString('en-IN'),'var(--a)');
+
+  var openCount = document.getElementById('spt-open-count');
+  if (openCount) openCount.textContent = openTrades.length + ' position'+(openTrades.length!==1?'s':'');
+  var closedCount = document.getElementById('spt-closed-count');
+  if (closedCount) closedCount.textContent = closedTrades.length + ' closed trade'+(closedTrades.length!==1?'s':'');
+
+  var openEl = document.getElementById('spt-open-list');
+  if (openEl) {
+    if (!openTrades.length) {
+      openEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open positions. Add a stock trade above ↑</div>';
+    } else {
+      openEl.innerHTML = openTrades.map(function(t){
+        var live = sptGetLivePrice(t);
+        var dir = t.side === 'SELL' ? -1 : 1;
+        var upnl = dir * (live - t.buy) * t.qty;
+        var upnlPct = (dir * (live - t.buy)/t.buy*100).toFixed(2);
+        var uColor = upnl>=0 ? 'var(--g)' : 'var(--r)';
+        var distTgt = t.target ? (Math.abs(t.target-live)/live*100).toFixed(1)+'%' : '—';
+        var distSl  = t.sl     ? (Math.abs(live-t.sl)/live*100).toFixed(1)+'%' : '—';
+        var sideColor = t.side === 'SELL' ? 'var(--r)' : 'var(--g)';
+        return '<div style="padding:12px 14px;border-bottom:1px solid var(--border);position:relative">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px">'
+            +'<div style="display:flex;align-items:center;gap:8px">'
+              +'<div style="width:8px;height:8px;border-radius:50%;background:var(--g);animation:pulse 1.5s infinite;box-shadow:0 0 6px var(--g)"></div>'
+              +'<span style="font-family:Orbitron;font-size:12px;font-weight:700;color:var(--a)">'+t.instr+'</span>'
+              +'<span style="font-family:Orbitron;font-size:9px;color:'+sideColor+';border:1px solid '+sideColor+';padding:1px 6px;border-radius:3px">'+t.side+'</span>'
+              +'<span style="font-family:Share Tech Mono;font-size:9px;color:#a064ff">'+sptStrategyLabel(t.strategy)+'</span>'
+              +'<span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">🕐 '+(t.time||'—')+'</span>'
+            +'</div>'
+            +'<div style="display:flex;align-items:center;gap:6px">'
+              +'<span style="font-family:Orbitron;font-size:13px;color:'+uColor+'">'+(upnl>=0?'+':'')+'₹'+Math.round(upnl).toLocaleString('en-IN')+'</span>'
+              +'<span style="font-family:Share Tech Mono;font-size:10px;color:'+uColor+'">('+upnlPct+'%)</span>'
+            +'</div>'
+          +'</div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:10px;font-family:Share Tech Mono;font-size:10px;margin-bottom:8px">'
+            +'<span style="color:var(--dim)">Entry: <span style="color:var(--a)">₹'+t.buy.toFixed(2)+'</span></span>'
+            +'<span style="color:var(--dim)">Live: <span style="color:var(--txt)">₹'+live.toFixed(2)+'</span></span>'
+            +'<span style="color:var(--dim)">Qty: <span style="color:var(--txt)">'+t.qty+'</span></span>'
+            +'<span style="color:var(--dim)">Target: <span style="color:var(--g)">'+(t.target?'₹'+t.target:'—')+'</span></span>'
+            +'<span style="color:var(--dim)">SL: <span style="color:var(--r)">'+(t.sl?'₹'+t.sl:'—')+(t.slTrailed?' 🔒':'')+'</span></span>'
+            +'<span style="color:var(--dim)">To Target: <span style="color:var(--g)">'+distTgt+'</span></span>'
+            +'<span style="color:var(--dim)">To SL: <span style="color:var(--r)">'+distSl+'</span></span>'
+          +'</div>'
+          + (t.slTrailed ? '<div style="font-family:Share Tech Mono;font-size:9px;color:var(--g);margin-bottom:8px">🔒 Trailing SL active — locked up from original ₹'+(t.slOriginal!==undefined?t.slOriginal:t.sl)+' as price ran in your favour. Won\'t move back.</div>' : '')
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+            +'<button onclick="sptShowExitModal('+t.id+')" style="padding:4px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">✅ CLOSE TRADE</button>'
+            +'<button onclick="sptToggleTrail('+t.id+')" title="Auto-ratchets your SL to lock in profit as price runs toward target, and auto-closes on target/SL hit" style="padding:4px 12px;background:'+(t.trailSL!==false?'rgba(0,255,136,.08)':'rgba(255,255,255,.04)')+';border:1px solid '+(t.trailSL!==false?'rgba(0,255,136,.3)':'var(--border)')+';border-radius:4px;color:'+(t.trailSL!==false?'var(--g)':'var(--dim)')+';font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">'+(t.trailSL!==false?'🔒 TRAIL SL: ON':'🔓 TRAIL SL: OFF')+'</button>'
+            +'<button onclick="sptDeleteTrade('+t.id+')" style="padding:4px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🗑 DELETE</button>'
+          +'</div>'
+        +'</div>';
+      }).join('');
+    }
+  }
+
+  var dateFilterEl = document.getElementById('spt-hist-filter-date');
+  var stratFilterEl = document.getElementById('spt-hist-filter-strategy');
+  if (dateFilterEl) {
+    var curDateVal = dateFilterEl.value;
+    var distinctDates = [];
+    closedTrades.forEach(function(t){
+      var key = t.dayKey || t.date;
+      if (key && !distinctDates.some(function(d){return d.key===key;})) distinctDates.push({key:key, label:t.date||key});
+    });
+    distinctDates.sort(function(a,b){ return a.key < b.key ? 1 : -1; });
+    dateFilterEl.innerHTML = '<option value="">All Dates</option>' + distinctDates.map(function(d){
+      return '<option value="'+d.key+'">'+d.label+'</option>';
+    }).join('');
+    dateFilterEl.value = distinctDates.some(function(d){return d.key===curDateVal;}) ? curDateVal : '';
+  }
+  if (stratFilterEl) {
+    var curStratVal = stratFilterEl.value;
+    var distinctStrats = [];
+    closedTrades.forEach(function(t){
+      var key = t.strategy || 'manual';
+      if (distinctStrats.indexOf(key) === -1) distinctStrats.push(key);
+    });
+    stratFilterEl.innerHTML = '<option value="">All Strategies</option>' + distinctStrats.map(function(k){
+      return '<option value="'+k+'">'+sptStrategyLabel(k)+'</option>';
+    }).join('');
+    stratFilterEl.value = distinctStrats.indexOf(curStratVal) !== -1 ? curStratVal : '';
+  }
+  var filteredClosed = closedTrades.filter(function(t){
+    if (dateFilterEl && dateFilterEl.value && (t.dayKey||t.date) !== dateFilterEl.value) return false;
+    if (stratFilterEl && stratFilterEl.value && (t.strategy||'manual') !== stratFilterEl.value) return false;
+    return true;
+  });
+
+  var hbody = document.getElementById('spt-history-body');
+  if (hbody) {
+    if (!filteredClosed.length) {
+      hbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
+    } else {
+      hbody.innerHTML = filteredClosed.slice().reverse().map(function(t){
+        var pColor = (t.net||0)>=0?'var(--g)':'var(--r)';
+        var rBg = t.result==='PROFIT'?'rgba(0,255,136,.12)':'rgba(255,61,90,.12)';
+        var sideColor = t.side === 'SELL' ? 'var(--r)' : 'var(--g)';
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
+          +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:var(--a)">'+t.instr+'</td>'
+          +'<td style="padding:7px 10px"><span style="color:'+sideColor+';border:1px solid '+sideColor+';padding:1px 6px;border-radius:3px;font-family:Orbitron;font-size:8px">'+t.side+'</span></td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:#a064ff">'+sptStrategyLabel(t.strategy)+(t.autoExitReason?' <span style="color:var(--dim)">· '+t.autoExitReason+'</span>':'')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.date||'—')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.time||'—')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.exitTime||'—')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--a)">₹'+t.buy.toFixed(2)+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono">₹'+(t.exit||0).toFixed(2)+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:var(--dim)">'+t.qty+'</td>'
+          +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:'+pColor+'">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net||0).toLocaleString('en-IN')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:'+pColor+'">'+(parseFloat(t.pnlPct||0)>=0?'+':'')+t.pnlPct+'%</td>'
+          +'<td style="padding:7px 10px"><span style="background:'+rBg+';color:'+(t.result==='PROFIT'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 7px;border-radius:3px;font-family:Share Tech Mono">'+t.result+'</span></td>'
+          +'</tr>';
+      }).join('');
+    }
+  }
+}
+
+function sptExportCSV() {
+  if (!SPT_PORTFOLIO || !SPT_PORTFOLIO.trades.length) { alert('No stock trades to export.'); return; }
+  var rows = [['Symbol','Side','Strategy','Entry ₹','Exit ₹','Qty','Gross P&L','Net P&L','Return %','Status','Date','Entry Time','Exit Time']];
+  SPT_PORTFOLIO.trades.forEach(function(t){
+    rows.push([t.instr,t.side,sptStrategyLabel(t.strategy),t.buy,t.exit||'Open',t.qty,t.gross||'Open',t.net||'Open',t.pnlPct||'—',t.status,t.date,t.time||'',t.exitTime||'']);
+  });
+  var csv = rows.map(function(r){return r.map(function(v){return '"'+v+'"';}).join(',');}).join('\n');
+  var blob = new Blob([csv],{type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url; a.download='JARVIS_stock_trades_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// Auto-init stock paper trading when the app loads (local-only for now —
+// no cloud sync yet, unlike the options portfolio's ptSyncCloud).
+(function(){
+  try { sptInit(); } catch(e) {}
 })();
 
 // ══════════════════════════════════════════════════════════════════
