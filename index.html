@@ -3706,6 +3706,52 @@ setTimeout(nd2SyncAll, 2000);
     </div>
   </div>
 
+  <!-- Stock Auto Signal Engine -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
+    <div class="ph">
+      <div class="pt" style="color:#a064ff">🤖 STOCK AUTO SIGNAL ENGINE</div>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Scans your heatmap stocks, ranks a Top 5, can auto-paper-trade</span>
+    </div>
+    <div style="padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+            <input type="checkbox" id="sase-toggle" onchange="saseToggle()" style="opacity:0;width:0;height:0">
+            <span id="sase-toggle-track" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:24px;transition:.2s"></span>
+            <span id="sase-toggle-knob" style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.2s"></span>
+          </label>
+          <div>
+            <div id="sase-status" style="font-family:Orbitron;font-size:11px;color:var(--dim);letter-spacing:1px">ENGINE OFF</div>
+            <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Rescans every 5 min · auto-trades top score ≥65, once per stock/day</div>
+          </div>
+        </div>
+        <button onclick="saseScanUniverse(true)" style="padding:6px 14px;background:rgba(160,100,255,.08);border:1px solid #a064ff;border-radius:5px;color:#a064ff;font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔍 SCAN NOW</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px">
+        <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);white-space:nowrap">STRATEGY:</span>
+        <select id="sase-strategy" onchange="saseSetStrategy(this.value)" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+          <option value="jarvis">JARVIS Standard (EMA+RSI+MACD composite)</option>
+          <option value="ema_cross">EMA Crossover Only</option>
+          <option value="rsi">RSI Reversal Strategy</option>
+          <option value="macd">MACD Momentum</option>
+          <option value="breakout">Volume Breakout</option>
+        </select>
+      </div>
+
+      <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">🏆 TOP 5 PICKS — RIGHT NOW</div>
+      <div id="sase-top5-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
+        <div style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No scan yet — click Scan Now or turn the engine ON.</div>
+      </div>
+
+      <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
+      <div id="sase-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
+      <div style="margin-top:8px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
+        Scans your ~16-stock heatmap universe (Reliance, TCS, HDFC Bank, Infosys, etc.) using daily candles from Angel One. Needs broker login (SETUP) — daily-candle history isn't available without it.
+      </div>
+    </div>
+  </div>
+
   <!-- Add Trade -->
   <div class="panel" style="margin-bottom:10px">
     <div class="ph"><div class="pt">➕ LOG STOCK TRADE</div>
@@ -5995,6 +6041,24 @@ function getSensexExpiry() {
 // strike: number (e.g. 24650)
 // type: 'ce' | 'pe'
 // Returns live LTP from OC_STATE if available, else falls back to BS estimate
+// Strict variant of getChainPrice for use ONLY when actually recording a
+// paper trade's entry price. getChainPrice's Black-Scholes fallback exists
+// so the UI has *something* to show while the chain is still loading, but
+// that theoretical estimate must never become a trade's real logged buy
+// price — that's exactly how a trade could get logged at (e.g.) ₹67.90
+// (a BS estimate) when the option was actually trading at ₹83.90 at that
+// moment, because OC_STATE hadn't been built/warmed for that strike yet
+// when the signal fired. Returns null (no fallback) if there's no real
+// live quote for this strike right now, so callers can skip the trade
+// instead of firing at a fake price.
+function getChainPriceStrict(idxKey, strike, type) {
+  if (OC_STATE && OC_STATE.index === idxKey && OC_STATE.data && OC_STATE.data[strike]) {
+    var side = OC_STATE.data[strike][type];
+    if (side && side.ltp && side.ltp > 0) return Math.round(side.ltp * 10) / 10;
+  }
+  return null;
+}
+
 function getChainPrice(idxKey, strike, type) {
   // If chain has data for this index and strike, use it directly
   if (OC_STATE && OC_STATE.index === idxKey && OC_STATE.data && OC_STATE.data[strike]) {
@@ -10372,7 +10436,13 @@ function ensureChainTicker() {
   OC_STATE.ticker = setInterval(function(){
     var chainPage = document.getElementById('page-chain');
     var chainActive = chainPage && chainPage.classList.contains('active');
-    if (!chainActive && !ptHasOpenTrades()) return; // nothing needs live chain data right now
+    // ASE_ON matters here too — without it, the chain only warmed once a
+    // position already existed, so the very FIRST auto-fired trade of the
+    // session could hit before any real chain data existed for that
+    // strike. getChainPriceStrict() now refuses to fire a trade in that
+    // case rather than silently using a Black-Scholes estimate, but
+    // keeping the chain warm proactively means that should rarely trigger.
+    if (!chainActive && !ptHasOpenTrades() && !(typeof ASE_ON !== 'undefined' && ASE_ON)) return; // nothing needs live chain data right now
     // Only auto-refresh during market hours
     var _ci = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
     var _cd = _ci.getDay(), _cm = _ci.getHours()*60+_ci.getMinutes();
@@ -16453,6 +16523,7 @@ function stockAdvTab(name, btn) {
     sptInit();
     sptRefreshUI();
     sptEnsureTicker();
+    saseLoadState();
   }
 }
 
@@ -16901,6 +16972,270 @@ function sptExportCSV() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
+// Programmatic trade entry for the Stock Auto Signal Engine — same
+// bookkeeping as sptAddTrade() but without reading form fields.
+function sptAddAutoTrade(opts) {
+  if (!SPT_PORTFOLIO) sptInit();
+  var cost = opts.buy * opts.qty;
+  if (cost > SPT_PORTFOLIO.cash) { if (typeof saseLog === 'function') saseLog('⚠ Skipped '+opts.instr+' — insufficient virtual cash.'); return null; }
+  var now = new Date();
+  var trade = {
+    id: Date.now() + Math.floor(Math.random()*1000), instr: opts.instr, side: opts.side || 'BUY',
+    strategy: opts.strategy || 'auto', buy: opts.buy, qty: opts.qty, cost: cost,
+    target: opts.target, sl: opts.sl, status: 'OPEN', exit: null, auto: true,
+    date: now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    dayKey: now.toLocaleDateString('en-CA'),
+    time: now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+    exitDate: null, exitTime: null, reasons: opts.reasons || ''
+  };
+  SPT_PORTFOLIO.cash -= cost;
+  SPT_PORTFOLIO.trades.push(trade);
+  sptSave();
+  sptEnsureTicker();
+  sptRefreshUI();
+  return { trade: trade };
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  STOCK AUTO SIGNAL ENGINE (SASE)
+//  Scans the heatmap universe (~16 large caps) on daily candles from
+//  Angel One, scores each stock against the selected strategy, ranks a
+//  Top 5, and — when the engine is ON — auto-paper-trades any pick that
+//  clears the score threshold (max once per stock per day). This is
+//  intentionally daily-candle based (not tick-by-tick like the options
+//  engine) since these are swing-style equity strategies, not intraday
+//  option scalps.
+// ══════════════════════════════════════════════════════════════════
+var SASE_ON = false;
+var SASE_STRATEGY = 'jarvis';
+var SASE_SCANNING = false;
+var SASE_TOP5 = [];
+var SASE_LOG = [];
+var SASE_LAST_AUTO_KEY = {}; // symbol -> dayKey, dedupe: max one auto-trade per stock per day
+var SASE_TICKER = null;
+var SASE_AUTO_THRESHOLD = 65; // score (0-100) required to auto-fire a trade
+
+function saseLog(msg) {
+  SASE_LOG.unshift('['+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'] '+msg);
+  SASE_LOG = SASE_LOG.slice(0, 30);
+  var el = document.getElementById('sase-log');
+  if (el) el.innerHTML = SASE_LOG.map(function(l){ return '<div>'+l+'</div>'; }).join('');
+}
+
+function saseSetStatus(text, color) {
+  var el = document.getElementById('sase-status');
+  if (el) { el.textContent = text; el.style.color = color; }
+}
+
+function saseUpdateToggleUI() {
+  var track = document.getElementById('sase-toggle-track');
+  var knob  = document.getElementById('sase-toggle-knob');
+  if (track) track.style.background = SASE_ON ? 'rgba(0,255,136,.35)' : 'rgba(255,255,255,.08)';
+  if (knob)  { knob.style.left = SASE_ON ? '24px' : '2px'; knob.style.background = SASE_ON ? 'var(--g)' : 'var(--dim)'; }
+  saseSetStatus(SASE_ON ? 'ENGINE ON' : 'ENGINE OFF', SASE_ON ? 'var(--g)' : 'var(--dim)');
+}
+
+// Composite score (0-100) per strategy, computed from a daily closes/volumes
+// series. Reuses the same calcEMA/calcRSI/calcMACD helpers the rest of the
+// app already relies on (Stock Pickup, backtester) — no separate indicator
+// math to keep in sync.
+function saseComputeScore(strategy, closes, volumes) {
+  if (!closes || closes.length < 30) return { score: 0, signal: 'NONE', reason: 'Insufficient history', last: closes ? closes[closes.length-1] : null };
+  var last = closes[closes.length - 1];
+  var ema20 = calcEMA(closes.slice(-20), 20);
+  var ema50 = closes.length >= 50 ? calcEMA(closes.slice(-50), 50) : null;
+  var rsi14 = calcRSI(closes, 14);
+  var macdRes = calcMACD(closes);
+  var score = 0, reasons = [];
+
+  if (strategy === 'ema_cross') {
+    if (ema50 && ema20 > ema50) { score += 60; reasons.push('EMA20>EMA50'); }
+    if (closes.length >= 51) {
+      var prevEma20 = calcEMA(closes.slice(-21, -1), 20);
+      var prevEma50 = calcEMA(closes.slice(-51, -1), 50);
+      if (prevEma50 != null && prevEma20 <= prevEma50 && ema50 && ema20 > ema50) { score += 30; reasons.push('Fresh crossover'); }
+    }
+    if (last > ema20) { score += 10; reasons.push('Price>EMA20'); }
+  } else if (strategy === 'rsi') {
+    if (rsi14 < 35) { score += 50; reasons.push('RSI oversold ('+rsi14.toFixed(1)+')'); }
+    var prevRsi = calcRSI(closes.slice(0, -1), 14);
+    if (rsi14 > prevRsi && rsi14 < 45) { score += 30; reasons.push('RSI turning up'); }
+    if (last > ema20) { score += 20; reasons.push('Above EMA20'); }
+  } else if (strategy === 'macd') {
+    if (macdRes.cross === 'Bullish Crossover') { score += 70; reasons.push('MACD bullish crossover'); }
+    else if (macdRes.cross === 'Bullish') { score += 35; reasons.push('MACD bullish'); }
+    if (last > ema20) { score += 15; reasons.push('Above EMA20'); }
+  } else if (strategy === 'breakout') {
+    if (closes.length >= 21) {
+      var recentHigh = Math.max.apply(null, closes.slice(-21, -1));
+      if (last > recentHigh) { score += 55; reasons.push('Broke 20-day high'); }
+    }
+    if (volumes && volumes.length >= 21) {
+      var avgVol = volumes.slice(-21, -1).reduce(function(a,b){return a+b;},0) / 20;
+      var lastVol = volumes[volumes.length - 1];
+      if (avgVol && lastVol > avgVol * 1.5) { score += 35; reasons.push('Volume surge ('+Math.round(lastVol/avgVol*100)+'% of avg)'); }
+    }
+  } else { // 'jarvis' — composite of all of the above, same spirit as the options JARVIS Standard
+    if (ema50 && ema20 > ema50) { score += 30; reasons.push('Uptrend (EMA20>EMA50)'); }
+    if (rsi14 > 40 && rsi14 < 65) { score += 20; reasons.push('RSI healthy ('+rsi14.toFixed(1)+')'); }
+    else if (rsi14 >= 30 && rsi14 <= 40) { score += 15; reasons.push('RSI recovering'); }
+    if (macdRes.cross === 'Bullish Crossover' || macdRes.cross === 'Bullish') { score += 30; reasons.push('MACD '+macdRes.cross.toLowerCase()); }
+    if (last > ema20) { score += 20; reasons.push('Price>EMA20'); }
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  return { score: score, signal: score >= SASE_AUTO_THRESHOLD ? 'BUY' : 'NONE', reason: reasons.join(' · ') || 'No qualifying conditions', last: last, rsi: rsi14, ema20: ema20 };
+}
+
+// Fetches ~120 days of daily candles for one heatmap symbol via the same
+// Angel One historical endpoint Stock Pickup already uses.
+async function saseFetchDailyCloses(symbol) {
+  try {
+    var tm = (typeof TM !== 'undefined') && TM[symbol];
+    if (!tm || typeof creds === 'undefined' || !creds.jwt) return null;
+    var now = new Date();
+    var past = new Date(now.getTime() - 150*24*60*60*1000);
+    function fmt(d){ return d.toISOString().slice(0,10) + ' 09:15'; }
+    var candles = await angelHistory(tm.tok, tm.ex || 'NSE', 'ONE_DAY', fmt(past), fmt(now));
+    if (!candles || !candles.length) return null;
+    return {
+      closes: candles.map(function(c){ return c[4]; }),
+      volumes: candles.map(function(c){ return c[5] || 0; })
+    };
+  } catch(e) { return null; }
+}
+
+async function saseScanUniverse(manual) {
+  if (SASE_SCANNING) return;
+  if (typeof creds === 'undefined' || !creds || !creds.jwt) {
+    saseLog('⚠ Needs Angel One login (SETUP) to fetch stock daily candles.');
+    saseSetStatus('NEED BROKER LOGIN', 'var(--w)');
+    return;
+  }
+  SASE_SCANNING = true;
+  saseSetStatus('SCANNING…', 'var(--w)');
+  if (manual) saseLog('Manual scan started · strategy: ' + sptStrategyLabel(SASE_STRATEGY));
+
+  var results = [];
+  for (var idx = 0; idx < HEAT.length; idx++) {
+    var h = HEAT[idx];
+    var data = await saseFetchDailyCloses(h.k);
+    if (data && data.closes && data.closes.length >= 30) {
+      var sc = saseComputeScore(SASE_STRATEGY, data.closes, data.volumes);
+      results.push(Object.assign({ symbol: h.k, name: h.nm }, sc));
+    }
+    await new Promise(function(res){ setTimeout(res, 300); }); // stagger — same rate-limit caution used elsewhere for Angel One calls
+  }
+  results.sort(function(a,b){ return b.score - a.score; });
+  SASE_TOP5 = results.slice(0, 5);
+  saseRenderTop5();
+  saseUpdateToggleUI();
+  saseLog('Scan complete · ' + results.length + '/' + HEAT.length + ' stocks evaluated · top pick: ' + (SASE_TOP5[0] ? SASE_TOP5[0].symbol + ' (' + SASE_TOP5[0].score + '/100)' : '—'));
+
+  if (SASE_ON) {
+    var todayKey = new Date().toLocaleDateString('en-CA');
+    SASE_TOP5.forEach(function(r){
+      if (r.signal !== 'BUY' || r.score < SASE_AUTO_THRESHOLD) return;
+      if (SASE_LAST_AUTO_KEY[r.symbol] === todayKey) return; // already auto-traded this stock today
+      var live = (LD && LD[r.symbol] && LD[r.symbol].ltp) ? LD[r.symbol].ltp : r.last;
+      if (!live) return;
+      var target = Math.round(live * 1.03 * 100) / 100; // approx +3% swing target
+      var sl     = Math.round(live * 0.985 * 100) / 100; // approx -1.5% swing stop
+      var qty    = Math.max(1, Math.floor(20000 / live)); // ~₹20k per auto position
+      var res = sptAddAutoTrade({ instr: r.symbol, side: 'BUY', buy: live, qty: qty, target: target, sl: sl, strategy: SASE_STRATEGY, reasons: r.reason });
+      if (res) {
+        SASE_LAST_AUTO_KEY[r.symbol] = todayKey;
+        saseLog('🤖 Auto trade: BUY ' + r.symbol + ' × ' + qty + ' @ ₹' + live.toFixed(2) + ' (' + r.reason + ')');
+      }
+    });
+  }
+  SASE_SCANNING = false;
+}
+
+function saseRenderTop5() {
+  var el = document.getElementById('sase-top5-list');
+  if (!el) return;
+  if (!SASE_TOP5.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No scan yet — click Scan Now or turn the engine ON.</div>';
+    return;
+  }
+  el.innerHTML = SASE_TOP5.map(function(r, i){
+    var barColor = r.score >= SASE_AUTO_THRESHOLD ? 'var(--g)' : r.score >= 40 ? 'var(--w)' : 'var(--dim)';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border)">'
+      +'<div style="font-family:Orbitron;font-size:12px;color:var(--dim);width:20px">#'+(i+1)+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:3px">'
+          +'<span style="font-family:Orbitron;font-size:11px;color:var(--a)">'+r.symbol+'</span>'
+          +'<span style="font-family:Share Tech Mono;font-size:10px;color:'+barColor+';white-space:nowrap">Score '+r.score+'/100'+(r.signal==='BUY'?' · BUY':'')+'</span>'
+        +'</div>'
+        +'<div style="background:rgba(255,255,255,.05);border-radius:3px;height:5px;overflow:hidden;margin-bottom:4px"><div style="width:'+r.score+'%;height:100%;background:'+barColor+'"></div></div>'
+        +'<div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.reason||'—')+' · Last ₹'+(r.last?r.last.toFixed(2):'—')+'</div>'
+      +'</div>'
+      +'<button onclick="saseQuickAdd(\''+r.symbol+'\','+(r.last||0)+')" style="padding:4px 10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;white-space:nowrap">+ TRADE</button>'
+    +'</div>';
+  }).join('');
+}
+
+// Prefills the manual Add Trade form from a Top 5 pick rather than firing
+// a trade outright — lets you review/adjust before committing.
+function saseQuickAdd(symbol, price) {
+  var instrEl = document.getElementById('spt-instr');
+  var sideEl = document.getElementById('spt-side');
+  var stratEl = document.getElementById('spt-strategy');
+  var buyEl = document.getElementById('spt-buy');
+  var targetEl = document.getElementById('spt-target');
+  var slEl = document.getElementById('spt-sl');
+  if (instrEl) instrEl.value = symbol;
+  if (sideEl) sideEl.value = 'BUY';
+  if (stratEl) stratEl.value = SASE_STRATEGY;
+  if (buyEl) buyEl.value = price || '';
+  if (targetEl) targetEl.value = price ? (price*1.03).toFixed(2) : '';
+  if (slEl) slEl.value = price ? (price*0.985).toFixed(2) : '';
+  if (instrEl) instrEl.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function saseEnsureTicker() {
+  if (SASE_TICKER) return;
+  SASE_TICKER = setInterval(function(){
+    if (!SASE_ON) return;
+    var _ci = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+    var _cd = _ci.getDay(), _cm = _ci.getHours()*60+_ci.getMinutes();
+    var _co = (_cd>=1 && _cd<=5) && (_cm>=555 && _cm<=935); // market hours
+    if (_co) saseScanUniverse();
+  }, 5*60*1000); // daily-candle scan doesn't need faster than every 5 min
+}
+
+function saseToggle() {
+  var cb = document.getElementById('sase-toggle');
+  SASE_ON = !!(cb && cb.checked);
+  try { localStorage.setItem('jarvis_sase_on', SASE_ON ? '1' : '0'); } catch(e) {}
+  saseUpdateToggleUI();
+  if (SASE_ON) {
+    saseLog('Stock Auto Signal Engine turned ON.');
+    saseEnsureTicker();
+    saseScanUniverse();
+  } else {
+    saseLog('Stock Auto Signal Engine turned OFF.');
+  }
+}
+
+function saseSetStrategy(val) {
+  var valid = ['jarvis','ema_cross','rsi','macd','breakout'];
+  SASE_STRATEGY = valid.indexOf(val) !== -1 ? val : 'jarvis';
+  try { localStorage.setItem('jarvis_sase_strategy', SASE_STRATEGY); } catch(e) {}
+  saseLog('Strategy switched to ' + sptStrategyLabel(SASE_STRATEGY) + ' — rescanning…');
+  saseScanUniverse();
+}
+
+function saseLoadState() {
+  try { SASE_ON = localStorage.getItem('jarvis_sase_on') === '1'; } catch(e) {}
+  try { SASE_STRATEGY = localStorage.getItem('jarvis_sase_strategy') || 'jarvis'; } catch(e) {}
+  var cb = document.getElementById('sase-toggle'); if (cb) cb.checked = SASE_ON;
+  var sel = document.getElementById('sase-strategy'); if (sel) sel.value = SASE_STRATEGY;
+  saseUpdateToggleUI();
+  if (SASE_ON) { saseEnsureTicker(); saseScanUniverse(); }
+}
+
 // Auto-init stock paper trading when the app loads (local-only for now —
 // no cloud sync yet, unlike the options portfolio's ptSyncCloud).
 (function(){
@@ -16987,6 +17322,10 @@ function aseLoadState() {
   aseUpdateToggleUI();
   aseApplyStrategyUI();
   if (typeof aseUpdateChartChrome === 'function') aseUpdateChartChrome(ASE_STRATEGY);
+  if (ASE_ON) {
+    if (typeof ensureChainTicker === 'function') ensureChainTicker();
+    if (typeof buildOptionChain === 'function') buildOptionChain();
+  }
 }
 
 function aseSetStrategy(val) {
@@ -17031,7 +17370,14 @@ function aseToggle() {
   ASE_ON = !!(cb && cb.checked);
   try { localStorage.setItem('jarvis_ase_on', ASE_ON ? '1' : '0'); } catch(e) {}
   aseUpdateToggleUI();
-  if (ASE_ON) aseLog('Engine turned ON — evaluating conditions every cycle.');
+  if (ASE_ON) {
+    aseLog('Engine turned ON — evaluating conditions every cycle.');
+    // Warm the option chain right away instead of waiting up to 15s for
+    // the next ticker tick — otherwise the first signal to fire could do
+    // so before any real chain data exists yet.
+    if (typeof ensureChainTicker === 'function') ensureChainTicker();
+    if (typeof buildOptionChain === 'function') buildOptionChain();
+  }
   else aseLog('Engine turned OFF.');
 }
 
@@ -17214,7 +17560,7 @@ function aseEvaluatePcrEmaVix() {
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPrice('NIFTY', strike, sideToTrade === 'CE' ? 'ce' : 'pe');
+  var chainLtp = getChainPriceStrict('NIFTY', strike, sideToTrade === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) { aseLog('Signal found ('+sideToTrade+') but no chain price available — skipped.'); return; }
 
   var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain
@@ -17296,7 +17642,7 @@ async function aseEvaluateTrendline() {
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
+  var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
     aseLog('Trendline breakout found ('+breakout.type+') but no chain price available — skipped.');
@@ -17411,7 +17757,7 @@ async function aseEvaluateTrendlineConfirmed() {
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
+  var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
     aseLog('Confirmed breakout found ('+breakout.type+') but no chain price available — skipped.');
@@ -17542,7 +17888,7 @@ async function aseEvaluateQualityBreakout() {
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPrice('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
+  var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
     aseLog('Quality breakout found ('+breakout.type+') but no chain price available — skipped.');
@@ -17652,7 +17998,7 @@ async function aseEvaluateNiftyProV15() {
   if (ASE_LAST_LOGGED_KEY === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPrice('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
+  var chainLtp = getChainPriceStrict('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
   if (!chainLtp || chainLtp <= 0) {
     ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
     aseLog('Nifty Pro V1.5 signal found ('+sig.type+') but no chain price available — skipped.');
