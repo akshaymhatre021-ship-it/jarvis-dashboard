@@ -1015,12 +1015,11 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
        left intact (harmless, just unreachable) in case it's wanted back. -->
   <button class="nav-tab" onclick="showPage('chain',this)">🔗 OPT CHAIN</button>
   <button class="nav-tab" onclick="showPage('tools',this)">🛠 TOOLS</button>
-  <button class="nav-tab" onclick="showPage('stockpick',this)">🔍 STOCK PICKUP</button>
-  <button class="nav-tab" onclick="showPage('stockreport',this)">📑 STOCK REPORT</button>
+  <!-- Stock Pickup / Stock Report tabs removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('mf',this)">💰 MUT. FUNDS</button>
   <button class="nav-tab" onclick="showPage('advanced',this)" style="border-color:rgba(160,100,255,.3);color:#a064ff;">⚡ ADVANCED</button>
   <button class="nav-tab" onclick="showPage('stockadv',this)" style="border-color:rgba(0,255,136,.3);color:var(--g);">📈 STOCK ADVANCE</button>
-  <button class="nav-tab" onclick="showPage('dashv2',this)" style="border-color:rgba(0,212,255,.3);color:#00d4ff;background:rgba(0,212,255,.04);">✨ DASH V2</button>
+  <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
 </div>
@@ -1086,7 +1085,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   </div>
 
   <!-- MAIN GRID: Chart + Signals -->
-  <div class="mg">
+  <div class="mg" style="grid-template-columns:1fr">
     <!-- CHART PANEL -->
     <div class="panel">
       <div class="ph">
@@ -1113,8 +1112,8 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
       </div>
     </div>
 
-    <!-- RIGHT PANEL: Signals -->
-    <div class="panel" style="display:flex;flex-direction:column;overflow:hidden">
+    <!-- RIGHT PANEL: Signals (hidden per user request) -->
+    <div class="panel" style="display:none;flex-direction:column;overflow:hidden">
       <div class="ph" style="background:linear-gradient(90deg,rgba(0,212,255,.07),transparent)">
         <div class="pt" style="color:var(--a)">📡 AI SIGNALS + OPTIONS CALLS</div>
         <div class="ptb live-pulse" id="sigUpdated">● LIVE</div>
@@ -1135,9 +1134,9 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   </div>
 
   <!-- STATS ROW: Heatmap + Performance + Alerts -->
-  <div class="brow">
-    <!-- HEATMAP -->
-    <div class="panel">
+  <div class="brow" style="grid-template-columns:1fr">
+    <!-- HEATMAP (hidden per user request) -->
+    <div class="panel" style="display:none">
       <div class="ph">
         <div class="pt">🔥 MARKET HEATMAP</div>
         <div class="ptb" id="heatTime">NSE</div>
@@ -1149,8 +1148,8 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
       </div>
     </div>
 
-    <!-- PERFORMANCE -->
-    <div class="panel">
+    <!-- PERFORMANCE (hidden per user request) -->
+    <div class="panel" style="display:none">
       <div class="ph">
         <div class="pt">📊 PERFORMANCE</div>
         <div class="ptb" style="cursor:pointer;color:var(--a)" onclick="openPerfOv('overview')">VIEW ALL →</div>
@@ -3710,7 +3709,7 @@ setTimeout(nd2SyncAll, 2000);
   <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
     <div class="ph">
       <div class="pt" style="color:#a064ff">🤖 STOCK AUTO SIGNAL ENGINE</div>
-      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Scans your heatmap stocks, ranks a Top 5, can auto-paper-trade</span>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Scans ~100 NSE stocks + your custom watchlist, ranks a Top 5, can auto-paper-trade</span>
     </div>
     <div style="padding:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
@@ -3739,6 +3738,13 @@ setTimeout(nd2SyncAll, 2000);
         </select>
       </div>
 
+      <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SCAN UNIVERSE — ~100 KNOWN NSE STOCKS + YOUR ADDITIONS</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input id="sase-custom-input" type="text" placeholder="Add any NSE symbol, e.g. IRCTC" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:6px 8px;border-radius:5px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter'){saseAddCustomSymbol();}">
+        <button onclick="saseAddCustomSymbol()" style="padding:6px 14px;background:rgba(160,100,255,.08);border:1px solid #a064ff;border-radius:5px;color:#a064ff;font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">+ ADD</button>
+      </div>
+      <div id="sase-custom-chips" style="margin-bottom:10px"></div>
+
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">🏆 TOP 5 PICKS — RIGHT NOW</div>
       <div id="sase-top5-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
         <div style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No scan yet — click Scan Now or turn the engine ON.</div>
@@ -3747,7 +3753,7 @@ setTimeout(nd2SyncAll, 2000);
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
       <div id="sase-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
       <div style="margin-top:8px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-        Scans your ~16-stock heatmap universe (Reliance, TCS, HDFC Bank, Infosys, etc.) using daily candles from Angel One. Needs broker login (SETUP) — daily-candle history isn't available without it.
+        Covers every symbol Angel One resolves a token for in our known-symbol table (~100 large/mid-caps) plus anything you add above — scanning the full 5,000+ NSE+BSE listing universe live isn't feasible against broker API rate limits, so this is the practical ceiling, extendable per-symbol. Needs broker login (SETUP) — daily-candle history isn't available without it.
       </div>
     </div>
   </div>
@@ -16602,12 +16608,61 @@ function sptSave() {
   try { localStorage.setItem('jarvis_spt_portfolio', JSON.stringify(SPT_PORTFOLIO)); } catch(e) {}
 }
 
+// Cloud sync for the stock portfolio — same 'reports' key-value table and
+// same debounce/merge pattern as the options portfolio's ptSyncCloud (and
+// the same one the ANGEL ONE SMARTAPI admin credentials use), just under
+// its own report_type ('stock_paper_trades') so the two portfolios and the
+// credentials never overwrite each other.
+var SPT_CLOUD_SYNC_PENDING = false;
+async function sptSyncCloud() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  if (!SPT_PORTFOLIO) return;
+  if (SPT_CLOUD_SYNC_PENDING) return;
+  SPT_CLOUD_SYNC_PENDING = true;
+  setTimeout(async function(){
+    SPT_CLOUD_SYNC_PENDING = false;
+    try {
+      await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          user_id: window.SUPA_USER.id,
+          report_type: 'stock_paper_trades',
+          title: 'Stock Paper Trading Portfolio',
+          content: JSON.stringify(SPT_PORTFOLIO),
+          metadata: { trade_count: SPT_PORTFOLIO.trades.length, updated_at: new Date().toISOString() }
+        })
+      });
+    } catch(e) { console.warn('[StockPaperTrading] cloud sync failed', e); }
+  }, 800);
+}
+
+async function sptCloudLoad() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  try {
+    var r = await supaFetch('/rest/v1/reports?report_type=eq.stock_paper_trades&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
+    if (r && r.data && r.data[0] && r.data[0].content) {
+      var cloud = JSON.parse(r.data[0].content);
+      // Strictly > (not >=) so an equal trade count never silently
+      // overwrites local data that just hasn't finished its own debounced
+      // push yet — same fix already applied to the options portfolio load.
+      if (cloud && cloud.version === 1 && (!SPT_PORTFOLIO || (cloud.trades||[]).length > (SPT_PORTFOLIO.trades||[]).length)) {
+        console.log('[StockPaperTrading] Cloud copy ('+(cloud.trades||[]).length+' trades) replacing local copy on load.');
+        SPT_PORTFOLIO = cloud;
+        sptSave();
+        sptRefreshUI();
+      }
+    }
+  } catch(e) { console.warn('[StockPaperTrading] cloud load failed', e); }
+}
+
 function sptReset() {
   if (!confirm('Reset the virtual stock portfolio to ₹10,00,000? All stock trades will be cleared. (Your F&O paper trading portfolio is unaffected.)')) return;
   localStorage.removeItem('jarvis_spt_portfolio');
   SPT_PORTFOLIO = null;
   sptInit();
   sptRefreshUI();
+  sptSyncCloud();
 }
 
 function sptStrategyLabel(key) {
@@ -16706,6 +16761,7 @@ function sptAddTrade() {
   SPT_PORTFOLIO.cash -= cost;
   SPT_PORTFOLIO.trades.push(trade);
   sptSave();
+  sptSyncCloud();
   sptEnsureTicker();
   showMsg('✅ Stock trade added! ' + (side==='SELL' ? 'Margin blocked' : 'Cost') + ': ₹'+Math.round(cost).toLocaleString('en-IN'));
   setTimeout(function(){ msg.style.display='none'; }, 3000);
@@ -16735,6 +16791,7 @@ function sptCloseTrade(id, exitPrice, skipRefresh) {
     return t;
   });
   sptSave();
+  sptSyncCloud();
   if (!skipRefresh) sptRefreshUI();
 }
 
@@ -16753,6 +16810,7 @@ function sptDeleteTrade(id) {
   if (t && t.status==='OPEN') SPT_PORTFOLIO.cash += t.cost;
   SPT_PORTFOLIO.trades = SPT_PORTFOLIO.trades.filter(function(x){return x.id!==id;});
   sptSave();
+  sptSyncCloud();
   sptRefreshUI();
 }
 
@@ -16991,6 +17049,7 @@ function sptAddAutoTrade(opts) {
   SPT_PORTFOLIO.cash -= cost;
   SPT_PORTFOLIO.trades.push(trade);
   sptSave();
+  sptSyncCloud();
   sptEnsureTicker();
   sptRefreshUI();
   return { trade: trade };
@@ -17105,6 +17164,59 @@ async function saseFetchDailyCloses(symbol) {
   } catch(e) { return null; }
 }
 
+// Scan universe: the ~100-symbol TM_EXT token map (far broader than the
+// 16-stock heatmap) plus any custom symbols the user adds. Scanning the
+// literal entire NSE+BSE universe (5,000+ listings) isn't practical from
+// a browser against Angel One's retail rate limits — this is the practical
+// ceiling: every liquid large/mid-cap Angel One resolves a token for,
+// extendable by hand for anything else you specifically want tracked.
+var SASE_CUSTOM_UNIVERSE = [];
+var SASE_MAX_UNIVERSE = 200; // safety cap so a scan can't run past the 5-min interval
+
+function saseLoadCustomUniverse() {
+  try { SASE_CUSTOM_UNIVERSE = JSON.parse(localStorage.getItem('jarvis_sase_custom_universe') || '[]'); } catch(e) { SASE_CUSTOM_UNIVERSE = []; }
+}
+function saseSaveCustomUniverse() {
+  try { localStorage.setItem('jarvis_sase_custom_universe', JSON.stringify(SASE_CUSTOM_UNIVERSE)); } catch(e) {}
+}
+function saseGetUniverse() {
+  var known = (typeof TM_EXT !== 'undefined') ? Object.keys(TM_EXT) : (typeof TM !== 'undefined' ? Object.keys(TM) : []);
+  var merged = known.slice();
+  SASE_CUSTOM_UNIVERSE.forEach(function(s){ if (merged.indexOf(s) === -1) merged.push(s); });
+  return merged.slice(0, SASE_MAX_UNIVERSE);
+}
+function saseAddCustomSymbol() {
+  var input = document.getElementById('sase-custom-input');
+  if (!input) return;
+  var sym = input.value.trim().toUpperCase();
+  if (!sym) return;
+  if (SASE_CUSTOM_UNIVERSE.indexOf(sym) === -1) {
+    SASE_CUSTOM_UNIVERSE.push(sym);
+    saseSaveCustomUniverse();
+    saseRenderCustomChips();
+    var known = ((typeof TM_EXT !== 'undefined' && TM_EXT[sym]) || (typeof TM !== 'undefined' && TM[sym]));
+    saseLog('Added ' + sym + ' to scan universe' + (known ? '' : ' — not in the resolved symbol table yet; live candles may not be found for it'));
+  }
+  input.value = '';
+}
+function saseRemoveCustomSymbol(sym) {
+  SASE_CUSTOM_UNIVERSE = SASE_CUSTOM_UNIVERSE.filter(function(s){ return s !== sym; });
+  saseSaveCustomUniverse();
+  saseRenderCustomChips();
+}
+function saseRenderCustomChips() {
+  var el = document.getElementById('sase-custom-chips');
+  if (!el) return;
+  if (!SASE_CUSTOM_UNIVERSE.length) {
+    el.innerHTML = '<span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">No custom symbols added yet.</span>';
+    return;
+  }
+  el.innerHTML = SASE_CUSTOM_UNIVERSE.map(function(s){
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:rgba(160,100,255,.08);border:1px solid rgba(160,100,255,.3);border-radius:12px;font-family:Share Tech Mono;font-size:9px;color:#a064ff;margin:2px 4px 2px 0">'
+      + s + '<span onclick="saseRemoveCustomSymbol(\''+s+'\')" style="cursor:pointer;color:var(--r);font-weight:bold">✕</span></span>';
+  }).join('');
+}
+
 async function saseScanUniverse(manual) {
   if (SASE_SCANNING) return;
   if (typeof creds === 'undefined' || !creds || !creds.jwt) {
@@ -17114,15 +17226,16 @@ async function saseScanUniverse(manual) {
   }
   SASE_SCANNING = true;
   saseSetStatus('SCANNING…', 'var(--w)');
-  if (manual) saseLog('Manual scan started · strategy: ' + sptStrategyLabel(SASE_STRATEGY));
+  var universe = saseGetUniverse();
+  if (manual) saseLog('Manual scan started · strategy: ' + sptStrategyLabel(SASE_STRATEGY) + ' · universe: ' + universe.length + ' symbols');
 
   var results = [];
-  for (var idx = 0; idx < HEAT.length; idx++) {
-    var h = HEAT[idx];
-    var data = await saseFetchDailyCloses(h.k);
+  for (var idx = 0; idx < universe.length; idx++) {
+    var sym = universe[idx];
+    var data = await saseFetchDailyCloses(sym);
     if (data && data.closes && data.closes.length >= 30) {
       var sc = saseComputeScore(SASE_STRATEGY, data.closes, data.volumes);
-      results.push(Object.assign({ symbol: h.k, name: h.nm }, sc));
+      results.push(Object.assign({ symbol: sym }, sc));
     }
     await new Promise(function(res){ setTimeout(res, 300); }); // stagger — same rate-limit caution used elsewhere for Angel One calls
   }
@@ -17130,7 +17243,7 @@ async function saseScanUniverse(manual) {
   SASE_TOP5 = results.slice(0, 5);
   saseRenderTop5();
   saseUpdateToggleUI();
-  saseLog('Scan complete · ' + results.length + '/' + HEAT.length + ' stocks evaluated · top pick: ' + (SASE_TOP5[0] ? SASE_TOP5[0].symbol + ' (' + SASE_TOP5[0].score + '/100)' : '—'));
+  saseLog('Scan complete · ' + results.length + '/' + universe.length + ' stocks evaluated · top pick: ' + (SASE_TOP5[0] ? SASE_TOP5[0].symbol + ' (' + SASE_TOP5[0].score + '/100)' : '—'));
 
   if (SASE_ON) {
     var todayKey = new Date().toLocaleDateString('en-CA');
@@ -17230,16 +17343,19 @@ function saseSetStrategy(val) {
 function saseLoadState() {
   try { SASE_ON = localStorage.getItem('jarvis_sase_on') === '1'; } catch(e) {}
   try { SASE_STRATEGY = localStorage.getItem('jarvis_sase_strategy') || 'jarvis'; } catch(e) {}
+  saseLoadCustomUniverse();
+  saseRenderCustomChips();
   var cb = document.getElementById('sase-toggle'); if (cb) cb.checked = SASE_ON;
   var sel = document.getElementById('sase-strategy'); if (sel) sel.value = SASE_STRATEGY;
   saseUpdateToggleUI();
   if (SASE_ON) { saseEnsureTicker(); saseScanUniverse(); }
 }
 
-// Auto-init stock paper trading when the app loads (local-only for now —
-// no cloud sync yet, unlike the options portfolio's ptSyncCloud).
+// Auto-init stock paper trading when the app loads, then pull any cloud
+// copy (same Supabase 'reports' table the options portfolio uses).
 (function(){
   try { sptInit(); } catch(e) {}
+  try { sptCloudLoad(); } catch(e) {}
 })();
 
 // ══════════════════════════════════════════════════════════════════
