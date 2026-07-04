@@ -3735,7 +3735,11 @@ setTimeout(nd2SyncAll, 2000);
           <option value="rsi">RSI Reversal Strategy</option>
           <option value="macd">MACD Momentum</option>
           <option value="breakout">Volume Breakout</option>
+          <option value="long_term">Long-Term Investing (200 DMA + Golden Cross)</option>
         </select>
+      </div>
+      <div id="sase-longterm-note" style="display:none;margin-bottom:12px;padding:8px 10px;background:rgba(255,193,7,.06);border:1px solid rgba(255,193,7,.25);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--w)">
+        ⚠ Long-Term Investing here scores the <b>technical</b> entry rules only (price vs 200 DMA, Golden Cross, RSI 50–65, volume, 52-week highs). The Fundamental Score (revenue/profit growth, ROE, debt) and Valuation Score (P/E, PEG, EV/EBITDA) from your plan need a fundamentals data source Angel One's API doesn't provide — tell me if you have one (screener.in export, a paid API, etc.) and I'll wire it in. Auto-trades use a wider ±20%/-15% target/SL and auto-close on a Death Cross (50 DMA crossing below 200 DMA), matching your sell rules — staged 30/30/40 entries aren't automated yet, so add follow-on tranches manually for now.
       </div>
 
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SCAN UNIVERSE — ~100 KNOWN NSE STOCKS + YOUR ADDITIONS</div>
@@ -3785,6 +3789,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="rsi">RSI Reversal Strategy</option>
             <option value="macd">MACD Momentum</option>
             <option value="breakout">Volume Breakout</option>
+            <option value="long_term">Long-Term Investing (200 DMA + Golden Cross)</option>
           </select>
         </div>
         <div>
@@ -5445,6 +5450,14 @@ var OPT_STATE = {
 };
 
 // EMA calculation
+// Simple Moving Average ("N-DMA" in Indian retail parlance is this, not
+// EMA — needed for the Long-Term Investing strategy's 50/200 DMA rules).
+function calcSMA(prices, period) {
+  if (!prices || prices.length < period) return null;
+  var slice = prices.slice(-period);
+  return slice.reduce(function(a,b){return a+b;},0) / period;
+}
+
 function calcEMA(prices, period) {
   if (!prices || prices.length < period) return null;
   var k = 2 / (period + 1);
@@ -8317,7 +8330,181 @@ function admAskPreset(q){ var inp=document.getElementById("adm-chat-inp"); if(in
 
 function admSendChat(){ var inp=document.getElementById("adm-chat-inp"); var out=document.getElementById("adm-chat-msgs"); if(!inp||!out) return; var q=inp.value.trim(); if(!q) return; inp.value=""; out.innerHTML+="<div style=\"padding:6px 10px;background:rgba(0,212,255,.06);border-left:2px solid #00d4ff;margin:4px 0;font-family:Share Tech Mono;font-size:10px;color:#c8d8f0\"><b style=\"color:#00d4ff\">YOU:</b> "+q+"</div>"; var ni=(typeof LD!=="undefined"&&LD.NIFTY50)?LD.NIFTY50:{}; var ctx="Nifty: "+(ni.ltp?ni.ltp.toFixed(0)+" ("+(ni.dp>0?"+":"")+ni.dp.toFixed(2)+"%)":"N/A")+". "; var answer=""; if(q.toLowerCase().includes("trade today")||q.toLowerCase().includes("market bias")){ var chg=ni.dp||0; answer=chg>0.5?"✅ Bias is BULLISH today. Nifty up "+chg.toFixed(2)+"%. Consider CE options on dips. Watch 9:30 AM candle for confirmation.":chg<-0.5?"🔴 Bias is BEARISH today. Nifty down "+Math.abs(chg).toFixed(2)+"%. Consider PE options on rallies. Strict SL discipline required.":"⚠️ Market is NEUTRAL/FLAT today. Avoid directional bets. Range-bound — sell options or wait for breakout."; } else if(q.toLowerCase().includes("vix")){ var vix=(typeof LD!=="undefined"&&LD.INDIAVIX)?LD.INDIAVIX.ltp:null; answer=vix?"VIX at "+vix.toFixed(1)+". "+(vix<14?"Low volatility — good for option sellers. Sell OTM strangles.":vix>20?"High volatility — option buyers advantage. Buy ATM options with tight SL.":"Moderate VIX — balanced environment."):"VIX data not available. Connect Angel One for live VIX."; } else if(q.toLowerCase().includes("nifty")){ answer=ni.ltp?"Nifty is at "+ni.ltp.toFixed(0)+", "+(ni.dp>0?"up +":"down ")+Math.abs(ni.dp||0).toFixed(2)+"% today. "+(ni.dp>0?"Positive momentum. Support at "+(ni.ltp*0.99).toFixed(0)+".":"Under pressure. Resistance at "+(ni.ltp*1.01).toFixed(0)+"."):"Nifty data not available. Please connect Angel One."; } else { answer="I can help with market analysis, trading decisions, and JARVIS features. Try asking: \"Should I trade today?\", \"What is VIX?\", or \"Nifty analysis\""; } out.innerHTML+="<div style=\"padding:6px 10px;background:rgba(0,255,136,.04);border-left:2px solid #00ff88;margin:4px 0;font-family:Share Tech Mono;font-size:10px;color:#c8d8f0\"><b style=\"color:#00ff88\">JARVIS:</b> "+answer+"</div>"; out.scrollTop=out.scrollHeight; }
 
-function fetchMCNews(force){ try{ fetchMarketNews(force||false); }catch(e){ console.warn("[News]",e); } }
+function fetchMCNews(force){ try{ fetchMarketNews(force||false).catch(function(e){ console.warn("[News]",e); }); }catch(e){ console.warn("[News]",e); } }
+
+// ══════════════════════════════════════════════════════════════════
+//  MARKET NEWS FEED — actually implemented.
+//  Previously `fetchMCNews` called `fetchMarketNews(...)`, but that
+//  function was never defined ANYWHERE in the app — it just threw
+//  immediately, silently caught, so the panel sat on "Fetching latest
+//  news..." forever. `filterMCNews` was also broken: it queried
+//  '#news-list a' (the real container is '#mcNewsList'), and matched
+//  category keys ('stock'/'macro'/'fii') that don't exist in the actual
+//  dropdown ('nifty'/'banknifty'/'results'/'rbi'/'ipo'). And MC_NEWS_ALL /
+//  BULLISH_KW / BEARISH_KW — used by the AI News Sentiment Boost feature —
+//  were referenced but never declared, so that feature was broken too.
+//  This builds the whole pipeline for real, end to end.
+// ══════════════════════════════════════════════════════════════════
+var MC_NEWS_ALL = [];
+var MC_NEWS_LAST_FETCH = 0;
+
+var BULLISH_KW = ['surge','soar','rally','jump','gain','rise','rises','rising','upgrade','upgraded','beat','beats','record high','all-time high','buy rating','outperform','strong','robust','growth','profit up','profits rise','bullish','breakout','recovery','rebound','positive','boost','wins','best','advances','climbs'];
+var BEARISH_KW = ['plunge','crash','tumble','slump','falls','falling','drop','drops','decline','downgrade','downgraded','miss','misses','loss','losses','weak','bearish','sell rating','underperform','concern','concerns','worry','worries','warns','warning','cut','cuts','slide','slides','slashed','recession','sell-off','selloff','correction'];
+
+// Public RSS feeds, tried independently — one failing doesn't block the
+// others. Fetched through a public CORS-proxy fallback chain (browsers
+// can't fetch cross-origin RSS directly without one).
+var MC_NEWS_SOURCES = [
+  { name: 'Business Standard', url: 'https://www.business-standard.com/rss/home_page_top_stories.rss' },
+  { name: 'Business Standard Markets', url: 'https://www.business-standard.com/rss/markets-106.rss' },
+  { name: 'Moneycontrol', url: 'https://www.moneycontrol.com/rss/latestnews.xml' },
+  { name: 'Economic Times', url: 'https://economictimes.indiatimes.com/rssfeedsdefault.cms' }
+];
+
+async function mcNewsFetchWithTimeout(url, ms) {
+  try {
+    return await Promise.race([
+      fetch(url).catch(function(){ return null; }),
+      new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms || 8000); })
+    ]).catch(function(){ return null; });
+  } catch(e) { return null; }
+}
+
+async function mcNewsFetchRSS(url) {
+  var proxies = [
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    'https://corsproxy.io/?' + encodeURIComponent(url),
+    'https://thingproxy.freeboard.io/fetch/' + url
+  ];
+  for (var i = 0; i < proxies.length; i++) {
+    try {
+      var r = await mcNewsFetchWithTimeout(proxies[i], 8000);
+      if (!r || !r.ok) continue;
+      var text = await r.text();
+      if (!text || text.indexOf('<item') === -1) continue;
+      return text;
+    } catch(e) {}
+  }
+  return null;
+}
+
+function mcNewsCategoryFor(title) {
+  var t = title.toLowerCase();
+  if (t.indexOf('bank nifty') !== -1 || t.indexOf('banknifty') !== -1 || t.indexOf('banking sector') !== -1) return 'banknifty';
+  if (t.indexOf('nifty') !== -1 || t.indexOf('sensex') !== -1 || t.indexOf('market') !== -1) return 'nifty';
+  if (t.indexOf('q1') !== -1 || t.indexOf('q2') !== -1 || t.indexOf('q3') !== -1 || t.indexOf('q4') !== -1 || t.indexOf('result') !== -1 || t.indexOf('earnings') !== -1) return 'results';
+  if (t.indexOf('rbi') !== -1 || t.indexOf('repo rate') !== -1 || t.indexOf('monetary policy') !== -1 || t.indexOf('inflation') !== -1 || t.indexOf('gdp') !== -1) return 'rbi';
+  if (t.indexOf('ipo') !== -1 || t.indexOf('listing gains') !== -1 || t.indexOf('ipo allotment') !== -1) return 'ipo';
+  return 'general';
+}
+
+function mcNewsSentimentFor(title) {
+  var t = title.toLowerCase();
+  var bull = BULLISH_KW.filter(function(w){ return t.indexOf(w) !== -1; }).length;
+  var bear = BEARISH_KW.filter(function(w){ return t.indexOf(w) !== -1; }).length;
+  if (bull > bear) return 'pos';
+  if (bear > bull) return 'neg';
+  return 'neu';
+}
+
+function mcNewsParseRSS(xmlText, sourceName) {
+  var items = [];
+  try {
+    var doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    if (doc.querySelector('parsererror')) return items;
+    doc.querySelectorAll('item').forEach(function(node){
+      var titleEl = node.querySelector('title');
+      var linkEl = node.querySelector('link');
+      var pubDateEl = node.querySelector('pubDate');
+      var title = titleEl ? titleEl.textContent.trim() : '';
+      if (!title) return;
+      var link = linkEl ? linkEl.textContent.trim() : '';
+      var pubDateRaw = pubDateEl ? pubDateEl.textContent.trim() : '';
+      var ts = pubDateRaw ? Date.parse(pubDateRaw) : NaN;
+      if (isNaN(ts)) ts = Date.now();
+      items.push({ title: title, link: link, source: sourceName, ts: ts, cat: mcNewsCategoryFor(title), sentiment: mcNewsSentimentFor(title) });
+    });
+  } catch(e) { console.warn('[News] RSS parse failed for', sourceName, e); }
+  return items;
+}
+
+function mcNewsTimeAgo(ts) {
+  var diffMin = Math.round((Date.now() - ts) / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return diffMin + 'm ago';
+  var diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return diffHr + 'h ago';
+  return Math.round(diffHr / 24) + 'd ago';
+}
+
+async function fetchMarketNews(force) {
+  var statusEl = document.getElementById('mcNewsStatus');
+  var now = Date.now();
+  if (!force && MC_NEWS_ALL.length && (now - MC_NEWS_LAST_FETCH) < 5*60*1000) {
+    renderMCNews(); // cache still fresh — just re-render, no need to refetch
+    return;
+  }
+  if (statusEl) { statusEl.textContent = 'Loading...'; statusEl.style.color = 'var(--dim)'; }
+
+  var results = await Promise.all(MC_NEWS_SOURCES.map(async function(src){
+    var xml = await mcNewsFetchRSS(src.url);
+    return xml ? mcNewsParseRSS(xml, src.name) : [];
+  }));
+
+  var merged = [].concat.apply([], results);
+  var seen = {};
+  merged = merged.filter(function(item){
+    var key = item.title.toLowerCase().slice(0, 60); // dedupe — wire stories often repeat across feeds
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+  merged.sort(function(a,b){ return b.ts - a.ts; });
+  merged = merged.slice(0, 50);
+
+  if (!merged.length) {
+    if (statusEl) { statusEl.textContent = '⚠ Unable to reach news sources'; statusEl.style.color = 'var(--r)'; }
+    if (!MC_NEWS_ALL.length) {
+      var listEl = document.getElementById('mcNewsList');
+      if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-family:Share Tech Mono;font-size:11px">⚠ Could not reach any news source right now. Tap ↺ to retry.</div>';
+    }
+    return; // keep whatever was already showing rather than wipe a working feed on a transient failure
+  }
+
+  MC_NEWS_ALL = merged;
+  MC_NEWS_LAST_FETCH = now;
+  renderMCNews();
+  if (statusEl) { statusEl.textContent = 'Live · ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); statusEl.style.color = 'var(--g)'; }
+  if (typeof nd2SyncNews === 'function') { try { nd2SyncNews(); } catch(e) {} }
+}
+
+function renderMCNews() {
+  var listEl = document.getElementById('mcNewsList');
+  if (!listEl) return;
+  var filterEl = document.getElementById('mcNewsFilter');
+  var cat = filterEl ? filterEl.value : 'all';
+  var items = MC_NEWS_ALL.filter(function(item){ return cat === 'all' || item.cat === cat; });
+  if (!items.length) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No news in this category right now.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="news-grid">' + items.map(function(item){
+    var tagClass = item.sentiment === 'pos' ? 'news-tag-pos' : item.sentiment === 'neg' ? 'news-tag-neg' : 'news-tag-neu';
+    var tagLabel = item.sentiment === 'pos' ? 'BULLISH' : item.sentiment === 'neg' ? 'BEARISH' : 'NEUTRAL';
+    var dotColor = item.sentiment === 'pos' ? 'var(--g)' : item.sentiment === 'neg' ? 'var(--r)' : 'var(--w)';
+    return '<div class="news-card">'
+      + '<div class="news-src-dot" style="background:'+dotColor+'"></div>'
+      + '<div class="news-body">'
+        + '<div class="news-src">'+item.source+' <span class="news-src-tag '+tagClass+'">'+tagLabel+'</span></div>'
+        + '<div class="news-hl"><a href="'+item.link+'" target="_blank" rel="noopener">'+item.title+'</a></div>'
+        + '<div class="news-meta"><span>'+mcNewsTimeAgo(item.ts)+'</span></div>'
+      + '</div>'
+    + '</div>';
+  }).join('') + '</div>';
+}
+
+// Auto-refresh every 10 minutes while the app is open
+setInterval(function(){ try { fetchMarketNews(false); } catch(e) {} }, 10*60*1000);
 
 function renderSAReport(){ try{ if(typeof buildStockAnalysis==="function"){ var syms=Object.keys(SA_STOCKS||{}); var tbody=document.getElementById("saReportBody"); if(tbody) tbody.innerHTML="<tr><td colspan=\"15\" style=\"text-align:center;color:var(--dim);padding:20px;font-family:Share Tech Mono;font-size:10px\">Analysing "+syms.length+" stocks...</td></tr>"; setTimeout(function(){ try{ var rows=[]; syms.forEach(function(sym){ var a=buildStockAnalysis(sym,"1y","medium",null,null); if(a) rows.push({sym:sym,a:a}); }); rows.sort(function(x,y){ return (y.a.fundamental_score||0)-(x.a.fundamental_score||0); }); if(tbody) tbody.innerHTML=rows.map(function(r){ var col=r.a.recommendation==="STRONG BUY"?"#00ff88":r.a.recommendation==="BUY"?"#7fff00":r.a.recommendation==="HOLD"?"#ffcc00":"#ff3d5a"; return "<tr><td style=\"font-weight:700;color:#c8d8f0\">"+r.sym+"</td><td style=\"color:#4a6080\">"+(r.a.sector||"")+"</td><td style=\"color:#00d4ff\">"+(r.a.current_price||"—")+"</td><td><span style=\"color:"+col+";border:1px solid "+col+";padding:1px 6px;border-radius:3px;font-size:9px;font-family:Share Tech Mono\">"+r.a.recommendation+"</span></td><td style=\"color:#ffcc00\">"+(r.a.target_price||"—")+"</td><td style=\"color:#ff3d5a\">"+(r.a.stop_loss||"—")+"</td><td>"+(r.a.risk_reward||"—")+"</td><td style=\"color:#00d4ff\">"+(r.a.roe||"—")+"</td></tr>"; }).join(""); var timeEl=document.getElementById("rpt-sa-time"); if(timeEl) timeEl.textContent=new Date().toLocaleTimeString("en-IN"); }catch(e2){console.warn("[SA Report]",e2);} },300); } }catch(e){console.warn("[SA Report outer]",e);} }
 
@@ -8347,18 +8534,12 @@ function spCopyJSON() {
 }
 
 // ── filterMCNews — filter news by category ──
-function filterMCNews(cat) {
-  var items = document.querySelectorAll('#news-list a');
-  items.forEach(function(item) {
-    if (!cat || cat === 'all') { item.style.display=''; return; }
-    var text = (item.textContent || '').toLowerCase();
-    var show = false;
-    if (cat === 'nifty'  && (text.includes('nifty') || text.includes('sensex') || text.includes('market'))) show=true;
-    if (cat === 'stock'  && (text.includes('share') || text.includes('stock') || text.includes('equity'))) show=true;
-    if (cat === 'macro'  && (text.includes('rbi') || text.includes('rate') || text.includes('inflation') || text.includes('gdp'))) show=true;
-    if (cat === 'fii'    && (text.includes('fii') || text.includes('dii') || text.includes('foreign'))) show=true;
-    item.style.display = show ? '' : 'none';
-  });
+// Previously queried '#news-list a' (real container is '#mcNewsList') and
+// matched category keys that don't exist in the dropdown at all. Now that
+// each item is tagged with a real category at fetch time, this just
+// re-renders from MC_NEWS_ALL filtered by whatever the dropdown says.
+function filterMCNews() {
+  renderMCNews();
 }
 
 
@@ -16668,7 +16849,7 @@ function sptReset() {
 function sptStrategyLabel(key) {
   var labels = {
     jarvis: 'JARVIS Standard', ema_cross: 'EMA Crossover', rsi: 'RSI Reversal',
-    macd: 'MACD Momentum', breakout: 'Volume Breakout', manual: 'Manual'
+    macd: 'MACD Momentum', breakout: 'Volume Breakout', long_term: 'Long-Term Investing', manual: 'Manual'
   };
   return labels[key] || key || 'Manual';
 }
@@ -17107,6 +17288,14 @@ function saseComputeScore(strategy, closes, volumes) {
   var macdRes = calcMACD(closes);
   var score = 0, reasons = [];
 
+  // Computed unconditionally (not just for the 'long_term' branch) so Death
+  // Cross monitoring for any open long-term position works regardless of
+  // which strategy is currently selected in the dropdown — see
+  // saseCheckLongTermExits().
+  var sma50 = calcSMA(closes, 50);
+  var sma200 = calcSMA(closes, 200);
+  var deathCross = (sma50 != null && sma200 != null) ? sma50 < sma200 : false;
+
   if (strategy === 'ema_cross') {
     if (ema50 && ema20 > ema50) { score += 60; reasons.push('EMA20>EMA50'); }
     if (closes.length >= 51) {
@@ -17134,6 +17323,31 @@ function saseComputeScore(strategy, closes, volumes) {
       var lastVol = volumes[volumes.length - 1];
       if (avgVol && lastVol > avgVol * 1.5) { score += 35; reasons.push('Volume surge ('+Math.round(lastVol/avgVol*100)+'% of avg)'); }
     }
+  } else if (strategy === 'long_term') {
+    // Step 2 (Technical Buy Conditions) from the Long-Term Investing plan.
+    // NOTE — Fundamental Score (revenue/profit growth, ROE, ROCE, debt,
+    // promoter/FII holding, FCF) and Valuation Score (P/E, P/B, PEG,
+    // EV/EBITDA) from that plan are NOT included here: Angel One's candle
+    // API has no fundamentals/valuation data, so this ranks purely on the
+    // technical entry criteria below. Wiring in a fundamentals source
+    // (screener.in export, a paid fundamentals API, etc.) would let this
+    // become the full weighted Fundamental+Technical+Valuation score.
+    if (sma200 == null) {
+      return { score: 0, signal: 'NONE', reason: 'Needs ~200 trading days of history for 200 DMA (not yet available for this symbol)', last: last, sma50: sma50, sma200: sma200, deathCross: deathCross };
+    }
+    if (last > sma200) { score += 30; reasons.push('Above 200 DMA'); }
+    if (sma50 != null && sma50 > sma200) { score += 30; reasons.push('Golden Trend (50DMA>200DMA)'); }
+    if (rsi14 >= 50 && rsi14 <= 65) { score += 20; reasons.push('RSI in buy zone ('+rsi14.toFixed(1)+')'); }
+    if (volumes && volumes.length >= 21) {
+      var avgVolLT = volumes.slice(-21, -1).reduce(function(a,b){return a+b;},0) / 20;
+      var lastVolLT = volumes[volumes.length - 1];
+      if (avgVolLT && lastVolLT > avgVolLT * 1.5) { score += 10; reasons.push('Volume ≥1.5× avg'); }
+    }
+    if (closes.length >= 252) {
+      var high52w = Math.max.apply(null, closes.slice(-252, -1));
+      if (last >= high52w * 0.99) { score += 10; reasons.push('At/near 52-week high'); }
+    }
+    reasons.push('(technical-only — fundamentals/valuation not connected)');
   } else { // 'jarvis' — composite of all of the above, same spirit as the options JARVIS Standard
     if (ema50 && ema20 > ema50) { score += 30; reasons.push('Uptrend (EMA20>EMA50)'); }
     if (rsi14 > 40 && rsi14 < 65) { score += 20; reasons.push('RSI healthy ('+rsi14.toFixed(1)+')'); }
@@ -17143,17 +17357,20 @@ function saseComputeScore(strategy, closes, volumes) {
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));
-  return { score: score, signal: score >= SASE_AUTO_THRESHOLD ? 'BUY' : 'NONE', reason: reasons.join(' · ') || 'No qualifying conditions', last: last, rsi: rsi14, ema20: ema20 };
+  return { score: score, signal: score >= SASE_AUTO_THRESHOLD ? 'BUY' : 'NONE', reason: reasons.join(' · ') || 'No qualifying conditions', last: last, rsi: rsi14, ema20: ema20, sma50: sma50, sma200: sma200, deathCross: deathCross };
 }
 
 // Fetches ~120 days of daily candles for one heatmap symbol via the same
 // Angel One historical endpoint Stock Pickup already uses.
 async function saseFetchDailyCloses(symbol) {
   try {
-    var tm = (typeof TM !== 'undefined') && TM[symbol];
+    var tm = (typeof TM !== 'undefined' && TM[symbol]) || (typeof TM_EXT !== 'undefined' && TM_EXT[symbol]);
     if (!tm || typeof creds === 'undefined' || !creds.jwt) return null;
     var now = new Date();
-    var past = new Date(now.getTime() - 150*24*60*60*1000);
+    // ~400 calendar days back — enough trading days for a 200 DMA plus a
+    // 252-trading-day (52-week) high/low, which the Long-Term Investing
+    // strategy needs. Other strategies just use a tail slice of this.
+    var past = new Date(now.getTime() - 400*24*60*60*1000);
     function fmt(d){ return d.toISOString().slice(0,10) + ' 09:15'; }
     var candles = await angelHistory(tm.tok, tm.ex || 'NSE', 'ONE_DAY', fmt(past), fmt(now));
     if (!candles || !candles.length) return null;
@@ -17240,6 +17457,8 @@ async function saseScanUniverse(manual) {
     await new Promise(function(res){ setTimeout(res, 300); }); // stagger — same rate-limit caution used elsewhere for Angel One calls
   }
   results.sort(function(a,b){ return b.score - a.score; });
+  var resultsMap = {};
+  results.forEach(function(r){ resultsMap[r.symbol] = r; });
   SASE_TOP5 = results.slice(0, 5);
   saseRenderTop5();
   saseUpdateToggleUI();
@@ -17252,9 +17471,13 @@ async function saseScanUniverse(manual) {
       if (SASE_LAST_AUTO_KEY[r.symbol] === todayKey) return; // already auto-traded this stock today
       var live = (LD && LD[r.symbol] && LD[r.symbol].ltp) ? LD[r.symbol].ltp : r.last;
       if (!live) return;
-      var target = Math.round(live * 1.03 * 100) / 100; // approx +3% swing target
-      var sl     = Math.round(live * 0.985 * 100) / 100; // approx -1.5% swing stop
-      var qty    = Math.max(1, Math.floor(20000 / live)); // ~₹20k per auto position
+      var isLongTerm = SASE_STRATEGY === 'long_term';
+      // Long-term positions use a much wider swing (matches the plan's
+      // "falls 15–20% below purchase price" sell rule and a multi-month
+      // holding horizon) instead of the tight intraday/swing default.
+      var target = Math.round(live * (isLongTerm ? 1.20 : 1.03) * 100) / 100;
+      var sl     = Math.round(live * (isLongTerm ? 0.85 : 0.985) * 100) / 100;
+      var qty    = Math.max(1, Math.floor((isLongTerm ? 50000 : 20000) / live)); // bigger position for a long-term conviction buy
       var res = sptAddAutoTrade({ instr: r.symbol, side: 'BUY', buy: live, qty: qty, target: target, sl: sl, strategy: SASE_STRATEGY, reasons: r.reason });
       if (res) {
         SASE_LAST_AUTO_KEY[r.symbol] = todayKey;
@@ -17262,7 +17485,32 @@ async function saseScanUniverse(manual) {
       }
     });
   }
+  saseCheckLongTermExits(resultsMap);
   SASE_SCANNING = false;
+}
+
+// Sell Rule #1 from the Long-Term Investing plan: 50 DMA crossing below
+// 200 DMA (Death Cross). Runs every scan cycle against whatever fresh
+// candle data was just fetched, for ANY open long-term position — not only
+// when 'long_term' happens to be the currently selected dropdown strategy,
+// since switching strategies shouldn't stop monitoring an open long-term
+// holding for its own exit rule. The 15–20% drawdown sell rule and target
+// hits are already covered by the normal sptCheckAutoExits() trailing-SL
+// engine (both portfolios share it).
+function saseCheckLongTermExits(resultsMap) {
+  if (!SPT_PORTFOLIO) return;
+  var closedAny = false;
+  SPT_PORTFOLIO.trades.forEach(function(t){
+    if (t.status !== 'OPEN' || t.strategy !== 'long_term') return;
+    var r = resultsMap[t.instr];
+    if (!r || !r.deathCross) return;
+    var live = sptGetLivePrice(t);
+    sptCloseTrade(t.id, live, true);
+    t.autoExitReason = 'DEATH CROSS';
+    saseLog('⚠ Death Cross on ' + t.instr + ' (50 DMA < 200 DMA) — auto-closed long-term position per your sell rules.');
+    closedAny = true;
+  });
+  if (closedAny) { sptSave(); sptSyncCloud(); sptRefreshUI(); }
 }
 
 function saseRenderTop5() {
@@ -17332,10 +17580,16 @@ function saseToggle() {
   }
 }
 
+function saseUpdateLongTermNote() {
+  var note = document.getElementById('sase-longterm-note');
+  if (note) note.style.display = SASE_STRATEGY === 'long_term' ? 'block' : 'none';
+}
+
 function saseSetStrategy(val) {
-  var valid = ['jarvis','ema_cross','rsi','macd','breakout'];
+  var valid = ['jarvis','ema_cross','rsi','macd','breakout','long_term'];
   SASE_STRATEGY = valid.indexOf(val) !== -1 ? val : 'jarvis';
   try { localStorage.setItem('jarvis_sase_strategy', SASE_STRATEGY); } catch(e) {}
+  saseUpdateLongTermNote();
   saseLog('Strategy switched to ' + sptStrategyLabel(SASE_STRATEGY) + ' — rescanning…');
   saseScanUniverse();
 }
@@ -17348,6 +17602,7 @@ function saseLoadState() {
   var cb = document.getElementById('sase-toggle'); if (cb) cb.checked = SASE_ON;
   var sel = document.getElementById('sase-strategy'); if (sel) sel.value = SASE_STRATEGY;
   saseUpdateToggleUI();
+  saseUpdateLongTermNote();
   if (SASE_ON) { saseEnsureTicker(); saseScanUniverse(); }
 }
 
