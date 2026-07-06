@@ -3423,6 +3423,71 @@ setTimeout(nd2SyncAll, 2000);
     </div>
   </div>
 
+  <!-- LIVE TRADING — ANGEL ONE -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(255,61,90,.4)">
+    <div class="ph">
+      <div class="pt" style="color:var(--r)">🔴 LIVE TRADING — ANGEL ONE</div>
+      <span id="live-status" style="font-family:Orbitron;font-size:10px;letter-spacing:1px;color:var(--dim)">OFF</span>
+    </div>
+    <div style="padding:14px">
+      <div style="padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:6px;font-family:Share Tech Mono;font-size:10px;color:var(--txt);margin-bottom:12px">
+        ⚠ This fires <b>real orders with real money</b> on your linked Angel One account, mirroring the F&amp;O Auto Signal Engine above — <b>no per-trade confirmation</b>, per your setup. Only the 5 real strategies mirror live (not manual trades, not Pipeline Test). Requires the app tab to stay open — closing it or losing internet stops live firing (and any open live position stays open on the broker's side until you close it yourself).
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:6px">Type <b style="color:var(--r)">I ACCEPT THE RISK</b> once to unlock the live toggle:</label>
+        <div style="display:flex;gap:6px">
+          <input id="live-risk-input" type="text" placeholder="I ACCEPT THE RISK" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:11px;padding:7px 10px;border-radius:5px;text-transform:uppercase">
+          <button onclick="liveTradingAcceptRisk()" style="padding:7px 14px;background:rgba(255,61,90,.08);border:1px solid var(--r);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">ACKNOWLEDGE</button>
+        </div>
+        <div id="live-risk-accepted-note" style="display:none;margin-top:6px;font-family:Share Tech Mono;font-size:9px;color:var(--g)">✅ Risk acknowledged — live toggle unlocked.</div>
+      </div>
+
+      <div id="live-toggle-wrap" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px">
+        <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="live-toggle" onchange="liveTradingToggle()" disabled style="opacity:0;width:0;height:0">
+          <span style="position:absolute;cursor:pointer;inset:0;background:rgba(255,61,90,.15);border:1px solid var(--r);border-radius:24px"></span>
+          <span style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--r);border-radius:50%;transition:.2s"></span>
+        </label>
+        <div style="flex:1">
+          <div style="font-family:Orbitron;font-size:10px;color:var(--txt);letter-spacing:1px">LIVE TRADING MASTER SWITCH</div>
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Today: <span id="live-today-count">0 / 5</span> trades · P&amp;L: <span id="live-today-pnl">₹0</span></div>
+        </div>
+        <button onclick="liveTradingEmergencyStop()" style="padding:10px 16px;background:var(--r);border:none;border-radius:6px;color:#fff;font-family:Orbitron;font-size:10px;cursor:pointer;letter-spacing:1px;font-weight:bold">🛑 STOP</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">LIVE QTY (SHARES)</label>
+          <input id="live-lot-qty" type="number" value="65" onchange="liveTradingSaveConfig()" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">PRODUCT TYPE</label>
+          <select id="live-product-type" onchange="liveTradingSaveConfig()" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px">
+            <option value="INTRADAY">Intraday (MIS)</option>
+            <option value="CARRYFORWARD">Carryforward (NRML)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">MAX TRADES/DAY</label>
+          <input id="live-max-trades" type="number" value="5" onchange="liveTradingSaveConfig()" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px">
+        </div>
+        <div>
+          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">MAX DAILY LOSS (₹)</label>
+          <input id="live-max-loss" type="number" value="5000" onchange="liveTradingSaveConfig()" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:7px 9px;color:var(--txt);font-family:Share Tech Mono;font-size:11px">
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px">LIVE ORDER LOG</div>
+        <button onclick="liveTradingRefreshOrderBook()" style="padding:3px 10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:4px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer">↺ CHECK BROKER ORDER BOOK</button>
+      </div>
+      <div id="live-order-log" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+        <div style="text-align:center;padding:14px;color:var(--dim);font-family:Share Tech Mono;font-size:10px">No live orders yet.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Trade -->
   <div class="panel" style="margin-bottom:10px">
     <div class="ph"><div class="pt">➕ LOG PAPER TRADE</div>
@@ -15178,6 +15243,14 @@ function advTab(name, btn) {
     if (typeof buildOptionChain === 'function') {
       buildOptionChain().then(function(){ try { ptRefreshUI(); } catch(e) {} });
     }
+    if (typeof liveTradingInit === 'function') {
+      liveTradingInit();
+      var q = document.getElementById('live-lot-qty'); if (q) q.value = LIVE_TRADING.lotQty;
+      var pt = document.getElementById('live-product-type'); if (pt) pt.value = LIVE_TRADING.productType;
+      var mt = document.getElementById('live-max-trades'); if (mt) mt.value = LIVE_TRADING.maxTradesPerDay;
+      var ml = document.getElementById('live-max-loss'); if (ml) ml.value = LIVE_TRADING.maxDailyLossINR;
+      liveTradingRenderPanel();
+    }
   }
 }
 
@@ -16080,12 +16153,14 @@ function ptAddAutoTrade(opts) {
   ptSyncCloud();
   if (typeof ensureChainTicker === 'function') ensureChainTicker();
   ptRefreshUI();
+  if (typeof liveTradingEnterPosition === 'function') { try { liveTradingEnterPosition(trade); } catch(e) { console.warn('[LiveTrading] entry hook failed', e); } }
   return { trade: trade };
 }
 
 
 function ptCloseTrade(id, exitPrice, skipRefresh) {
   if (!PT_PORTFOLIO) return;
+  var closedTradeRef = null;
   PT_PORTFOLIO.trades = PT_PORTFOLIO.trades.map(function(t){
     if (t.id !== id) return t;
     var gross = (exitPrice - t.buy) * t.qty;
@@ -16100,11 +16175,16 @@ function ptCloseTrade(id, exitPrice, skipRefresh) {
     t.exitTime = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     t.dayKey = t.dayKey || new Date().toLocaleDateString('en-CA');
     PT_PORTFOLIO.cash += exitPrice * t.qty - Math.round(t.qty * 0.55);
+    closedTradeRef = t;
     return t;
   });
   ptSave();
   ptSyncCloud();
   if (!skipRefresh) ptRefreshUI(); // skipRefresh=true when called from ptCheckAutoExits, which already runs inside a ptRefreshUI pass
+  if (closedTradeRef && typeof liveTradingExitPosition === 'function') {
+    try { liveTradingExitPosition(closedTradeRef, skipRefresh ? 'auto target/SL' : 'manual close'); }
+    catch(e) { console.warn('[LiveTrading] exit hook failed', e); }
+  }
 }
 
 function ptShowExitModal(id) {
@@ -16419,6 +16499,362 @@ function ptParseStrikeType(instr) {
   return m ? { strike: m[1], type: m[2] } : null;
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  LIVE TRADING — Angel One real order execution
+//  Mirrors the Auto Signal Engine's F&O paper trades into REAL orders on
+//  your linked Angel One account. This is fundamentally different from
+//  paper trading: it uses real money on a leveraged, time-decaying
+//  instrument, fired with no per-trade confirmation, per your explicit
+//  choice. Several deliberate safety rails are built in regardless (kill
+//  switch, one-time risk acknowledgment, daily trade/loss caps, an
+//  emergency stop) — none of these ask for per-trade confirmation, they
+//  just bound how much damage a single bug or bad signal can do, which any
+//  responsible automated trading system needs.
+//
+//  IMPORTANT — SCOPE: this fires the live ENTRY (BUY) when a paper auto
+//  trade opens, and the live EXIT (SELL) when that SAME paper trade closes
+//  (target/SL/trailing-SL/manual), so a live position is never left
+//  unmanaged after this hooks it in. It only mirrors the 5 real F&O auto
+//  strategies (not manual paper trades, not the Pipeline Test mode).
+// ══════════════════════════════════════════════════════════════════
+var LIVE_TRADING = null;
+var LIVE_RISK_PHRASE = 'I ACCEPT THE RISK';
+
+function liveTradingInit() {
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('jarvis_live_trading')); } catch(e) {}
+  var todayKey = new Date().toLocaleDateString('en-CA');
+  if (stored && stored.version === 1) {
+    LIVE_TRADING = stored;
+    if (LIVE_TRADING.todayKey !== todayKey) {
+      // New day — reset daily counters, but master enabled/acknowledged
+      // state persists (you don't have to re-accept risk every day, but
+      // you do have to manually re-enable after any circuit-breaker trip).
+      LIVE_TRADING.todayKey = todayKey;
+      LIVE_TRADING.todayTradeCount = 0;
+      LIVE_TRADING.todayRealizedPnl = 0;
+      LIVE_TRADING.circuitBreakerTripped = false;
+      liveTradingSave();
+    }
+  } else {
+    LIVE_TRADING = {
+      version: 1,
+      enabled: false,
+      acceptedRiskAt: null,
+      lotQty: 65,
+      productType: 'INTRADAY', // INTRADAY (MIS-style, auto square-off by broker) or CARRYFORWARD (NRML)
+      maxTradesPerDay: 5,
+      maxDailyLossINR: 5000,
+      todayKey: todayKey,
+      todayTradeCount: 0,
+      todayRealizedPnl: 0,
+      circuitBreakerTripped: false,
+      log: [] // {ts, instr, side, qty, orderId, status, reason, linkedPaperTradeId}
+    };
+    liveTradingSave();
+  }
+}
+
+function liveTradingSave() {
+  if (!LIVE_TRADING) return;
+  try { localStorage.setItem('jarvis_live_trading', JSON.stringify(LIVE_TRADING)); } catch(e) {}
+  liveTradingSyncCloud();
+}
+
+var LIVE_TRADING_SYNC_PENDING = false;
+async function liveTradingSyncCloud() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  if (!LIVE_TRADING || LIVE_TRADING_SYNC_PENDING) return;
+  LIVE_TRADING_SYNC_PENDING = true;
+  setTimeout(async function(){
+    LIVE_TRADING_SYNC_PENDING = false;
+    try {
+      await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          user_id: window.SUPA_USER.id, report_type: 'live_trading_state',
+          title: 'Live Trading State & Order Log',
+          content: JSON.stringify(LIVE_TRADING),
+          metadata: { updated_at: new Date().toISOString() }
+        })
+      });
+    } catch(e) { console.warn('[LiveTrading] cloud sync failed', e); }
+  }, 800);
+}
+
+function liveTradingLog(entry) {
+  entry.ts = new Date().toISOString();
+  LIVE_TRADING.log.unshift(entry);
+  LIVE_TRADING.log = LIVE_TRADING.log.slice(0, 200);
+  liveTradingSave();
+  liveTradingRenderPanel();
+}
+
+// One-time explicit acknowledgment required before the master toggle can
+// ever be switched on — not a per-trade confirmation (which you declined),
+// a single "I understand what I'm turning on" gate.
+function liveTradingAcceptRisk() {
+  var input = document.getElementById('live-risk-input');
+  if (!input || input.value.trim().toUpperCase() !== LIVE_RISK_PHRASE) {
+    alert('Type exactly: ' + LIVE_RISK_PHRASE);
+    return;
+  }
+  LIVE_TRADING.acceptedRiskAt = new Date().toISOString();
+  liveTradingSave();
+  liveTradingRenderPanel();
+}
+
+function liveTradingToggle() {
+  if (!LIVE_TRADING.acceptedRiskAt) { alert('Accept the risk acknowledgment above first.'); return; }
+  var cb = document.getElementById('live-toggle');
+  LIVE_TRADING.enabled = !!(cb && cb.checked);
+  if (LIVE_TRADING.enabled) LIVE_TRADING.circuitBreakerTripped = false; // manual re-enable clears a prior trip
+  liveTradingSave();
+  liveTradingRenderPanel();
+}
+
+// The big emergency stop — always visible, always one click, no confirm
+// dialog in the way of actually stopping.
+function liveTradingEmergencyStop() {
+  LIVE_TRADING.enabled = false;
+  var cb = document.getElementById('live-toggle'); if (cb) cb.checked = false;
+  liveTradingLog({ instr:'—', side:'—', qty:0, status:'STOPPED', reason:'Emergency stop pressed — live trading disabled.' });
+}
+
+function liveTradingSaveConfig() {
+  var q = parseInt(document.getElementById('live-lot-qty').value) || 65;
+  var pt = document.getElementById('live-product-type').value;
+  var maxT = parseInt(document.getElementById('live-max-trades').value) || 5;
+  var maxL = parseFloat(document.getElementById('live-max-loss').value) || 5000;
+  LIVE_TRADING.lotQty = q;
+  LIVE_TRADING.productType = pt;
+  LIVE_TRADING.maxTradesPerDay = maxT;
+  LIVE_TRADING.maxDailyLossINR = maxL;
+  liveTradingSave();
+}
+
+// Checked before every live order attempt. Trips = stop firing new
+// entries for the rest of the day and force the toggle off (existing open
+// live positions still get their live EXIT fired normally — this only
+// blocks new entries).
+function liveTradingCircuitOk() {
+  if (LIVE_TRADING.circuitBreakerTripped) return false;
+  if (LIVE_TRADING.todayTradeCount >= LIVE_TRADING.maxTradesPerDay) {
+    LIVE_TRADING.circuitBreakerTripped = true;
+    LIVE_TRADING.enabled = false;
+    liveTradingLog({ instr:'—', side:'—', qty:0, status:'CIRCUIT BREAKER', reason:'Max trades/day ('+LIVE_TRADING.maxTradesPerDay+') reached — live trading auto-disabled.' });
+    return false;
+  }
+  if (LIVE_TRADING.todayRealizedPnl <= -Math.abs(LIVE_TRADING.maxDailyLossINR)) {
+    LIVE_TRADING.circuitBreakerTripped = true;
+    LIVE_TRADING.enabled = false;
+    liveTradingLog({ instr:'—', side:'—', qty:0, status:'CIRCUIT BREAKER', reason:'Daily max loss (₹'+LIVE_TRADING.maxDailyLossINR+') breached — live trading auto-disabled.' });
+    return false;
+  }
+  return true;
+}
+
+// ── Angel One order placement — deliberately a SINGLE attempt, direct
+// fetch only. Angel One's SmartAPI is documented as CORS-enabled for
+// direct browser calls, so no proxy is needed here at all. This
+// intentionally does NOT reuse multiPost()'s cascading proxy-fallback
+// pattern (fine for read-only quote/history calls) — for a mutating
+// call, if one transport's response is lost after actually reaching the
+// broker, a fallback retry could fire the SAME order twice. Here, an
+// ambiguous outcome is reported as UNKNOWN rather than silently retried.
+async function angelPlaceOrder(params) {
+  if (!creds || !creds.jwt) return { ok:false, reason:'Not logged in to Angel One' };
+  var realIp = await getRealPublicIP();
+  var hdrs = {
+    'Content-Type':'application/json',
+    'Authorization':'Bearer ' + creds.jwt,
+    'X-UserType':'USER','X-SourceID':'WEB',
+    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':realIp,
+    'X-MACAddress':'00:00:00:00:00:00',
+    'X-PrivateKey': creds.apiKey,
+    'Accept':'application/json'
+  };
+  var body = JSON.stringify({
+    variety: 'NORMAL',
+    tradingsymbol: params.tradingsymbol,
+    symboltoken: params.symboltoken,
+    transactiontype: params.transactiontype, // BUY or SELL
+    exchange: 'NFO',
+    ordertype: 'MARKET',
+    producttype: params.productType || 'INTRADAY',
+    duration: 'DAY',
+    price: '0',
+    squareoff: '0',
+    stoploss: '0',
+    quantity: String(params.quantity)
+  });
+  var url = BASE + '/rest/secure/angelbroking/order/v1/placeOrder';
+  try {
+    var r = await Promise.race([
+      fetch(url, { method:'POST', headers:hdrs, body:body }).catch(function(){ return null; }),
+      new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 10000); })
+    ]).catch(function(){ return null; });
+    if (!r) return { ok:false, unknown:true, reason:'No response (network/timeout) — order status UNKNOWN. Check the Angel One app/order book before assuming it failed.' };
+    var txt = await r.text().catch(function(){ return ''; });
+    var d; try { d = JSON.parse(txt); } catch(e) { d = null; }
+    if (d && d.status === true && d.data && d.data.orderid) return { ok:true, orderId: d.data.orderid };
+    return { ok:false, reason: (d && d.message) || ('HTTP ' + r.status) };
+  } catch(e) {
+    return { ok:false, unknown:true, reason:'Exception: ' + e.message };
+  }
+}
+
+async function angelGetOrderBook() {
+  if (!creds || !creds.jwt) return null;
+  var realIp = await getRealPublicIP();
+  var hdrs = {
+    'Authorization':'Bearer ' + creds.jwt,
+    'X-UserType':'USER','X-SourceID':'WEB',
+    'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':realIp,
+    'X-MACAddress':'00:00:00:00:00:00',
+    'X-PrivateKey': creds.apiKey,
+    'Accept':'application/json'
+  };
+  try {
+    var r = await fetch(BASE + '/rest/secure/angelbroking/order/v1/getOrderBook', { method:'GET', headers:hdrs });
+    if (!r.ok) return null;
+    var d = await r.json();
+    if (d && d.status === true) return d.data || [];
+  } catch(e) {}
+  return null;
+}
+
+// Resolves the real Angel One tradingsymbol + symboltoken for a paper
+// trade's strike/type — reuses the app's existing, already-working
+// resolver (buildAngelOptSymbol + angelSearchOptToken) rather than
+// constructing or guessing anything new, since sending a wrong/guessed
+// token risks trading the wrong instrument entirely.
+async function liveTradingResolveSymbol(instr) {
+  var parsed = ptParseStrikeType(instr);
+  if (!parsed) return null;
+  var instrUp = String(instr).toUpperCase();
+  var idxKey = instrUp.indexOf('BANKNIFTY') !== -1 ? 'BANKNIFTY' : instrUp.indexOf('SENSEX') !== -1 ? 'SENSEX' : 'NIFTY';
+  var expiryStr = idxKey === 'NIFTY' ? getNiftyExpiry() : idxKey === 'BANKNIFTY' ? getBankNiftyExpiry() : getSensexExpiry();
+  var tradingsymbol = buildAngelOptSymbol(idxKey, parsed.strike, parsed.type, expiryStr);
+  var symboltoken = await angelSearchOptToken(tradingsymbol);
+  if (!symboltoken) return null;
+  return { tradingsymbol: tradingsymbol, symboltoken: symboltoken };
+}
+
+// ── Live ENTRY — called right after a paper auto trade is created ──
+async function liveTradingEnterPosition(trade) {
+  if (!LIVE_TRADING) liveTradingInit();
+  if (!LIVE_TRADING.enabled) return;
+  if (!liveTradingCircuitOk()) return;
+
+  var resolved = await liveTradingResolveSymbol(trade.instr);
+  if (!resolved) {
+    liveTradingLog({ instr: trade.instr, side:'BUY', qty:0, status:'SKIPPED', reason:'Could not resolve a real Angel One symbol/token — not firing blind.', linkedPaperTradeId: trade.id });
+    return;
+  }
+
+  LIVE_TRADING.todayTradeCount++; // counts the attempt, success or fail, toward the daily cap
+  liveTradingSave();
+
+  var result = await angelPlaceOrder({
+    tradingsymbol: resolved.tradingsymbol, symboltoken: resolved.symboltoken,
+    transactiontype: 'BUY', quantity: LIVE_TRADING.lotQty, productType: LIVE_TRADING.productType
+  });
+
+  trade.live = {
+    tradingsymbol: resolved.tradingsymbol, symboltoken: resolved.symboltoken,
+    qty: LIVE_TRADING.lotQty, entryOrderId: result.ok ? result.orderId : null,
+    status: result.ok ? 'PLACED' : (result.unknown ? 'UNKNOWN' : 'FAILED')
+  };
+  ptSave();
+
+  liveTradingLog({
+    instr: resolved.tradingsymbol, side:'BUY', qty: LIVE_TRADING.lotQty,
+    orderId: result.ok ? result.orderId : null,
+    status: trade.live.status, reason: result.ok ? 'Live entry placed, mirroring paper trade.' : result.reason,
+    linkedPaperTradeId: trade.id
+  });
+}
+
+// ── Live EXIT — called right when the linked paper trade closes ──
+async function liveTradingExitPosition(trade, exitReason) {
+  if (!trade.live || trade.live.status !== 'PLACED') return; // nothing live was actually placed for this one
+  if (!LIVE_TRADING) liveTradingInit();
+
+  var result = await angelPlaceOrder({
+    tradingsymbol: trade.live.tradingsymbol, symboltoken: trade.live.symboltoken,
+    transactiontype: 'SELL', quantity: trade.live.qty, productType: LIVE_TRADING.productType
+  });
+
+  trade.live.exitOrderId = result.ok ? result.orderId : null;
+  trade.live.status = result.ok ? 'CLOSED' : (result.unknown ? 'EXIT_UNKNOWN' : 'EXIT_FAILED');
+  ptSave();
+
+  if (result.ok) {
+    // Approximate live P&L using the same entry/exit premiums as the
+    // linked paper trade (the real fill price can differ slightly from
+    // this MARKET order's actual execution — check your broker's contract
+    // note for the exact figure; this is for the circuit breaker only).
+    var approxPnl = (trade.exit - trade.buy) * trade.live.qty;
+    LIVE_TRADING.todayRealizedPnl += approxPnl;
+    liveTradingSave();
+  }
+
+  liveTradingLog({
+    instr: trade.live.tradingsymbol, side:'SELL', qty: trade.live.qty,
+    orderId: result.ok ? result.orderId : null,
+    status: trade.live.status, reason: (result.ok ? 'Live exit placed (' + exitReason + ').' : result.reason),
+    linkedPaperTradeId: trade.id
+  });
+}
+
+function liveTradingRenderPanel() {
+  if (!LIVE_TRADING) return;
+  var accEl = document.getElementById('live-risk-accepted-note');
+  if (accEl) accEl.style.display = LIVE_TRADING.acceptedRiskAt ? 'block' : 'none';
+  var toggleWrap = document.getElementById('live-toggle-wrap');
+  if (toggleWrap) toggleWrap.style.opacity = LIVE_TRADING.acceptedRiskAt ? '1' : '.4';
+  var cb = document.getElementById('live-toggle'); if (cb) cb.disabled = !LIVE_TRADING.acceptedRiskAt;
+  if (cb) cb.checked = !!LIVE_TRADING.enabled;
+
+  var statusEl = document.getElementById('live-status');
+  if (statusEl) {
+    if (LIVE_TRADING.circuitBreakerTripped) { statusEl.textContent = '🛑 CIRCUIT BREAKER TRIPPED — DISABLED'; statusEl.style.color = 'var(--r)'; }
+    else if (LIVE_TRADING.enabled) { statusEl.textContent = '🔴 LIVE — FIRING REAL ORDERS'; statusEl.style.color = 'var(--r)'; }
+    else { statusEl.textContent = 'OFF'; statusEl.style.color = 'var(--dim)'; }
+  }
+  var countEl = document.getElementById('live-today-count');
+  if (countEl) countEl.textContent = LIVE_TRADING.todayTradeCount + ' / ' + LIVE_TRADING.maxTradesPerDay;
+  var pnlEl = document.getElementById('live-today-pnl');
+  if (pnlEl) { pnlEl.textContent = (LIVE_TRADING.todayRealizedPnl>=0?'+':'') + '₹' + Math.round(LIVE_TRADING.todayRealizedPnl).toLocaleString('en-IN'); pnlEl.style.color = LIVE_TRADING.todayRealizedPnl>=0?'var(--g)':'var(--r)'; }
+
+  var logEl = document.getElementById('live-order-log');
+  if (logEl) {
+    if (!LIVE_TRADING.log.length) {
+      logEl.innerHTML = '<div style="text-align:center;padding:14px;color:var(--dim);font-family:Share Tech Mono;font-size:10px">No live orders yet.</div>';
+    } else {
+      logEl.innerHTML = LIVE_TRADING.log.slice(0, 30).map(function(e){
+        var color = e.status==='PLACED'||e.status==='CLOSED' ? 'var(--g)' : (e.status==='FAILED'||e.status==='EXIT_FAILED') ? 'var(--r)' : 'var(--w)';
+        return '<div style="padding:6px 10px;border-bottom:1px solid var(--border);font-family:Share Tech Mono;font-size:9px">'
+          + '<span style="color:var(--dim)">'+new Date(e.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</span> '
+          + '<span style="color:'+color+';font-weight:bold">'+e.status+'</span> '
+          + '<span style="color:var(--a)">'+e.side+' '+e.instr+'</span> × '+e.qty
+          + (e.orderId ? ' <span style="color:var(--dim)">#'+e.orderId+'</span>' : '')
+          + '<div style="color:var(--dim);margin-top:2px">'+e.reason+'</div>'
+        + '</div>';
+      }).join('');
+    }
+  }
+}
+
+async function liveTradingRefreshOrderBook() {
+  var book = await angelGetOrderBook();
+  if (!book) { alert('Could not fetch order book — check your Angel One connection.'); return; }
+  var recent = book.slice(0, 10).map(function(o){ return o.tradingsymbol+' '+o.transactiontype+' × '+o.quantity+' — '+o.status; }).join('\n');
+  alert('Recent Angel One orders:\n\n' + (recent || 'No orders found.'));
+}
+
 function ptRenderDashboard(closedTrades) {
   ptRenderDailyChart(closedTrades);
   ptRenderHourChart(closedTrades);
@@ -16690,10 +17126,34 @@ function ptExportCSV() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
+async function liveTradingCloudLoad() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  try {
+    var r = await supaFetch('/rest/v1/reports?report_type=eq.live_trading_state&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
+    if (r && r.data && r.data[0] && r.data[0].content) {
+      var cloud = JSON.parse(r.data[0].content);
+      if (cloud && cloud.version === 1) {
+        // Always defer to whichever copy has enabled=false as the safer
+        // state on ambiguity, rather than trusting trade/log counts the
+        // way the paper portfolios do — a stale "enabled:true" synced
+        // from another device is exactly the kind of silent surprise a
+        // live-money feature shouldn't risk.
+        var local = LIVE_TRADING;
+        if (!local || (cloud.log||[]).length > (local.log||[]).length) {
+          cloud.enabled = false; // never resume live firing automatically just from a cloud load
+          LIVE_TRADING = cloud;
+          liveTradingSave();
+        }
+      }
+    }
+  } catch(e) { console.warn('[LiveTrading] cloud load failed', e); }
+}
+
 // Auto-init paper trading when page loads
 (function(){
   try { ptInit(); } catch(e) {}
   try { ptCloudLoad(); } catch(e) {}
+  try { liveTradingInit(); liveTradingCloudLoad(); } catch(e) {}
 })();
 
 // ══════════════════════════════════════════════════════════════════
