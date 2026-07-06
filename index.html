@@ -3432,6 +3432,8 @@ setTimeout(nd2SyncAll, 2000);
     <div style="padding:14px">
       <div style="padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:6px;font-family:Share Tech Mono;font-size:10px;color:var(--txt);margin-bottom:12px">
         ⚠ This fires <b>real orders with real money</b> on your linked Angel One account, mirroring the F&amp;O Auto Signal Engine above — <b>no per-trade confirmation</b>, per your setup. Only the 5 real strategies mirror live (not manual trades, not Pipeline Test). Requires the app tab to stay open — closing it or losing internet stops live firing (and any open live position stays open on the broker's side until you close it yourself).
+        <br><br>
+        ⚠ <b>SEBI/NSE mandate (effective 1-Apr-2026, all Indian brokers):</b> orders now require a <b>registered static IP</b> — register yours at smartapi.angelone.in → My Profile → My APIs. Most home/mobile connections are dynamic, not static; you may need a static-IP add-on from your ISP. Orders also now use <b>LIMIT</b>, not MARKET — Market/IOC orders are banned for algo trading under this same rule, and a LIMIT order fills at your exact price or not at all, rather than slipping.
       </div>
 
       <div style="margin-bottom:12px">
@@ -3446,8 +3448,8 @@ setTimeout(nd2SyncAll, 2000);
       <div id="live-toggle-wrap" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px">
         <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
           <input type="checkbox" id="live-toggle" onchange="liveTradingToggle()" disabled style="opacity:0;width:0;height:0">
-          <span style="position:absolute;cursor:pointer;inset:0;background:rgba(255,61,90,.15);border:1px solid var(--r);border-radius:24px"></span>
-          <span style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--r);border-radius:50%;transition:.2s"></span>
+          <span id="live-toggle-track" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:24px;transition:.2s"></span>
+          <span id="live-toggle-knob" style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.2s"></span>
         </label>
         <div style="flex:1">
           <div style="font-family:Orbitron;font-size:10px;color:var(--txt);letter-spacing:1px">LIVE TRADING MASTER SWITCH</div>
@@ -3933,552 +3935,53 @@ setTimeout(nd2SyncAll, 2000);
 <!-- Header -->
 <div style="background:linear-gradient(135deg,rgba(255,204,0,.09),rgba(255,107,53,.05));border:1px solid rgba(255,204,0,.3);border-left:4px solid #ffcc00;border-radius:12px;padding:14px 18px;margin-bottom:10px;position:relative;overflow:hidden">
   <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ffcc00,#ff6b35,#ff3d5a,#ffcc00)"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:42px;height:42px;border-radius:50%;border:2px solid #ffcc00;background:radial-gradient(circle at 35% 35%,rgba(255,204,0,.45),rgba(0,0,0,.85));display:flex;align-items:center;justify-content:center;font-size:20px;animation:pulse 2.5s ease-in-out infinite;box-shadow:0 0 18px rgba(255,204,0,.3)">🔐</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:42px;height:42px;border-radius:50%;border:2px solid #ffcc00;background:radial-gradient(circle at 35% 35%,rgba(255,204,0,.45),rgba(0,0,0,.85));display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 18px rgba(255,204,0,.3)">🔐</div>
+    <div>
+      <div style="font-family:Orbitron;font-size:14px;font-weight:900;color:#ffcc00;letter-spacing:3px">ADMIN — USER MANAGEMENT</div>
+      <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;margin-top:2px;letter-spacing:2px">ADD USERS · MANAGE ACCOUNTS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add User -->
+<div class="panel" style="margin-bottom:10px">
+  <div class="ph"><span class="pt">➕ ADD USER</span><span class="ptb">Creates a real login for someone else</span></div>
+  <div style="padding:14px">
+    <div style="padding:8px 10px;background:rgba(255,204,0,.06);border:1px solid rgba(255,204,0,.2);border-radius:6px;font-family:'Share Tech Mono';font-size:9px;color:#c8d8f0;margin-bottom:12px">
+      ⚠ If your Supabase project requires email confirmation (common default), the new person needs to click the confirmation link sent to their email before they can log in — that setting lives in your Supabase dashboard, not here.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px">
       <div>
-        <div style="font-family:Orbitron;font-size:14px;font-weight:900;color:#ffcc00;letter-spacing:3px">ADMIN PANEL</div>
-        <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;margin-top:2px;letter-spacing:2px">PIYUSH ACCESS ONLY · AI UPGRADE ADVISOR · v24</div>
+        <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">EMAIL</label>
+        <input id="adm-new-email" type="email" placeholder="person@example.com" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none">
       </div>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <div style="padding:4px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:20px;font-family:'Share Tech Mono';font-size:9px;color:#00ff88;letter-spacing:2px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#00ff88;display:inline-block;animation:pulse 1s infinite"></span>SESSION ACTIVE</div>
-      <div style="padding:4px 12px;background:rgba(255,204,0,.08);border:1px solid rgba(255,204,0,.2);border-radius:20px;font-family:'Share Tech Mono';font-size:9px;color:#ffcc00;letter-spacing:1px">👑 PIYUSH</div>
-    </div>
-  </div>
-</div>
-
-<!-- Score Cards -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">
-  <div style="background:linear-gradient(145deg,rgba(13,20,36,.98),rgba(10,16,30,.95));border:1px solid #1a2840;border-top:2px solid #ff3d5a;border-radius:10px;padding:12px;text-align:center">
-    <div style="font-family:Orbitron;font-size:22px;font-weight:900;color:#ff3d5a;margin-bottom:2px">3</div>
-    <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;letter-spacing:1px;text-transform:uppercase">Critical Fixes</div>
-  </div>
-  <div style="background:linear-gradient(145deg,rgba(13,20,36,.98),rgba(10,16,30,.95));border:1px solid #1a2840;border-top:2px solid #ff6b35;border-radius:10px;padding:12px;text-align:center">
-    <div style="font-family:Orbitron;font-size:22px;font-weight:900;color:#ff6b35;margin-bottom:2px">5</div>
-    <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;letter-spacing:1px;text-transform:uppercase">High Priority</div>
-  </div>
-  <div style="background:linear-gradient(145deg,rgba(13,20,36,.98),rgba(10,16,30,.95));border:1px solid #1a2840;border-top:2px solid #ffcc00;border-radius:10px;padding:12px;text-align:center">
-    <div style="font-family:Orbitron;font-size:22px;font-weight:900;color:#ffcc00;margin-bottom:2px">6</div>
-    <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;letter-spacing:1px;text-transform:uppercase">Improvements</div>
-  </div>
-  <div style="background:linear-gradient(145deg,rgba(13,20,36,.98),rgba(10,16,30,.95));border:1px solid #1a2840;border-top:2px solid #00d4ff;border-radius:10px;padding:12px;text-align:center">
-    <div style="font-family:Orbitron;font-size:22px;font-weight:900;color:#00d4ff;margin-bottom:2px">4</div>
-    <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;letter-spacing:1px;text-transform:uppercase">New Features</div>
-  </div>
-</div>
-
-<!-- Sub-tabs -->
-<div style="display:flex;gap:3px;margin-bottom:10px;background:rgba(0,0,0,.48);border:1px solid #1a2840;border-radius:10px;padding:4px">
-  <button id="adm-t1" class="nav-tab active" style="font-size:8px" onclick="admTab('security',this)">🔐 SECURITY</button>
-  <button id="adm-t2" class="nav-tab" style="font-size:8px" onclick="admTab('features',this)">⚡ NEW FEATURES</button>
-  <button id="adm-t3" class="nav-tab" style="font-size:8px" onclick="admTab('code',this)">🛠 CODE FIXES</button>
-  <button id="adm-t4" class="nav-tab" style="font-size:8px" onclick="admTab('ai',this)">🤖 AI IDEAS</button>
-  <button id="adm-t5" class="nav-tab" style="font-size:8px" onclick="admTab('assistant',this)">💬 AI CHAT</button>
-  <button id="adm-t6" class="nav-tab" style="font-size:8px;border-color:rgba(160,100,255,.4);color:#a064ff" onclick="admTab('brain',this)">🧠 JARVIS BRAIN</button>
-</div>
-
-<!-- ── SECURITY TAB ── -->
-<div id="adm-page-security">
-  <div class="panel">
-    <div class="ph"><span class="pt">⚠️ CRITICAL SECURITY ISSUES FOUND IN YOUR CODE</span><span class="ptb">Scan complete — 5 issues</span></div>
-    <div style="padding:10px;display:flex;flex-direction:column;gap:6px">
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.25);border-left:3px solid #00ff88;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">✅</div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">Hardcoded local-auth passwords removed <span style="background:rgba(0,255,136,.15);color:#00ff88;border:1px solid rgba(0,255,136,.3);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">FIXED</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">The plaintext/hashed password fallback in doLogin() was deleted. Auth now relies solely on Supabase; if that's unreachable, login fails safely instead of falling back to a password baked into the shipped JS.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-left:3px solid #ff3d5a;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">🗝️</div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">Angel One API keys — verify none are hardcoded <span style="background:rgba(255,61,90,.15);color:#ff3d5a;border:1px solid rgba(255,61,90,.3);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">VERIFY</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">No hardcoded API key/clientId/MPIN/TOTP literals were found in this file on last review. These are entered via the SETUP panel and stored in localStorage at runtime, not baked into source. Rotate any keys that were exposed previously regardless.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-left:3px solid #ff3d5a;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">📦</div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">JWT token stored in localStorage <span style="background:rgba(255,61,90,.15);color:#ff3d5a;border:1px solid rgba(255,61,90,.3);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">CRITICAL</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">localStorage is readable by any injected script. For a live trading app, keep the JWT only in memory (a JS variable) or in Electron's main process — never in browser storage.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">👥</div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">No role-based access control <span style="background:rgba(255,107,53,.15);color:#ff6b35;border:1px solid rgba(255,107,53,.3);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">HIGH</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">Pranav can see everything Piyush sees (except setup button). Admin tab, credential setup, and trade logs should be Piyush-only. This is now fixed in v24 — this tab is admin-only.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">⏱️</div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">No session timeout <span style="background:rgba(255,107,53,.15);color:#ff6b35;border:1px solid rgba(255,107,53,.3);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">HIGH</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">App stays logged in forever. For a live broker-connected trading dashboard, add an auto-logout after 6 hours of inactivity or when market closes at 3:35 PM IST.</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-  <div class="panel">
-    <div class="ph"><span class="pt">✅ SUGGESTED FIX — Secure Credentials (move to main.js)</span></div>
-    <div style="padding:10px">
-      <div style="background:rgba(0,0,0,.6);border:1px solid #1a2840;border-radius:7px;padding:12px;font-family:'Share Tech Mono';font-size:10px;color:#00ff88;line-height:1.8">
-        <span style="color:#4a6080">// main.js — credentials NEVER go in HTML</span><br>
-        <span style="color:#00d4ff">const</span> crypto = require(<span style="color:#ffcc00">'crypto'</span>);<br>
-        <span style="color:#4a6080">// Store a SHA-256 hash, not plain text password</span><br>
-        <span style="color:#00d4ff">const</span> USERS = {<br>
-        &nbsp;&nbsp;<span style="color:#ffcc00">'mhatre'</span>: { hash: <span style="color:#ffcc00">'&lt;sha256_of_password&gt;'</span>, name: <span style="color:#ffcc00">'Piyush'</span>, role: <span style="color:#ffcc00">'admin'</span> },<br>
-        &nbsp;&nbsp;<span style="color:#ffcc00">'pranav'</span>: { hash: <span style="color:#ffcc00">'&lt;sha256_of_password&gt;'</span>, name: <span style="color:#ffcc00">'Pranav'</span>, role: <span style="color:#ffcc00">'viewer'</span> }<br>
-        };<br>
-        ipcMain.handle(<span style="color:#ffcc00">'do-login'</span>, (e, user, pass) => {<br>
-        &nbsp;&nbsp;<span style="color:#00d4ff">const</span> u = USERS[user.toLowerCase()];<br>
-        &nbsp;&nbsp;<span style="color:#00d4ff">const</span> h = crypto.createHash(<span style="color:#ffcc00">'sha256'</span>).update(pass).digest(<span style="color:#ffcc00">'hex'</span>);<br>
-        &nbsp;&nbsp;<span style="color:#00d4ff">return</span> (u && h === u.hash) ? { ok: <span style="color:#00d4ff">true</span>, name: u.name, role: u.role } : { ok: <span style="color:#00d4ff">false</span> };<br>
-        });
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── FEATURES TAB ── -->
-<div id="adm-page-features" style="display:none">
-  <div class="panel">
-    <div class="ph"><span class="pt">⚡ RECOMMENDED NEW FEATURES FOR JARVIS</span><span class="ptb">Based on v23 analysis</span></div>
-    <div style="padding:10px;display:flex;flex-direction:column;gap:6px">
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">📱</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">Telegram alert bot <span style="background:rgba(255,107,53,.12);color:#ff6b35;border:1px solid rgba(255,107,53,.25);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">HIGH IMPACT</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">When JARVIS generates a BUY/SELL signal, auto-send a Telegram message with entry, SL, target. You don't need to watch the screen all day. Uses free Telegram Bot API.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">📊</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">Live P&L from Angel One positions <span style="background:rgba(255,107,53,.12);color:#ff6b35;border:1px solid rgba(255,107,53,.25);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">HIGH IMPACT</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">Pull actual open positions from Angel One API <span style="color:#ffcc00">/portfolio/v1/getHolding</span> endpoint. Show real-time P&L on dashboard. Your API is already connected — just missing this call.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">🔔</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">Custom price alert system <span style="background:rgba(255,107,53,.12);color:#ff6b35;border:1px solid rgba(255,107,53,.25);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">HIGH IMPACT</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">Set price targets: "Alert me if Nifty crosses 24,500". JARVIS plays your existing alarm sound + shows an Electron desktop notification. Extends your current <span style="color:#ffcc00">buildAlerts()</span>.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,204,0,.04);border:1px solid rgba(255,204,0,.15);border-left:3px solid #ffcc00;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">📅</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">9:00 AM auto morning briefing <span style="background:rgba(255,204,0,.1);color:#ffcc00;border:1px solid rgba(255,204,0,.2);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">USEFUL</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">Auto-trigger <span style="color:#ffcc00">playBriefing()</span> at 9:00 AM IST with SGX Nifty, Gift Nifty, US futures, VIX, and key economic events. Your voice function already exists — just needs a scheduler.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,204,0,.04);border:1px solid rgba(255,204,0,.15);border-left:3px solid #ffcc00;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">💾</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">Trade journal — auto-log all signals <span style="background:rgba(255,204,0,.1);color:#ffcc00;border:1px solid rgba(255,204,0,.2);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">USEFUL</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">Every signal generated (entry, SL, target, outcome, date) auto-saved to a local CSV via Electron's <span style="color:#ffcc00">fs.appendFileSync()</span>. Export to Excel for weekly review.</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;padding:10px 12px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-left:3px solid #00d4ff;border-radius:7px">
-        <div style="font-size:16px;flex-shrink:0">🌙</div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#c8d8f0;margin-bottom:3px">After-hours global markets view <span style="background:rgba(0,212,255,.08);color:#00d4ff;border:1px solid rgba(0,212,255,.2);font-family:'Share Tech Mono';font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">NICE TO HAVE</span></div>
-          <div style="font-family:'Share Tech Mono';font-size:10px;color:#4a6080;line-height:1.55">When NSE closes at 3:35 PM, auto-switch dashboard to US markets (Dow, Nasdaq, S&P 500) and crypto (BTC, ETH) via Yahoo Finance — same API you already use.</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- ── CODE FIXES TAB ── -->
-<div id="adm-page-code" style="display:none">
-
-  <!-- Live Fix Log -->
-  <div id="adm-fix-log" style="display:none;background:rgba(0,0,0,.55);border:1px solid #1a2840;border-left:3px solid #00ff88;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-family:monospace;font-size:10px;color:#00ff88;line-height:1.8;max-height:120px;overflow-y:auto"></div>
-
-  <div class="panel">
-    <div class="ph">
-      <span class="pt">🛠 LIVE AUTO-FIX — Click to apply each fix instantly</span>
-      <span class="ptb" id="adm-fix-count" style="color:#00ff88">5 / 5 fixed ✅</span>
-    </div>
-    <div style="padding:10px;display:flex;flex-direction:column;gap:8px">
-
-      <!-- FIX 1: Safe renderAll wrapper -->
-      <div id="adm-fix-row-1" style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-left:3px solid #ff3d5a;border-radius:7px;align-items:flex-start">
-        <div style="font-size:18px;flex-shrink:0;margin-top:1px" id="adm-fix-icon-1">❌</div>
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-            <div style="font-size:12px;font-weight:700;color:#c8d8f0">No error handling in render functions
-              <span id="adm-fix-badge-1" style="background:rgba(255,61,90,.15);color:#ff3d5a;border:1px solid rgba(255,61,90,.3);font-family:monospace;font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">UNFIXED</span>
-            </div>
-            <button id="adm-fix-btn-1" onclick="admFix(1)" style="padding:5px 14px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,136,.06));border:1px solid rgba(0,212,255,.35);border-radius:6px;color:#00d4ff;font-family:monospace;font-size:9px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all .2s">⚡ FIX NOW</button>
-          </div>
-          <div style="font-family:monospace;font-size:10px;color:#4a6080;line-height:1.55">Wraps <span style="color:#ffcc00">renderAll()</span>, <span style="color:#ffcc00">buildTicker()</span>, and <span style="color:#ffcc00">renderFOCalls()</span> in safe try/catch so one bad API response never crashes the whole UI.</div>
-        </div>
-      </div>
-
-      <!-- FIX 2: Market hours guard on 30s refresh -->
-      <div id="adm-fix-row-2" style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,204,0,.04);border:1px solid rgba(255,204,0,.15);border-left:3px solid #ffcc00;border-radius:7px;align-items:flex-start">
-        <div style="font-size:18px;flex-shrink:0;margin-top:1px" id="adm-fix-icon-2">🔁</div>
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-            <div style="font-size:12px;font-weight:700;color:#c8d8f0">Weekend/night refresh is wasting API calls
-              <span id="adm-fix-badge-2" style="background:rgba(255,204,0,.1);color:#ffcc00;border:1px solid rgba(255,204,0,.2);font-family:monospace;font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">UNFIXED</span>
-            </div>
-            <button id="adm-fix-btn-2" onclick="admFix(2)" style="padding:5px 14px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,136,.06));border:1px solid rgba(0,212,255,.35);border-radius:6px;color:#00d4ff;font-family:monospace;font-size:9px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all .2s">⚡ FIX NOW</button>
-          </div>
-          <div style="font-family:monospace;font-size:10px;color:#4a6080;line-height:1.55">Patches the live 30s refresh to skip API calls outside NSE hours (Mon–Fri 9:15 AM – 3:35 PM IST). Effective immediately — no restart needed.</div>
-        </div>
-      </div>
-
-      <!-- FIX 3: BS formula cache -->
-      <div id="adm-fix-row-3" style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px;align-items:flex-start">
-        <div style="font-size:18px;flex-shrink:0;margin-top:1px" id="adm-fix-icon-3">⚡</div>
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-            <div style="font-size:12px;font-weight:700;color:#c8d8f0">Black-Scholes runs on every tick (CPU waste)
-              <span id="adm-fix-badge-3" style="background:rgba(255,107,53,.12);color:#ff6b35;border:1px solid rgba(255,107,53,.25);font-family:monospace;font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">UNFIXED</span>
-            </div>
-            <button id="adm-fix-btn-3" onclick="admFix(3)" style="padding:5px 14px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,136,.06));border:1px solid rgba(0,212,255,.35);border-radius:6px;color:#00d4ff;font-family:monospace;font-size:9px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all .2s">⚡ FIX NOW</button>
-          </div>
-          <div style="font-family:monospace;font-size:10px;color:#4a6080;line-height:1.55">Installs a cache on <span style="color:#ffcc00">fo2BuildCall()</span> — skips the full erf() calculation when spot price hasn't changed by more than 0.1%. Reduces CPU usage by ~70% on F&O tab.</div>
-        </div>
-      </div>
-
-      <!-- FIX 4: Console error interceptor -->
-      <div id="adm-fix-row-4" style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,204,0,.04);border:1px solid rgba(255,204,0,.15);border-left:3px solid #ffcc00;border-radius:7px;align-items:flex-start">
-        <div style="font-size:18px;flex-shrink:0;margin-top:1px" id="adm-fix-icon-4">🔍</div>
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-            <div style="font-size:12px;font-weight:700;color:#c8d8f0">Errors are invisible — no in-app error log
-              <span id="adm-fix-badge-4" style="background:rgba(255,204,0,.1);color:#ffcc00;border:1px solid rgba(255,204,0,.2);font-family:monospace;font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">UNFIXED</span>
-            </div>
-            <button id="adm-fix-btn-4" onclick="admFix(4)" style="padding:5px 14px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,136,.06));border:1px solid rgba(0,212,255,.35);border-radius:6px;color:#00d4ff;font-family:monospace;font-size:9px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all .2s">⚡ FIX NOW</button>
-          </div>
-          <div style="font-family:monospace;font-size:10px;color:#4a6080;line-height:1.55">Installs an error interceptor that captures all runtime errors and shows them in this fix log above — no need to open DevTools to diagnose issues.</div>
-        </div>
-      </div>
-
-      <!-- FIX 5: Safe JSON parse guard -->
-      <div id="adm-fix-row-5" style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-left:3px solid #ff6b35;border-radius:7px;align-items:flex-start">
-        <div style="font-size:18px;flex-shrink:0;margin-top:1px" id="adm-fix-icon-5">🛡️</div>
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-            <div style="font-size:12px;font-weight:700;color:#c8d8f0">Angel One bad JSON can crash the app cold
-              <span id="adm-fix-badge-5" style="background:rgba(255,107,53,.12);color:#ff6b35;border:1px solid rgba(255,107,53,.25);font-family:monospace;font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px">UNFIXED</span>
-            </div>
-            <button id="adm-fix-btn-5" onclick="admFix(5)" style="padding:5px 14px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,136,.06));border:1px solid rgba(0,212,255,.35);border-radius:6px;color:#00d4ff;font-family:monospace;font-size:9px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all .2s">⚡ FIX NOW</button>
-          </div>
-          <div style="font-family:monospace;font-size:10px;color:#4a6080;line-height:1.55">Patches <span style="color:#ffcc00">JSON.parse</span> globally with a safe wrapper that returns <span style="color:#ffcc00">null</span> on bad data instead of throwing — prevents total UI freeze on malformed API responses.</div>
-        </div>
-      </div>
-
-      <!-- FIX ALL button -->
-      <button onclick="admFixAll()" style="width:100%;padding:11px;margin-top:4px;background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,212,255,.06));border:1px solid rgba(0,255,136,.3);border-radius:8px;color:#00ff88;font-family:monospace;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .2s;font-weight:700">
-        🔧 FIX ALL 5 ISSUES AT ONCE
-      </button>
-
-    </div>
-  </div>
-</div>
-
-<!-- ── AI IDEAS TAB ── -->
-<div id="adm-page-ai" style="display:none">
-
-  <!-- AI feature sub-tabs -->
-  <div style="display:flex;gap:3px;margin-bottom:10px;background:rgba(0,0,0,.4);border:1px solid #1a2840;border-radius:8px;padding:3px">
-    <button class="nav-tab active" id="ai-sub-t1" onclick="aiSubTab('news',this)" style="font-size:8px;flex:1">📰 NEWS BOOST</button>
-    <button class="nav-tab" id="ai-sub-t2" onclick="aiSubTab('report',this)" style="font-size:8px;flex:1">📈 DAY REPORT</button>
-    <button class="nav-tab" id="ai-sub-t3" onclick="aiSubTab('coach',this)" style="font-size:8px;flex:1">🧠 TRADE COACH</button>
-    <button class="nav-tab" id="ai-sub-t4" onclick="aiSubTab('strategy',this)" style="font-size:8px;flex:1">🎯 F&amp;O STRATEGY</button>
-  </div>
-
-  <!-- ── 1. NEWS SENTIMENT BOOST ── -->
-  <div id="ai-page-news">
-    <div class="panel">
-      <div class="ph">
-        <span class="pt">📰 AI News Sentiment → Signal Confidence Boost</span>
-        <span id="ai-news-status" style="font-family:monospace;font-size:9px;color:#4a6080"></span>
-      </div>
-      <div style="padding:10px">
-        <div style="font-family:monospace;font-size:10px;color:#4a6080;margin-bottom:10px;line-height:1.6">
-          Feeds your live news headlines into Claude. Bullish news → confidence ↑, Bearish news → confidence ↓. Changes are shown live on the signals panel.
-        </div>
-        <div id="ai-news-result" style="display:none;margin-bottom:10px"></div>
-        <button onclick="aiRunNewsSentiment()" id="ai-news-btn"
-          style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(0,255,136,.05));border:1px solid rgba(0,212,255,.3);border-radius:7px;color:#00d4ff;font-family:monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s">
-          ⚡ ANALYSE NEWS &amp; BOOST SIGNALS NOW
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 2. POST-MARKET REPORT ── -->
-  <div id="ai-page-report" style="display:none">
-    <div class="panel">
-      <div class="ph">
-        <span class="pt">📈 AI Post-Market Day Report</span>
-        <span id="ai-report-status" style="font-family:monospace;font-size:9px;color:#4a6080"></span>
-      </div>
-      <div style="padding:10px">
-        <div style="font-family:monospace;font-size:10px;color:#4a6080;margin-bottom:10px;line-height:1.6">
-          Claude analyses all of today's trades from your journal — what worked, what hit SL, key patterns, and tomorrow's recommended levels. Auto-triggers at 3:30 PM IST.
-        </div>
-        <div id="ai-report-result" style="display:none;background:rgba(0,0,0,.4);border:1px solid #1a2840;border-radius:7px;padding:12px;font-family:monospace;font-size:11px;color:#c8d8f0;line-height:1.75;max-height:340px;overflow-y:auto;white-space:pre-wrap;margin-bottom:10px"></div>
-        <div style="display:flex;gap:8px">
-          <button onclick="aiRunDayReport()" id="ai-report-btn"
-            style="flex:1;padding:10px;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(0,255,136,.05));border:1px solid rgba(0,212,255,.3);border-radius:7px;color:#00d4ff;font-family:monospace;font-size:10px;letter-spacing:2px;cursor:pointer">
-            ⚡ GENERATE TODAY'S REPORT
-          </button>
-          <button onclick="aiCopyReport()" id="ai-copy-btn"
-            style="padding:10px 16px;background:rgba(255,204,0,.08);border:1px solid rgba(255,204,0,.25);border-radius:7px;color:#ffcc00;font-family:monospace;font-size:10px;cursor:pointer;display:none">
-            📋 COPY
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 3. TRADE COACH ── -->
-  <div id="ai-page-coach" style="display:none">
-    <div class="panel">
-      <div class="ph">
-        <span class="pt">🧠 AI Trade Coach — Learn From Your History</span>
-        <span id="ai-coach-status" style="font-family:monospace;font-size:9px;color:#4a6080"></span>
-      </div>
-      <div style="padding:10px">
-        <div style="font-family:monospace;font-size:10px;color:#4a6080;margin-bottom:10px;line-height:1.6">
-          Sends your full trade journal to Claude. It finds patterns in your wins and losses — time-of-day tendencies, instrument biases, SL sizing issues — and gives you personalised coaching.
-        </div>
-        <div id="ai-coach-result" style="display:none;background:rgba(0,0,0,.4);border:1px solid #1a2840;border-radius:7px;padding:12px;font-family:monospace;font-size:11px;color:#c8d8f0;line-height:1.75;max-height:340px;overflow-y:auto;white-space:pre-wrap;margin-bottom:10px"></div>
-        <button onclick="aiRunTradeCoach()" id="ai-coach-btn"
-          style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(255,204,0,.1),rgba(255,107,53,.05));border:1px solid rgba(255,204,0,.3);border-radius:7px;color:#ffcc00;font-family:monospace;font-size:10px;letter-spacing:2px;cursor:pointer">
-          🧠 ANALYSE MY TRADE JOURNAL
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 4. F&O STRATEGY PICKER ── -->
-  <div id="ai-page-strategy" style="display:none">
-    <div class="panel">
-      <div class="ph">
-        <span class="pt">🎯 AI Best F&amp;O Strategy Picker</span>
-        <span id="ai-strat-status" style="font-family:monospace;font-size:9px;color:#4a6080"></span>
-      </div>
-      <div style="padding:10px">
-        <div style="font-family:monospace;font-size:10px;color:#4a6080;margin-bottom:10px;line-height:1.6">
-          Sends live VIX, PCR, Nifty/BankNifty OHLC, trend, and news tone to Claude. Gets back a specific strategy recommendation with entry, SL, and reasoning for today's conditions.
-        </div>
-        <div id="ai-strat-result" style="display:none;background:rgba(0,0,0,.4);border:1px solid #1a2840;border-radius:7px;padding:12px;font-family:monospace;font-size:11px;color:#c8d8f0;line-height:1.75;max-height:340px;overflow-y:auto;white-space:pre-wrap;margin-bottom:10px"></div>
-        <button onclick="aiRunStrategyPicker()" id="ai-strat-btn"
-          style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,212,255,.05));border:1px solid rgba(0,255,136,.3);border-radius:7px;color:#00ff88;font-family:monospace;font-size:10px;letter-spacing:2px;cursor:pointer">
-          🎯 PICK BEST STRATEGY FOR TODAY
-        </button>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ── AI CHAT ASSISTANT TAB ── -->
-<div id="adm-page-assistant" style="display:none">
-  <div class="panel">
-    <div class="ph">
-      <span class="pt">💬 JARVIS AI ASSISTANT — Ask Anything About Today's Market</span>
-      <span class="live-tag">● ADMIN ONLY</span>
-    </div>
-    <div style="padding:12px">
-
-      <!-- Sample questions -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        <button onclick="admAskPreset('Should I trade today? Give me a market bias based on current Nifty and VIX levels.')" style="padding:5px 11px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);border-radius:20px;color:#00d4ff;font-family:'Share Tech Mono';font-size:9px;cursor:pointer;transition:all .2s">📊 Market bias today?</button>
-        <button onclick="admAskPreset('What is the best F&O strategy given current market conditions? Consider VIX, PCR, and trend.')" style="padding:5px 11px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:20px;color:#00ff88;font-family:'Share Tech Mono';font-size:9px;cursor:pointer;transition:all .2s">📈 Best F&O strategy?</button>
-        <button onclick="admAskPreset('Review my current JARVIS signals. Which ones look strongest and which should I avoid today?')" style="padding:5px 11px;background:rgba(255,204,0,.06);border:1px solid rgba(255,204,0,.15);border-radius:20px;color:#ffcc00;font-family:'Share Tech Mono';font-size:9px;cursor:pointer;transition:all .2s">🔍 Review signals</button>
-        <button onclick="admAskPreset('What improvements should I make to JARVIS next? Suggest the top 3 features that will give me the most trading edge.')" style="padding:5px 11px;background:rgba(255,107,53,.06);border:1px solid rgba(255,107,53,.15);border-radius:20px;color:#ff6b35;font-family:'Share Tech Mono';font-size:9px;cursor:pointer;transition:all .2s">🛠 JARVIS improvements</button>
-      </div>
-
-      <!-- Context panel (shows live data going into AI) -->
-      <div id="adm-ctx-bar" style="background:rgba(0,0,0,.35);border:1px solid #1a2840;border-radius:7px;padding:8px 12px;margin-bottom:10px;display:flex;gap:16px;flex-wrap:wrap">
-        <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;letter-spacing:1px">LIVE CONTEXT SENT TO AI:</div>
-        <div id="adm-ctx-nifty" style="font-family:'Share Tech Mono';font-size:9px;color:#00d4ff">NIFTY: loading…</div>
-        <div id="adm-ctx-vix" style="font-family:'Share Tech Mono';font-size:9px;color:#ffcc00">VIX: loading…</div>
-        <div id="adm-ctx-bn" style="font-family:'Share Tech Mono';font-size:9px;color:#00ff88">BANKNIFTY: loading…</div>
-        <div id="adm-ctx-time" style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080">IST: --:--</div>
-      </div>
-
-      <!-- Chat messages area -->
-      <div id="adm-chat-msgs" style="min-height:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding-right:4px">
-        <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.18);border-left:3px solid #00ff88;border-radius:7px;padding:10px 13px">
-          <div style="font-family:'Share Tech Mono';font-size:9px;color:#00ff88;letter-spacing:1px;margin-bottom:5px">🤖 JARVIS AI · Ready</div>
-          <div style="font-family:'Share Tech Mono';font-size:11px;color:#c8d8f0;line-height:1.65">Good day, Piyush. I am connected to your live market data. Ask me anything — market bias, F&O strategy, signal review, or JARVIS upgrade ideas. I will use your real Nifty, VIX, and BankNifty levels in my response.</div>
-        </div>
-      </div>
-
-      <!-- Input row -->
-      <div style="display:flex;gap:8px;align-items:flex-end">
-        <textarea id="adm-chat-inp" placeholder="Ask JARVIS AI anything… e.g. Should I buy Nifty CE today?" style="flex:1;background:rgba(0,0,0,.45);border:1px solid #1a2840;border-radius:7px;padding:10px 12px;color:#c8d8f0;font-family:'Share Tech Mono';font-size:11px;resize:none;height:52px;outline:none;transition:border .2s;line-height:1.4" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();admSendChat();}"></textarea>
-        <button onclick="admSendChat()" id="adm-send-btn" style="padding:10px 18px;background:linear-gradient(135deg,rgba(0,212,255,.14),rgba(0,255,136,.06));border:1px solid rgba(0,212,255,.35);border-radius:7px;color:#00d4ff;font-family:Orbitron;font-size:9px;letter-spacing:2px;cursor:pointer;height:52px;flex-shrink:0;transition:all .2s">⚡ ASK</button>
-      </div>
-      <div style="font-family:'Share Tech Mono';font-size:9px;color:#4a6080;margin-top:5px">Press Enter to send · Shift+Enter for new line · AI reads your live Nifty, VIX, BankNifty data</div>
-
-    </div>
-  </div>
-</div>
-
-<div id="adm-page-brain" style="display:none">
-
-  <!-- ── BRAIN HEADER ── -->
-  <div style="background:rgba(160,100,255,.07);border:1px solid rgba(160,100,255,.35);border-left:4px solid #a064ff;border-radius:12px;padding:14px 18px;margin-bottom:10px">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <div style="font-family:Orbitron;font-size:11px;color:#a064ff;letter-spacing:3px;margin-bottom:6px">🧠 JARVIS SELF-LEARNING BRAIN v3</div>
-        <div style="font-family:Share Tech Mono;font-size:11px;color:#c8d8f0;line-height:1.7;max-width:540px">Reads every trade, every stock call, every pattern. Tracks its own improvement suggestions. Learns what works for <em>you</em> specifically — and gets smarter every session.</div>
+        <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">PASSWORD</label>
+        <input id="adm-new-password" type="text" placeholder="Temporary password (min 6 chars)" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none">
       </div>
-      <div style="display:flex;gap:12px;align-items:center">
-        <div style="text-align:center">
-          <div style="font-family:Orbitron;font-size:30px;font-weight:900;color:#a064ff" id="brain-iq-score">—</div>
-          <div style="font-family:Share Tech Mono;font-size:8px;color:#4a6080;letter-spacing:1px">TRADER IQ</div>
-          <div style="font-family:Share Tech Mono;font-size:9px;color:#a064ff" id="brain-iq-label">—</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-family:Orbitron;font-size:30px;font-weight:900;color:#00ff88" id="brain-portfolio-growth">—</div>
-          <div style="font-family:Share Tech Mono;font-size:8px;color:#4a6080;letter-spacing:1px">PORTFOLIO</div>
-          <div style="font-family:Share Tech Mono;font-size:9px;color:#00ff88">GROWTH SCORE</div>
-        </div>
+      <div>
+        <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">USERNAME</label>
+        <input id="adm-new-username" type="text" placeholder="Display name" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none">
       </div>
-    </div>
-  </div>
-
-  <!-- ── LIVE METRICS STRIP ── -->
-  <div id="brain-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px"></div>
-
-  <!-- ── PORTFOLIO GROWTH LEVEL ── -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph">
-      <span class="pt" style="color:#00d4ff">📈 PORTFOLIO GROWTH TRACKER</span>
-      <span id="brain-level-badge" style="font-family:Share Tech Mono;font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(160,100,255,.12);color:#a064ff;border:1px solid rgba(160,100,255,.3)">LEVEL 1</span>
-    </div>
-    <div style="padding:12px">
-      <div style="display:flex;justify-content:space-between;font-family:Share Tech Mono;font-size:9px;color:#4a6080;margin-bottom:5px">
-        <span id="brain-growth-label">Calculating…</span><span id="brain-growth-pct">0%</span>
+      <div>
+        <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">FULL NAME</label>
+        <input id="adm-new-fullname" type="text" placeholder="Optional" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none">
       </div>
-      <div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-bottom:10px">
-        <div id="brain-growth-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#a064ff,#00d4ff,#00ff88);border-radius:4px;transition:width 1.2s ease"></div>
-      </div>
-      <div id="brain-milestones" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px"></div>
-    </div>
-  </div>
-
-  <!-- ── PATTERN ENGINE ── -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px">
-    <div class="panel">
-      <div class="ph"><span class="pt" style="color:#00ff88">✅ YOUR PROVEN EDGES</span></div>
-      <div id="brain-strengths" style="padding:10px;font-family:Share Tech Mono;font-size:11px;color:#4a6080;line-height:1.8">Analysing…</div>
-    </div>
-    <div class="panel">
-      <div class="ph"><span class="pt" style="color:#ff3d5a">🩸 PORTFOLIO KILLERS</span></div>
-      <div id="brain-weaknesses" style="padding:10px;font-family:Share Tech Mono;font-size:11px;color:#4a6080;line-height:1.8">Analysing…</div>
-    </div>
-  </div>
-
-  <!-- ── TRACKED IMPROVEMENT CARDS ── -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph">
-      <span class="pt" style="color:#ffcc00">🎯 IMPROVEMENT TRACKER — JARVIS detects, you apply, outcomes are scored</span>
-      <span id="brain-imp-count" style="font-family:Share Tech Mono;font-size:9px;color:#4a6080"></span>
-    </div>
-    <div style="padding:8px 10px 4px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #1a2840;margin-bottom:4px">
-      <button onclick="brainImpFilter('all',this)" id="bimp-f-all" style="padding:3px 10px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);border-radius:12px;color:#00d4ff;font-family:Share Tech Mono;font-size:9px;cursor:pointer">ALL</button>
-      <button onclick="brainImpFilter('open',this)" id="bimp-f-open" style="padding:3px 10px;background:rgba(0,0,0,.3);border:1px solid #1a2840;border-radius:12px;color:#4a6080;font-family:Share Tech Mono;font-size:9px;cursor:pointer">OPEN</button>
-      <button onclick="brainImpFilter('applied',this)" id="bimp-f-applied" style="padding:3px 10px;background:rgba(0,0,0,.3);border:1px solid #1a2840;border-radius:12px;color:#4a6080;font-family:Share Tech Mono;font-size:9px;cursor:pointer">APPLIED</button>
-      <button onclick="brainImpFilter('working',this)" id="bimp-f-working" style="padding:3px 10px;background:rgba(0,0,0,.3);border:1px solid #1a2840;border-radius:12px;color:#4a6080;font-family:Share Tech Mono;font-size:9px;cursor:pointer">WORKING ✅</button>
-      <button onclick="brainImpFilter('skipped',this)" id="bimp-f-skipped" style="padding:3px 10px;background:rgba(0,0,0,.3);border:1px solid #1a2840;border-radius:12px;color:#4a6080;font-family:Share Tech Mono;font-size:9px;cursor:pointer">SKIPPED</button>
-    </div>
-    <div id="brain-improvements" style="padding:10px;display:flex;flex-direction:column;gap:7px">
-      <div style="font-family:Share Tech Mono;font-size:10px;color:#4a6080">Run analysis to generate improvement cards…</div>
-    </div>
-  </div>
-
-  <!-- ── AI DEEP ANALYSIS ── -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph">
-      <span class="pt" style="color:#a064ff">🧠 AI GROWTH COACH — Reads all your data, gives you a specific plan</span>
-      <span id="brain-ai-status" style="font-family:Share Tech Mono;font-size:9px;color:#4a6080"></span>
-    </div>
-    <div style="padding:10px">
-      <div id="brain-ai-result" style="background:rgba(0,0,0,.35);border:1px solid #1a2840;border-radius:8px;padding:14px;font-family:Share Tech Mono;font-size:11px;color:#c8d8f0;line-height:1.85;min-height:80px;white-space:pre-wrap;margin-bottom:10px">
-        <span style="color:#4a6080">Click "Run Full Brain Analysis" — JARVIS reads your complete trading history, compares to last session, and generates a personalised growth plan with specific numbers…</span>
-      </div>
-      <!-- Follow-up chat -->
-      <div id="brain-chat-area" style="display:none;margin-bottom:10px">
-        <div id="brain-chat-history" style="background:rgba(0,0,0,.2);border:1px solid #1a2840;border-radius:7px;padding:10px;max-height:200px;overflow-y:auto;font-family:Share Tech Mono;font-size:10px;color:#c8d8f0;line-height:1.7;margin-bottom:8px;display:flex;flex-direction:column;gap:8px"></div>
-        <div style="display:flex;gap:7px">
-          <input id="brain-chat-inp" type="text" placeholder="Ask JARVIS anything about your portfolio growth…" onkeydown="if(event.key==='Enter')jarvisBrainChat()" style="flex:1;background:rgba(0,0,0,.45);border:1px solid #1a2840;border-radius:6px;padding:8px 11px;color:#c8d8f0;font-family:Share Tech Mono;font-size:11px;outline:none">
-          <button onclick="jarvisBrainChat()" style="padding:8px 16px;background:rgba(160,100,255,.12);border:1px solid rgba(160,100,255,.35);border-radius:6px;color:#a064ff;font-family:Orbitron;font-size:9px;letter-spacing:1px;cursor:pointer">ASK</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="jarvisBrainRunAI()" id="brain-run-btn"
-          style="flex:1;min-width:200px;padding:11px;background:rgba(160,100,255,.1);border:1px solid rgba(160,100,255,.45);border-radius:8px;color:#a064ff;font-family:Orbitron;font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s">
-          🧠 RUN FULL BRAIN ANALYSIS
-        </button>
-        <button onclick="jarvisBrainSaveInsight()" id="brain-save-btn"
-          style="padding:11px 18px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;color:#00ff88;font-family:Orbitron;font-size:9px;letter-spacing:1px;cursor:pointer;display:none">
-          💾 SAVE INSIGHT
-        </button>
+      <div>
+        <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px">ROLE</label>
+        <select id="adm-new-role" style="width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
       </div>
     </div>
+    <div id="adm-new-msg" style="display:none;padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px;margin-bottom:8px"></div>
+    <button onclick="admCreateUser()" style="padding:9px 18px;background:rgba(255,204,0,.1);border:1px solid #ffcc00;border-radius:6px;color:#ffcc00;font-family:Orbitron;font-size:10px;cursor:pointer;letter-spacing:1px">+ CREATE USER</button>
   </div>
-
-  <!-- ── DAILY RULES CHECKLIST ── -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph">
-      <span class="pt">📋 DAILY TRADING RULES — Auto-generated from your actual patterns</span>
-      <span id="brain-check-count" style="font-family:Share Tech Mono;font-size:9px;color:#4a6080"></span>
-    </div>
-    <div id="brain-checklist" style="padding:10px;display:flex;flex-direction:column;gap:6px">
-      <div style="font-family:Share Tech Mono;font-size:10px;color:#4a6080">Run analysis to generate your personalised checklist…</div>
-    </div>
-  </div>
-
-  <!-- ── WHAT JARVIS LEARNED ── -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph">
-      <span class="pt" style="color:#00d4ff">🔁 WHAT JARVIS LEARNED FROM YOUR IMPROVEMENTS</span>
-    </div>
-    <div id="brain-learning-feedback" style="padding:10px;font-family:Share Tech Mono;font-size:11px;color:#4a6080;line-height:1.8">
-      Apply improvements and mark them — JARVIS will track whether your portfolio improved after each change.
-    </div>
-  </div>
-
-  <!-- ── LEARNING MEMORY LOG ── -->
-  <div class="panel">
-    <div class="ph">
-      <span class="pt">📖 LEARNING MEMORY — Insights saved across all sessions</span>
-      <button onclick="jarvisBrainClearLog()" style="padding:3px 10px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:#ff3d5a;font-family:Share Tech Mono;font-size:9px;cursor:pointer">🗑 CLEAR ALL</button>
-    </div>
-    <div id="brain-log" style="padding:10px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:7px">
-      <div style="font-family:Share Tech Mono;font-size:10px;color:#4a6080">No saved insights yet.</div>
-    </div>
-  </div>
-
 </div>
+
+<!-- Existing Supabase Cloud Users list gets appended here automatically by injectSupaAdminPanel() -->
 
 </div><!-- /admin -->
 
@@ -10706,7 +10209,14 @@ function ensureChainTicker() {
         if (ptHasOpenTrades()) { try { ptRefreshUI(); } catch(e) {} }
       });
     }
-  }, 15000);
+  }, 4000); // 4s refresh (was 15s) — faster updates for Live Trading/paper
+    // trading, at the cost of ~4x more Angel One calls. The earlier 403
+    // "exceeding access rate" storm this app hit was mainly from resolving
+    // MANY new strikes' tokens at once (searchScrip); once the ATM range
+    // is cached (_angelOptTokenCache), most refreshes just re-fetch LTP
+    // for already-known strikes, which is lighter. Still, watch the
+    // console for rate-limit warnings — dial this back toward 8-10s if
+    // you see repeated cooldowns kick in.
 }
 
 // ── Hook into showPage for chain ──
@@ -16675,16 +16185,23 @@ async function angelPlaceOrder(params) {
     'X-PrivateKey': creds.apiKey,
     'Accept':'application/json'
   };
+  // LIMIT, not MARKET — SEBI/NSE's algo trading framework (effective
+  // 1-Apr-2026, applies across every Indian broker) strictly prohibits
+  // Market and IOC orders for algorithmic order placement. A MARKET order
+  // here would be rejected by regulation regardless of the IP issue. This
+  // also happens to answer "what price will it fill at" honestly: it
+  // fills at exactly params.price or not at all, rather than whatever the
+  // market gives a MARKET order.
   var body = JSON.stringify({
     variety: 'NORMAL',
     tradingsymbol: params.tradingsymbol,
     symboltoken: params.symboltoken,
     transactiontype: params.transactiontype, // BUY or SELL
     exchange: 'NFO',
-    ordertype: 'MARKET',
+    ordertype: 'LIMIT',
     producttype: params.productType || 'INTRADAY',
     duration: 'DAY',
-    price: '0',
+    price: String(params.price),
     squareoff: '0',
     stoploss: '0',
     quantity: String(params.quantity)
@@ -16759,7 +16276,8 @@ async function liveTradingEnterPosition(trade) {
 
   var result = await angelPlaceOrder({
     tradingsymbol: resolved.tradingsymbol, symboltoken: resolved.symboltoken,
-    transactiontype: 'BUY', quantity: LIVE_TRADING.lotQty, productType: LIVE_TRADING.productType
+    transactiontype: 'BUY', quantity: LIVE_TRADING.lotQty, productType: LIVE_TRADING.productType,
+    price: trade.buy
   });
 
   trade.live = {
@@ -16784,7 +16302,8 @@ async function liveTradingExitPosition(trade, exitReason) {
 
   var result = await angelPlaceOrder({
     tradingsymbol: trade.live.tradingsymbol, symboltoken: trade.live.symboltoken,
-    transactiontype: 'SELL', quantity: trade.live.qty, productType: LIVE_TRADING.productType
+    transactiontype: 'SELL', quantity: trade.live.qty, productType: LIVE_TRADING.productType,
+    price: trade.exit
   });
 
   trade.live.exitOrderId = result.ok ? result.orderId : null;
@@ -16817,6 +16336,11 @@ function liveTradingRenderPanel() {
   if (toggleWrap) toggleWrap.style.opacity = LIVE_TRADING.acceptedRiskAt ? '1' : '.4';
   var cb = document.getElementById('live-toggle'); if (cb) cb.disabled = !LIVE_TRADING.acceptedRiskAt;
   if (cb) cb.checked = !!LIVE_TRADING.enabled;
+  var track = document.getElementById('live-toggle-track');
+  var knob  = document.getElementById('live-toggle-knob');
+  if (track) track.style.background = LIVE_TRADING.enabled ? 'rgba(255,61,90,.35)' : 'rgba(255,255,255,.08)';
+  if (track) track.style.borderColor = LIVE_TRADING.enabled ? 'var(--r)' : 'var(--border)';
+  if (knob)  { knob.style.left = LIVE_TRADING.enabled ? '24px' : '2px'; knob.style.background = LIVE_TRADING.enabled ? 'var(--r)' : 'var(--dim)'; }
 
   var statusEl = document.getElementById('live-status');
   if (statusEl) {
@@ -20491,6 +20015,70 @@ window.supaSaveTrade = async function(t) {
     })
   });
 };
+
+/* ─── Admin: Create a new user ───
+   Uses Supabase's public signup endpoint (auth/v1/signup) with the anon
+   key — the only option available from a pure client-side app. Supabase's
+   proper "admin creates a user" API needs the SERVICE ROLE key, which must
+   never be embedded in browser JS (anyone opening dev tools could extract
+   it and get full, RLS-bypassing database access) — so this uses the same
+   endpoint any normal signup would. The role check below is a UI-level
+   convenience gate, not a real security boundary: Supabase's signup
+   endpoint is already publicly callable by anyone with the anon key,
+   regardless of this app, protected by your Supabase project's own
+   settings — not by this button. */
+window.supaAdminCreateUser = async function(email, password, username, fullName, role) {
+  if (!window.SUPA_USER || window.SUPA_USER.role !== 'admin') return { error: 'Not authorized' };
+  if (!email || !password || password.length < 6) return { error: 'Valid email and a password (6+ chars) are required.' };
+  try {
+    var res = await fetch(SUPA_URL + '/auth/v1/signup', {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email, password: password,
+        data: { username: username || email.split('@')[0], full_name: fullName || '', role: role || 'user' }
+      })
+    });
+    var data = await res.json();
+    if (!res.ok || data.error) return { error: data.error_description || data.msg || data.error || ('HTTP ' + res.status) };
+    var newUserId = (data.user && data.user.id) || data.id;
+    if (!newUserId) return { error: 'Signup call succeeded but returned no user id — check Supabase Auth settings.' };
+    // Explicitly write the profiles row too, rather than assuming a DB
+    // trigger sets username/role/full_name from the signup metadata.
+    var profileRes = await supaFetch('/rest/v1/profiles?on_conflict=id', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        id: newUserId, username: username || email.split('@')[0],
+        full_name: fullName || '', role: role || 'user',
+        created_at: new Date().toISOString()
+      })
+    });
+    var needsConfirmation = !data.session; // no session returned usually means email confirmation is required
+    return { ok: true, userId: newUserId, needsConfirmation: needsConfirmation };
+  } catch(e) { return { error: e.message }; }
+};
+
+function admCreateUser() {
+  var email = document.getElementById('adm-new-email').value.trim();
+  var password = document.getElementById('adm-new-password').value;
+  var username = document.getElementById('adm-new-username').value.trim();
+  var fullName = document.getElementById('adm-new-fullname').value.trim();
+  var role = document.getElementById('adm-new-role').value;
+  var msg = document.getElementById('adm-new-msg');
+  function show(text, bad) {
+    msg.style.cssText = 'display:block;background:'+(bad?'rgba(255,61,90,.08)':'rgba(0,255,136,.07)')+';border:1px solid '+(bad?'rgba(255,61,90,.3)':'rgba(0,255,136,.3)')+';color:'+(bad?'var(--r)':'var(--g)')+';padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px';
+    msg.textContent = text;
+  }
+  if (!email || !password) { show('⚠ Email and password are required.', true); return; }
+  show('Creating user…');
+  window.supaAdminCreateUser(email, password, username, fullName, role).then(function(res){
+    if (res.error) { show('⚠ ' + res.error, true); return; }
+    show('✅ User created' + (res.needsConfirmation ? ' — they must confirm their email before logging in.' : '.') );
+    ['adm-new-email','adm-new-password','adm-new-username','adm-new-fullname'].forEach(function(id){ document.getElementById(id).value = ''; });
+    if (window.SUPA_USER && window.SUPA_USER.role === 'admin') { try { supaRenderAdminUsers(); } catch(e) {} }
+  });
+}
 
 /* ─── Load All Users (admin) ─── */
 window.supaLoadAllUsers = async function() {
