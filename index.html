@@ -1267,6 +1267,25 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
           </div>
         </div>
       </div>
+
+      <!-- COMBINED P&L — options + stock paper trading, one glance -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="ph"><div class="pt">💰 COMBINED P&amp;L (PAPER)</div></div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+            <span style="color:var(--dim);font-family:Share Tech Mono">Options Paper Trading</span>
+            <span style="font-family:Share Tech Mono;font-weight:700" id="cpnl-options">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+            <span style="color:var(--dim);font-family:Share Tech Mono">Stock Paper Trading</span>
+            <span style="font-family:Share Tech Mono;font-weight:700" id="cpnl-stocks">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0 0;font-size:12px">
+            <span style="color:var(--txt);font-family:Share Tech Mono;font-weight:700">TOTAL</span>
+            <span style="font-family:Orbitron;font-weight:800;font-size:14px" id="cpnl-total">—</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3038,6 +3057,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
             <option value="quality_breakout">Quality Breakout (ADX + Follow-Through)</option>
             <option value="nifty_pro_v15">Nifty Pro V1.5 (EMA+VWAP+RSI+HTF)</option>
+            <option value="nifty_pro_v2">✨ Nifty Pro V2 (+MACD +VOL +ATR)</option>
           </select>
         </div>
         <div>
@@ -3231,10 +3251,6 @@ setTimeout(nd2SyncAll, 2000);
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#00ff88;cursor:pointer" onmouseover="this.style.background='rgba(0,255,136,.07)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-nifty_pro_v2" onchange="aseToggleStrategy('nifty_pro_v2', this.checked)" style="accent-color:#00ff88;width:14px;height:14px;flex-shrink:0"> ✨ Nifty Pro V2 (+MACD +VOL +ATR)
-          </label>
-          <div style="height:1px;background:var(--border);margin:4px 2px"></div>
-          <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:var(--r);cursor:pointer" onmouseover="this.style.background='rgba(255,61,90,.07)'" onmouseout="this.style.background='transparent'">
-            <input type="checkbox" id="ase-strat-chk-pipeline_test" onchange="aseToggleStrategy('pipeline_test', this.checked)" style="accent-color:var(--r);width:14px;height:14px;flex-shrink:0"> ⚙ PIPELINE TEST (fires every cycle)
           </label>
         </div>
       </div>
@@ -3445,30 +3461,6 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:var(--dim)">SL/TARGET: ATR(14)-based (1.2×/2.4×ATR) instead of a fixed 5-bar window — scales with real-time volatility · R:R kept at 1:2 · ONE trade per day · only between 9:30-11:30 AM.</div>
       </div>
 
-      <!-- Live condition readout: Pipeline Test strategy -->
-      <div id="ase-readout-pipelinetest" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
-        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">CYCLE COUNT</div>
-          <div id="ase-pt-cyclecount" style="font-family:Orbitron;font-size:16px;color:var(--txt)">0</div>
-        </div>
-        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">NEXT SIDE</div>
-          <div id="ase-pt-nextside" style="font-family:Orbitron;font-size:14px;color:var(--txt)">CE</div>
-        </div>
-        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">TRADES LOGGED THIS SESSION</div>
-          <div id="ase-pt-tradeslogged" style="font-family:Orbitron;font-size:16px;color:var(--g)">0</div>
-        </div>
-        <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
-          <div id="ase-pt-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
-        </div>
-      </div>
-      <div id="ase-rules-pipelinetest" style="display:none;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.3);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
-        <div style="color:var(--r);margin-bottom:4px;font-weight:bold">⚠ NOT A REAL TRADING STRATEGY — fires a BUY CE or BUY PE on every single engine cycle (~every 30s), alternating sides, completely ignoring market conditions.</div>
-        <div style="color:var(--dim)">Built specifically to verify the full data pipeline end-to-end: auto-log → Open Positions → Trade History → Day-Wise Breakdown → P&L Dashboard → Performance vs Nifty Benchmark. Switch back to a real strategy when done testing — leaving this on will rapidly fill your paper trading history with meaningless trades and burn through fake capital fast (each trade target/SL is also fixed and arbitrary, not derived from any real signal).</div>
-      </div>
-
       <!-- Live trendline chart -->
       <div style="margin-top:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -3503,7 +3495,7 @@ setTimeout(nd2SyncAll, 2000);
     </div>
     <div style="padding:14px">
       <div style="padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:6px;font-family:Share Tech Mono;font-size:10px;color:var(--txt);margin-bottom:12px">
-        ⚠ This fires <b>real orders with real money</b> on your linked Angel One account, mirroring the F&amp;O Auto Signal Engine above — <b>no per-trade confirmation</b>, per your setup. Only the 5 real strategies mirror live (not manual trades, not Pipeline Test). Requires the app tab to stay open — closing it or losing internet stops live firing (and any open live position stays open on the broker's side until you close it yourself).
+        ⚠ This fires <b>real orders with real money</b> on your linked Angel One account, mirroring the F&amp;O Auto Signal Engine above — <b>no per-trade confirmation</b>, per your setup. Only the 6 real strategies mirror live (not manual trades). Requires the app tab to stay open — closing it or losing internet stops live firing (and any open live position stays open on the broker's side until you close it yourself).
         <br><br>
         ⚠ <b>SEBI/NSE mandate (effective 1-Apr-2026, all Indian brokers):</b> orders now require a <b>registered static IP</b> — register yours at smartapi.angelone.in → My Profile → My APIs. Most home/mobile connections are dynamic, not static; you may need a static-IP add-on from your ISP. Orders also now use <b>LIMIT</b>, not MARKET — Market/IOC orders are banned for algo trading under this same rule, and a LIMIT order fills at your exact price or not at all, rather than slipping.
       </div>
@@ -3591,6 +3583,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="trendline_confirmed">Trendline + PCR/EMA Confirmation</option>
             <option value="quality_breakout">Quality Breakout (Regime-Filtered)</option>
             <option value="nifty_pro_v15">Nifty Pro V1.5</option>
+            <option value="nifty_pro_v2">Nifty Pro V2</option>
           </select>
         </div>
         <div>
@@ -4926,11 +4919,215 @@ function parseQuote(data) {
     LD[name] = {
       ltp:q.ltp, open:q.open||q.ltp, high:q.high||q.ltp, low:q.low||q.ltp, close:close,
       volume:q.tradeVolume||0, avgPrice:q.avgPrice||q.averagePrice||q.ltp,
-      chg:+chg.toFixed(2), dp:+dp.toFixed(2)
+      chg:+chg.toFixed(2), dp:+dp.toFixed(2),
+      // 52-week high/low, if Angel's FULL quote mode includes them for this
+      // instrument — used for the real Market Pulse breadth counts. Several
+      // possible field-name casings are checked since this isn't otherwise
+      // exercised elsewhere in the app; if none are present, the 52W
+      // high/low counters simply skip that symbol rather than guessing.
+      wk52High: q['52WeekHigh'] ?? q.fiftyTwoWeekHigh ?? q.weekHigh52 ?? null,
+      wk52Low:  q['52WeekLow']  ?? q.fiftyTwoWeekLow  ?? q.weekLow52  ?? null
     };
     ok++;
   });
+  try { updateMarketSentimentAndPulse(); } catch(e) { console.warn('[MarketPulse]', e); }
   return ok;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MARKET SENTIMENT + MARKET PULSE — real data, no placeholders
+//  Previously these widgets were pure HTML shells that nothing ever
+//  wrote to, so they sat stuck on "Analysing market..." / "—" forever.
+//  Sentiment score is computed from four already-live inputs: Nifty's
+//  day change, India VIX level, PCR, and breadth (below) — nothing
+//  fabricated. Market Pulse breadth (advances/declines/52W hi-lo) is
+//  computed from the SAME 34-stock quote batch fetchAll() already
+//  pulls every 30s (see TM/LD) — no extra API calls needed. FII/DII
+//  flow is a genuine NSE fetch (nseindia.com's public fiidii endpoint,
+//  same multi-proxy pattern as fetchNSEChain) since Angel One's API
+//  doesn't provide it at all.
+// ══════════════════════════════════════════════════════════════════
+var MP_BREADTH_UNIVERSE = null; // lazily built: every TM key that isn't an index
+
+function mpGetUniverse() {
+  if (MP_BREADTH_UNIVERSE) return MP_BREADTH_UNIVERSE;
+  var indices = { NIFTY50:1, BANKNIFTY:1, SENSEX:1, INDIAVIX:1 };
+  MP_BREADTH_UNIVERSE = Object.keys(TM).filter(function(k){ return !indices[k]; });
+  return MP_BREADTH_UNIVERSE;
+}
+
+function updateMarketSentimentAndPulse() {
+  var universe = mpGetUniverse();
+  var adv = 0, dec = 0, unch = 0, highs52 = 0, lows52 = 0, seen = 0, wk52Seen = 0;
+  universe.forEach(function(k){
+    var d = LD[k];
+    if (!d || d.dp == null) return;
+    seen++;
+    if (d.dp > 0) adv++; else if (d.dp < 0) dec++; else unch++;
+    if (d.wk52High) { wk52Seen++; if (d.ltp >= d.wk52High * 0.999) highs52++; }
+    if (d.wk52Low)  { if (d.ltp <= d.wk52Low * 1.001) lows52++; }
+  });
+
+  var advEl = document.getElementById('mpAdv'), decEl = document.getElementById('mpDec');
+  var h52El = document.getElementById('mp52H'), l52El = document.getElementById('mp52L');
+  if (seen > 0) {
+    if (advEl) advEl.textContent = adv;
+    if (decEl) decEl.textContent = dec;
+    // 52-week hi/lo only shown once we've actually confirmed Angel's quote
+    // response includes those fields for at least one symbol — showing "0"
+    // when the field simply isn't present would misleadingly imply "no
+    // stocks at a 52-week extreme" rather than "data not available".
+    if (h52El) h52El.textContent = wk52Seen > 0 ? highs52 : 'N/A';
+    if (l52El) l52El.textContent = wk52Seen > 0 ? lows52 : 'N/A';
+  }
+
+  // ── FII/DII: real fetch, fire-and-forget (own cache/rate-limit inside) ──
+  mpFetchFiiDii();
+
+  // ── Sentiment score, 0 (extreme fear) – 100 (extreme greed) ──
+  var ni = LD.NIFTY50, vix = LD.INDIAVIX;
+  var pcr = (typeof OC_STATE !== 'undefined' && OC_STATE && OC_STATE.pcr) ? OC_STATE.pcr : null;
+  var parts = [], weightsSum = 0, score = 0;
+
+  if (ni && ni.dp != null) {
+    var s1 = Math.max(0, Math.min(100, 50 + ni.dp * 12)); // ±4% day ≈ full swing
+    parts.push({ label: 'Nifty ' + (ni.dp>=0?'▲':'▼') + Math.abs(ni.dp).toFixed(2) + '%', score: s1 });
+    score += s1; weightsSum++;
+  }
+  if (vix && vix.ltp) {
+    var s2 = Math.max(0, Math.min(100, 100 - (vix.ltp - 10) * 4)); // VIX 10→100(greed), VIX 35→0(fear)
+    parts.push({ label: 'VIX ' + vix.ltp.toFixed(1) + (vix.ltp<13?' (calm)':vix.ltp>20?' (elevated)':''), score: s2 });
+    score += s2; weightsSum++;
+  }
+  if (pcr != null) {
+    var s3 = Math.max(0, Math.min(100, 50 + (pcr - 1) * 60));
+    parts.push({ label: 'PCR ' + pcr.toFixed(2), score: s3 });
+    score += s3; weightsSum++;
+  }
+  if (seen > 0) {
+    var s4 = (adv + dec) > 0 ? (adv / (adv + dec)) * 100 : 50;
+    parts.push({ label: 'Breadth ' + adv + '↑/' + dec + '↓ (34 tracked)', score: s4 });
+    score += s4; weightsSum++;
+  }
+
+  var labelEl = document.getElementById('sentimentLabel');
+  var subEl = document.getElementById('sentimentSub');
+  var needleEl = document.getElementById('sentimentNeedle');
+  var factorsEl = document.getElementById('sentimentFactors');
+
+  if (weightsSum === 0) {
+    // Nothing live yet (not connected / market closed with no cached
+    // quotes) — leave the original "Analysing market..." placeholder
+    // rather than showing a fake/zero score.
+    return;
+  }
+
+  var finalScore = Math.round(score / weightsSum);
+  var label, color;
+  if (finalScore < 20)      { label = 'EXTREME FEAR'; color = 'var(--r)'; }
+  else if (finalScore < 40) { label = 'FEAR';          color = 'var(--r)'; }
+  else if (finalScore < 60) { label = 'NEUTRAL';       color = 'var(--w)'; }
+  else if (finalScore < 80) { label = 'GREED';         color = 'var(--g)'; }
+  else                      { label = 'EXTREME GREED'; color = 'var(--g)'; }
+
+  if (labelEl) { labelEl.textContent = label; labelEl.style.color = color; }
+  if (subEl) subEl.textContent = 'Score ' + finalScore + '/100 · ' + parts.length + ' live factors · updated ' + new Date().toLocaleTimeString('en-IN',{hour12:false});
+  if (needleEl) needleEl.style.left = finalScore + '%';
+  if (factorsEl) {
+    factorsEl.innerHTML = parts.map(function(p){
+      var c = p.score >= 60 ? 'var(--g)' : p.score <= 40 ? 'var(--r)' : 'var(--dim)';
+      return '<div style="display:flex;justify-content:space-between;font-size:9px;font-family:Share Tech Mono"><span style="color:var(--dim)">' + p.label + '</span><span style="color:' + c + '">' + Math.round(p.score) + '/100</span></div>';
+    }).join('');
+  }
+}
+
+var _fiiDiiCache = null; // { ts, fii, dii }
+async function mpFetchFiiDii() {
+  var el = document.getElementById('mpFII');
+  var now = Date.now();
+  // Cache 10 min — this is an end-of-day-ish provisional figure NSE
+  // itself only updates a few times a day, no need to hammer it.
+  if (_fiiDiiCache && (now - _fiiDiiCache.ts) < 10*60*1000) {
+    if (el) mpRenderFiiDii(el, _fiiDiiCache);
+    return;
+  }
+  var url = 'https://www.nseindia.com/api/fiidiiTradeReact';
+  async function safeFetch(u, opts, ms) {
+    try {
+      return await Promise.race([
+        fetch(u, opts || {}).catch(function(){ return null; }),
+        new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms||7000); })
+      ]).catch(function(){ return null; });
+    } catch(e) { return null; }
+  }
+  async function tryParse(r) {
+    if (!r) return null;
+    try { var d = JSON.parse(await r.text()); return Array.isArray(d) ? d : null; } catch(e) { return null; }
+  }
+  var data = null;
+  if (typeof PROXY_URL !== 'undefined' && PROXY_URL) {
+    try {
+      var r1 = await safeFetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'nse_fetch', url: url}) }, 8000);
+      data = await tryParse(r1);
+    } catch(e) {}
+  }
+  if (!data) { try { data = await tryParse(await safeFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), {}, 7000)); } catch(e) {} }
+  if (!data) { try { data = await tryParse(await safeFetch('https://corsproxy.io/?' + encodeURIComponent(url), { headers:{'x-requested-with':'XMLHttpRequest'} }, 7000)); } catch(e) {} }
+  if (!data) { try { data = await tryParse(await safeFetch('https://thingproxy.freeboard.io/fetch/' + url, {}, 7000)); } catch(e) {} }
+
+  if (data && data.length) {
+    var fiiRow = data.find(function(r){ return /FII|FPI/i.test(r.category||''); });
+    var diiRow = data.find(function(r){ return /DII/i.test(r.category||''); });
+    _fiiDiiCache = {
+      ts: now,
+      fii: fiiRow ? parseFloat(fiiRow.netValue) : null,
+      dii: diiRow ? parseFloat(diiRow.netValue) : null,
+      date: (fiiRow && fiiRow.date) || (diiRow && diiRow.date) || null
+    };
+  } else {
+    _fiiDiiCache = { ts: now, fii: null, dii: null, unavailable: true };
+  }
+  if (el) mpRenderFiiDii(el, _fiiDiiCache);
+}
+
+function mpRenderFiiDii(el, c) {
+  if (!c || c.unavailable || (c.fii == null && c.dii == null)) {
+    el.textContent = 'N/A';
+    el.style.color = 'var(--dim)';
+    el.title = 'NSE FII/DII feed unreachable right now (proxy-dependent) — not a fabricated number.';
+    return;
+  }
+  var bits = [];
+  if (c.fii != null) bits.push('FII ' + (c.fii>=0?'+':'') + c.fii.toFixed(0) + 'Cr');
+  if (c.dii != null) bits.push('DII ' + (c.dii>=0?'+':'') + c.dii.toFixed(0) + 'Cr');
+  el.textContent = bits.join(' · ');
+  el.style.color = ((c.fii||0) + (c.dii||0)) >= 0 ? 'var(--g)' : 'var(--r)';
+  el.title = c.date ? ('As of ' + c.date + ' (NSE provisional)') : '';
+}
+
+// Combines options paper trading (PT_PORTFOLIO) + stock paper trading
+// (SPT_PORTFOLIO) P&L into one glance-able card. Called whenever either
+// side refreshes (ptRefreshUI / sptRefreshUI), so it stays live without
+// needing its own polling.
+function updateCombinedPnlWidget() {
+  var optEl = document.getElementById('cpnl-options');
+  var stkEl = document.getElementById('cpnl-stocks');
+  var totEl = document.getElementById('cpnl-total');
+  if (!optEl && !stkEl && !totEl) return; // widget not on this page
+
+  var optPnl = (typeof window.PT_LAST_TOTAL_PNL === 'number') ? window.PT_LAST_TOTAL_PNL : null;
+  var stkPnl = (typeof window.SPT_LAST_TOTAL_PNL === 'number') ? window.SPT_LAST_TOTAL_PNL : null;
+
+  function fmt(v) { return (v>=0?'+':'') + '₹' + Math.round(v).toLocaleString('en-IN'); }
+  function paint(el, v) {
+    if (!el) return;
+    el.textContent = v == null ? '—' : fmt(v);
+    el.style.color = v == null ? 'var(--dim)' : (v >= 0 ? 'var(--g)' : 'var(--r)');
+  }
+  paint(optEl, optPnl);
+  paint(stkEl, stkPnl);
+  var total = (optPnl != null ? optPnl : 0) + (stkPnl != null ? stkPnl : 0);
+  paint(totEl, (optPnl == null && stkPnl == null) ? null : total);
 }
 
 // ══ MAIN FETCH ══
@@ -5650,7 +5847,18 @@ function aseDrawTrendlineChart(candles) {
 
   if (statusEl) {
     var lastT = visible[visible.length-1].time;
-    statusEl.textContent = visible.length + ' candles · last ' + String(lastT).slice(-8);
+    // Previously this did String(lastT).slice(-8), which on a real Angel
+    // One candle timestamp like "2026-07-10T09:45:00+05:30" always grabs
+    // the constant "00+05:30" tail (seconds are always :00 on a 5-min
+    // boundary, and the +05:30 offset never changes) — so the label looked
+    // permanently frozen no matter how recent the candle actually was.
+    // Parse it properly and show real HH:MM:SS in IST instead.
+    var lastTimeLabel = String(lastT);
+    var lastDate = new Date(lastT);
+    if (!isNaN(lastDate.getTime())) {
+      lastTimeLabel = lastDate.toLocaleTimeString('en-IN', { hour12: false, timeZone: 'Asia/Kolkata' });
+    }
+    statusEl.textContent = visible.length + ' candles · last ' + lastTimeLabel;
   }
   // Live overlay draws on its own transparent canvas on top of this one —
   // give it an immediate redraw now too so the yellow line never lags a
@@ -14955,7 +15163,7 @@ function runBacktest() {
 
     var periodLabels = {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'};
     var pl = document.getElementById('bt-period-label');
-    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') ? ' · synthetic data (no broker connection)' : '');
+    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') ? ' · synthetic data (no broker connection)' : '');
     if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy) + dataSourceTag;
 
     // The trade log title used to always say "SIMULATED" regardless of
@@ -14984,7 +15192,7 @@ function runBacktest() {
   // data — it needs Angel One's actual 5-min candles to mean anything
   // (comparing against a live TradingView chart). Every other strategy
   // here still runs on synthetic daily data, same as before.
-  if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') && ticker === 'NIFTY') {
+  if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') && ticker === 'NIFTY') {
     var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
     var connected = typeof creds !== 'undefined' && creds.jwt && creds.connected;
     if (!tm || !connected) {
@@ -15025,8 +15233,8 @@ function runBacktest() {
   }
 
   setTimeout(function(){
-    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
-    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
+    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
+    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
   }, 2800);
 }
 
@@ -15141,6 +15349,7 @@ function btOptionPrice(spot, strike, daysToExpiry, type) {
 function btRunStrategy(data, strategy, signalType, capital, posPct) {
   if (data.length < 15) return [];
   if (strategy === 'nifty_pro_v15') return btRunNiftyProV15(data, signalType, capital, posPct);
+  if (strategy === 'nifty_pro_v2') return btRunNiftyProV2(data, signalType, capital, posPct);
   var closes = data.map(function(d){return d.close;});
   var trades = [];
   var inTrade = false;
@@ -15319,6 +15528,74 @@ function btRunNiftyProV15(data, signalType, capital, posPct) {
       if (pnlPct >= target) exitReason = 'TARGET HIT';
       else if (pnlPct <= sl) exitReason = 'STOP LOSS HIT';
       else if (i - entryIdx >= 30) exitReason = 'TIME EXIT'; // safety valve — original script has no time exit, but an unbounded hold isn't realistic for a 5-min options backtest
+      if (exitReason) {
+        var gross = (curPremium - entryPremium) * lotQty * lotsHeld;
+        var net   = gross - 40 * lotsHeld;
+        trades.push({
+          num: trades.length+1, entryDate: entryDate, exitDate: data[i].date,
+          optType: optType, strike: strike, lots: lotsHeld, lotSize: lotQty,
+          entry: entryPremium, exit: curPremium,
+          indexEntry: entry, indexExit: closes[i],
+          posSize: entryPremium*lotQty*lotsHeld, gross: gross, net: net,
+          pnlPct: (pnlPct*100).toFixed(2), result: exitReason
+        });
+        inTrade = false;
+      }
+    }
+  }
+  return trades;
+}
+
+// Same backtest loop as btRunNiftyProV15 above, but sources signals from
+// npv2ComputeSignal (MACD + volume + candle-strength confirmation, ATR-based
+// SL/target) instead of npComputeSignal. V1.5's runner above is untouched.
+function btRunNiftyProV2(data, signalType, capital, posPct) {
+  var closes = data.map(function(d){ return d.close; });
+  var dayKeys = data.map(function(d){
+    var s = String(d.date);
+    var m = s.match(/^(.*)\s+\d{1,2}:\d{2}\s*$/);
+    return m ? m[1] : s;
+  });
+  var timeStrings = data.map(function(d){ var m = String(d.date).match(/(\d{1,2}:\d{2})\s*$/); return m ? m[1] : ''; });
+  var vwapSeries = calcSessionVWAP(data, dayKeys);
+  var htf50Series = npAlignHTFEma(data);
+
+  var trades = [];
+  var inTrade = false;
+  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0;
+  var lotQty = 65, lotsHeld = 1;
+  var tradedOnDay = {};
+  var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
+  var wantPE = (signalType==='all'||signalType==='sell'||signalType==='put');
+
+  for (var i = 50; i < data.length - 1; i++) {
+    if (!inTrade) {
+      var dk = dayKeys[i];
+      if (tradedOnDay[dk]) continue; // one trade per day, matching the live strategy
+
+      var sig = npv2ComputeSignal(data, timeStrings, vwapSeries, htf50Series, i);
+      if (!sig) continue;
+      if ((sig.type === 'CE' && !wantCE) || (sig.type === 'PE' && !wantPE)) continue;
+
+      inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
+      optType = sig.type;
+      strike = Math.round(entry/50)*50;
+      entryPremium = btOptionPrice(entry, strike, BT_DTE_DAYS, optType.toLowerCase());
+      lotsHeld = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
+      // Same index-risk → premium-% conversion as V1.5, but sig.risk here
+      // comes from ATR instead of a 5-bar Donchian window.
+      var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / entry * 8));
+      sl     = -riskPct;
+      target = riskPct * 2.0; // R:R 1:2
+      tradedOnDay[dk] = true;
+    } else {
+      var daysElapsed = (i - entryIdx) * (5/60/24);
+      var curPremium = btOptionPrice(closes[i], strike, BT_DTE_DAYS - daysElapsed, optType.toLowerCase());
+      var pnlPct = (curPremium - entryPremium) / entryPremium;
+      var exitReason = '';
+      if (pnlPct >= target) exitReason = 'TARGET HIT';
+      else if (pnlPct <= sl) exitReason = 'STOP LOSS HIT';
+      else if (i - entryIdx >= 30) exitReason = 'TIME EXIT';
       if (exitReason) {
         var gross = (curPremium - entryPremium) * lotQty * lotsHeld;
         var net   = gross - 40 * lotsHeld;
@@ -15931,8 +16208,8 @@ function ptToggleTrail(id) {
 function ptStrategyLabel(key) {
   var labels = {
     pcr_ema_vix: 'PCR+EMA21+VIX', trendline: 'Trendline Breakout', trendline_confirmed: 'Trendline+Confirm',
-    quality_breakout: 'Quality Breakout', nifty_pro_v15: 'Nifty Pro V1.5', pipeline_test: 'Pipeline Test',
-    manual: 'Manual', auto: 'Auto (unspecified)'
+    quality_breakout: 'Quality Breakout', nifty_pro_v15: 'Nifty Pro V1.5', nifty_pro_v2: 'Nifty Pro V2',
+    pipeline_test: 'Pipeline Test (removed)', manual: 'Manual', auto: 'Auto (unspecified)'
   };
   return labels[key] || key || 'Manual';
 }
@@ -15955,8 +16232,9 @@ function ptRefreshUI() {
   var portfolioVal = p.cash + openTrades.reduce(function(a,t){ var live = ptGetLivePrice(t); return a + live * t.qty; },0);
   var retPct = ((portfolioVal - p.startCapital) / p.startCapital * 100).toFixed(2);
   var pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
-
-  // vs Nifty
+  window.PT_LAST_TOTAL_PNL = totalPnl;
+  window.PT_LAST_PORTFOLIO_VAL = portfolioVal;
+  try { updateCombinedPnlWidget(); } catch(e) {}
   var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
   var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
   var vsNifty = (parseFloat(retPct) - parseFloat(niftyRet)).toFixed(2);
@@ -16164,8 +16442,8 @@ function ptParseStrikeType(instr) {
 //  IMPORTANT — SCOPE: this fires the live ENTRY (BUY) when a paper auto
 //  trade opens, and the live EXIT (SELL) when that SAME paper trade closes
 //  (target/SL/trailing-SL/manual), so a live position is never left
-//  unmanaged after this hooks it in. It only mirrors the 5 real F&O auto
-//  strategies (not manual paper trades, not the Pipeline Test mode).
+//  unmanaged after this hooks it in. It only mirrors the 6 real F&O auto
+//  strategies (not manual paper trades).
 // ══════════════════════════════════════════════════════════════════
 var LIVE_TRADING = null;
 var LIVE_RISK_PHRASE = 'I ACCEPT THE RISK';
@@ -16816,6 +17094,7 @@ async function liveTradingCloudLoad() {
 // Auto-init paper trading when page loads
 (function(){
   try { ptInit(); } catch(e) {}
+  try { ptRefreshUI(); } catch(e) {} // populate immediately — cloud load below may not call this if local already has equal/more trades
   try { ptCloudLoad(); } catch(e) {}
   try { liveTradingInit(); liveTradingCloudLoad(); } catch(e) {}
 })();
@@ -17192,6 +17471,9 @@ function sptRefreshUI() {
   var portfolioVal = p.cash + unrealised + openTrades.reduce(function(a,t){ return a + t.cost; },0);
   var retPct = ((portfolioVal - p.startCapital) / p.startCapital * 100).toFixed(2);
   var pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
+  window.SPT_LAST_TOTAL_PNL = totalPnl;
+  window.SPT_LAST_PORTFOLIO_VAL = portfolioVal;
+  try { updateCombinedPnlWidget(); } catch(e) {}
 
   var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
   var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
@@ -17734,6 +18016,7 @@ function saseLoadState() {
 // copy (same Supabase 'reports' table the options portfolio uses).
 (function(){
   try { sptInit(); } catch(e) {}
+  try { sptRefreshUI(); } catch(e) {} // populate immediately — same reasoning as the options side above
   try { sptCloudLoad(); } catch(e) {}
 })();
 
@@ -17805,8 +18088,8 @@ async function ptCloudLoad() {
 var ASE_ON = false;
 var ASE_STRATEGY = 'pcr_ema_vix'; // primary/display strategy — ASE_STRATEGIES[0]; drives chart overlay + fallback labeling
 var ASE_STRATEGIES = ['pcr_ema_vix']; // multi-select: every strategy in this list is evaluated independently, every cycle
-var ASE_VALID_STRATEGIES = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'nifty_pro_v2', 'pipeline_test'];
-var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)', pipeline_test:'⚙ PIPELINE TEST (not a real strategy)' };
+var ASE_VALID_STRATEGIES = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'nifty_pro_v2'];
+var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)' };
 // De-dupe: avoid re-logging same signal repeatedly. Keyed per-strategy (not a
 // single shared value) so that with 2-3 strategies active at once, one
 // strategy logging a trade can't clear/overwrite another strategy's de-dupe
@@ -17874,9 +18157,6 @@ function aseToggleStrategy(key, checked) {
   // so switching strategy here now visibly changes what's drawn right away.
   if (typeof ASE_LAST_CANDLES !== 'undefined' && ASE_LAST_CANDLES) aseDrawTrendlineChart(ASE_LAST_CANDLES);
   aseLog('Active strategies: ' + ASE_STRATEGIES.map(function(s){ return ASE_STRATEGY_LABELS[s]; }).join('  +  '));
-  if (ASE_STRATEGIES.indexOf('pipeline_test') !== -1) {
-    aseLog('⚠ Pipeline test mode active — will log a real (fake-signal) paper trade roughly every cycle. Uncheck it once done testing.');
-  }
 }
 
 function aseApplyStrategyUI() {
@@ -17886,8 +18166,7 @@ function aseApplyStrategyUI() {
     trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' },
     quality_breakout:     { readout: 'ase-readout-quality',    rules: 'ase-rules-quality' },
     nifty_pro_v15:        { readout: 'ase-readout-niftypro',   rules: 'ase-rules-niftypro' },
-    nifty_pro_v2:         { readout: 'ase-readout-niftypro2',  rules: 'ase-rules-niftypro2' },
-    pipeline_test:        { readout: 'ase-readout-pipelinetest', rules: 'ase-rules-pipelinetest' }
+    nifty_pro_v2:         { readout: 'ase-readout-niftypro2',  rules: 'ase-rules-niftypro2' }
   };
   Object.keys(panels).forEach(function(key){
     var isActive = ASE_STRATEGIES.indexOf(key) !== -1;
@@ -18034,7 +18313,6 @@ function aseEvaluate() {
         else if (s === 'quality_breakout') { await aseEvaluateQualityBreakout(); }
         else if (s === 'nifty_pro_v15') { await aseEvaluateNiftyProV15(); }
         else if (s === 'nifty_pro_v2') { await aseEvaluateNiftyProV2(); }
-        else if (s === 'pipeline_test') { aseEvaluatePipelineTest(); }
         else { aseEvaluatePcrEmaVix(); }
       } catch(e) { console.warn('[AutoSignalEngine ' + s + ']', e); }
     }
@@ -18815,62 +19093,6 @@ async function aseEvaluateNiftyProV2() {
     aseLog('✅ Nifty Pro V2 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2, ATR '+fN(sig.atr,1)+') — one trade/day used');
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V2 signal found but could not log: ' + res.error);
-  }
-}
-
-// ── PIPELINE TEST (not a real trading strategy) ──
-// Fires a BUY CE or BUY PE on every single evaluation cycle, alternating
-// sides, with no market-condition checks at all — purpose-built to
-// verify the full pipeline end-to-end: auto-log → Open Positions →
-// Trade History → Day-Wise Breakdown → P&L Dashboard → Performance vs
-// Nifty Benchmark, without waiting for a real strategy's signal to
-// happen to fire (which can take hours/days and makes the cloud-sync
-// race condition fixed earlier very hard to reproduce on demand).
-var ASE_PIPELINE_TEST_CYCLE = 0;
-var ASE_PIPELINE_TEST_LOGGED = 0;
-
-function aseEvaluatePipelineTest() {
-  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
-  if (!ni || !ni.ltp) { ptSet2('ase-pt-verdict', 'WAITING DATA', 'var(--w)'); return; }
-  if (!ASE_ON) { ptSet2('ase-pt-verdict', 'OFF', 'var(--dim)'); return; }
-
-  ASE_PIPELINE_TEST_CYCLE++;
-  ptSet2('ase-pt-cyclecount', ASE_PIPELINE_TEST_CYCLE);
-
-  var side = (ASE_PIPELINE_TEST_CYCLE % 2 === 1) ? 'CE' : 'PE';
-  ptSet2('ase-pt-nextside', side === 'CE' ? 'PE' : 'CE'); // shows what fires NEXT cycle, not this one
-  ptSet2('ase-pt-verdict', 'BUY ' + side, side === 'CE' ? 'var(--g)' : 'var(--r)');
-
-  var strike = getATMStrike(ni.ltp, 50);
-  // Real chain price where available (so this exercises the real
-  // pricing path, not just fabricated numbers); falls back to a fixed
-  // placeholder premium if the chain isn't ready yet, so the pipeline
-  // test never silently does nothing just because the option chain
-  // hasn't loaded — getting SOMETHING into Open Positions immediately
-  // is the entire point of this mode.
-  var chainLtp = null;
-  try { chainLtp = getChainPrice('NIFTY', strike, side.toLowerCase()); } catch(e) {}
-  if (!chainLtp || chainLtp <= 0) chainLtp = 100; // arbitrary fixed fallback premium
-
-  var target = Math.round(chainLtp * 1.20 / 5) * 5; // arbitrary fixed +20%/-15% - not derived from any real signal, by design
-  var sl     = Math.round(chainLtp * 0.85 / 5) * 5;
-  var instr  = 'NIFTY ' + strike + side + ' ' + (typeof getNiftyExpiry === 'function' ? getNiftyExpiry() : '');
-  var lotQty = 65;
-
-  var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'pipeline_test',
-    signalType: 'BUY ' + side,
-    reasons: 'PIPELINE TEST (not a real signal) · cycle #' + ASE_PIPELINE_TEST_CYCLE
-  });
-
-  if (res && res.trade) {
-    ASE_PIPELINE_TEST_LOGGED++;
-    ptSet2('ase-pt-tradeslogged', ASE_PIPELINE_TEST_LOGGED);
-    aseLog('✅ [TEST] Logged BUY '+side+' '+instr+' @ ₹'+chainLtp+' (cycle #'+ASE_PIPELINE_TEST_CYCLE+') — check Open Positions now.');
-  } else if (res && res.error) {
-    aseLog('⚠ [TEST] Could not log: ' + res.error);
-  } else {
-    aseLog('⚠ [TEST] ptAddAutoTrade returned unexpected result: ' + JSON.stringify(res));
   }
 }
 
