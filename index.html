@@ -17267,7 +17267,19 @@ function ptDeleteTrade(id) {
   if (!PT_PORTFOLIO) return;
   if (!confirm('Delete this paper trade?')) return;
   var t = PT_PORTFOLIO.trades.find(function(x){return x.id===id;});
-  if (t && t.status==='OPEN') PT_PORTFOLIO.cash += t.cost;
+  if (t) {
+    if (t.status === 'OPEN') {
+      PT_PORTFOLIO.cash += t.cost; // undo the buy-time debit
+    } else {
+      // ptCloseTrade credits (exitPrice*qty - brokerage) at close, which
+      // is mathematically t.cost + t.net (buy*qty + net = exit*qty -
+      // brokerage). Reverse that exact amount, or Cash/Portfolio Value
+      // stay permanently inflated by the deleted trade's proceeds even
+      // though Total P&L correctly stops counting it — that mismatch is
+      // exactly the bug this fixes.
+      PT_PORTFOLIO.cash -= (t.cost + t.net);
+    }
+  }
   PT_PORTFOLIO.trades = PT_PORTFOLIO.trades.filter(function(x){return x.id!==id;});
   ptSave();
   ptSyncCloud();
@@ -17647,7 +17659,19 @@ function sptDeleteTrade(id) {
   if (!SPT_PORTFOLIO) return;
   if (!confirm('Delete this stock trade?')) return;
   var t = SPT_PORTFOLIO.trades.find(function(x){return x.id===id;});
-  if (t && t.status==='OPEN') SPT_PORTFOLIO.cash += t.cost;
+  if (t) {
+    if (t.status === 'OPEN') {
+      SPT_PORTFOLIO.cash += t.cost;
+    } else {
+      // sptCloseTrade credits (t.cost + t.net) at close — reverse that
+      // exact amount here (t.net already correctly accounts for
+      // SELL/short direction and the real stock brokerage formula,
+      // unlike the options side, so reuse it directly rather than
+      // recompute). Without this, cash stayed inflated by a deleted
+      // trade's proceeds even after Total P&L correctly dropped it.
+      SPT_PORTFOLIO.cash -= (t.cost + t.net);
+    }
+  }
   SPT_PORTFOLIO.trades = SPT_PORTFOLIO.trades.filter(function(x){return x.id!==id;});
   sptSave();
   sptSyncCloud();
