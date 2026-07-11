@@ -1052,6 +1052,34 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
     <div id="ji-alert" style="display:none;padding:8px 12px;border-radius:7px;font-family:Share Tech Mono;font-size:10px;line-height:1.6"></div>
   </div>
 
+  <!-- ══ TODAY AT A GLANCE ══ -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(0,212,255,.3);background:linear-gradient(135deg,rgba(0,212,255,.05),rgba(160,100,255,.03))">
+    <div class="ph"><div class="pt" style="color:var(--a)">🎯 TODAY AT A GLANCE</div><span id="tag-updated" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">—</span></div>
+    <div style="padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:1px">TODAY'S P&amp;L</div>
+        <div id="tag-today-pnl" style="font-family:Orbitron;font-size:16px;font-weight:700">—</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:1px">OPEN POSITIONS</div>
+        <div id="tag-open-positions" style="font-family:Orbitron;font-size:16px;font-weight:700;color:var(--txt)">—</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:1px">SIGNALS TODAY</div>
+        <div id="tag-signals-today" style="font-family:Orbitron;font-size:16px;font-weight:700;color:var(--txt)">—</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:1px">NIFTY EXPIRY</div>
+        <div id="tag-expiry" style="font-family:Orbitron;font-size:16px;font-weight:700;color:var(--txt)">—</div>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:1px">REAL DATA RECORDED</div>
+        <div id="tag-real-days" style="font-family:Orbitron;font-size:16px;font-weight:700;color:var(--txt)">—</div>
+      </div>
+    </div>
+    <div id="tag-signal-breakdown" style="padding:0 14px 12px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></div>
+  </div>
+
   <!-- INDEX CARDS -->
   <div class="indices">
     <div class="idx loading" id="idx-nifty">
@@ -3643,9 +3671,10 @@ setTimeout(nd2SyncAll, 2000);
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">NET P&amp;L ₹</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RETURN %</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ACTION</th>
         </tr></thead>
         <tbody id="pt-history-body">
-          <tr><td colspan="11" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
+          <tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
         </tbody>
       </table>
     </div>
@@ -3982,9 +4011,10 @@ setTimeout(nd2SyncAll, 2000);
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">NET P&amp;L ₹</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RETURN %</th>
           <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ACTION</th>
         </tr></thead>
         <tbody id="spt-history-body">
-          <tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
+          <tr><td colspan="13" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
         </tbody>
       </table>
     </div>
@@ -5109,6 +5139,76 @@ function mpRenderFiiDii(el, c) {
 // (SPT_PORTFOLIO) P&L into one glance-able card. Called whenever either
 // side refreshes (ptRefreshUI / sptRefreshUI), so it stays live without
 // needing its own polling.
+// Fills the "Today at a Glance" dashboard card — combines options +
+// stock paper trading data (open positions, today's realized P&L,
+// today's signal count per strategy), the Nifty expiry countdown, and
+// how many days of real option-chain history have been recorded so
+// far. Called from ptRefreshUI/sptRefreshUI (same pattern as
+// updateCombinedPnlWidget) so it stays live without its own polling.
+function updateTodayGlance() {
+  var pnlEl = document.getElementById('tag-today-pnl');
+  var posEl = document.getElementById('tag-open-positions');
+  var sigEl = document.getElementById('tag-signals-today');
+  var expEl = document.getElementById('tag-expiry');
+  var recEl = document.getElementById('tag-real-days');
+  var brkEl = document.getElementById('tag-signal-breakdown');
+  var updEl = document.getElementById('tag-updated');
+  if (!pnlEl && !posEl && !sigEl && !expEl && !recEl) return; // widget not on this page
+
+  var todayKey = getIST().toLocaleDateString('en-CA');
+  var optTrades = (PT_PORTFOLIO && PT_PORTFOLIO.trades) || [];
+  var stkTrades = (SPT_PORTFOLIO && SPT_PORTFOLIO.trades) || [];
+
+  // Today's realized P&L — closed trades only, both books combined.
+  var todayPnl = optTrades.concat(stkTrades)
+    .filter(function(t){ return t.status !== 'OPEN' && t.dayKey === todayKey; })
+    .reduce(function(sum,t){ return sum + (t.net||0); }, 0);
+  if (pnlEl) {
+    pnlEl.textContent = (todayPnl>=0?'+':'') + '₹' + Math.round(todayPnl).toLocaleString('en-IN');
+    pnlEl.style.color = todayPnl >= 0 ? 'var(--g)' : 'var(--r)';
+  }
+
+  // Open positions, both books.
+  var openOpt = optTrades.filter(function(t){ return t.status==='OPEN'; }).length;
+  var openStk = stkTrades.filter(function(t){ return t.status==='OPEN'; }).length;
+  if (posEl) posEl.textContent = (openOpt+openStk) + (openOpt+openStk===1?' position':' positions') + (openOpt&&openStk ? ' ('+openOpt+' opt · '+openStk+' stk)' : '');
+
+  // Signals today — every trade logged today, grouped by strategy,
+  // regardless of whether it's since closed.
+  var todaysTrades = optTrades.concat(stkTrades).filter(function(t){ return t.dayKey === todayKey; });
+  if (sigEl) sigEl.textContent = todaysTrades.length;
+  if (brkEl) {
+    if (!todaysTrades.length) {
+      brkEl.textContent = 'No signals fired yet today.';
+    } else {
+      var byStrat = {};
+      todaysTrades.forEach(function(t){
+        var label = (typeof ptStrategyLabel === 'function') ? ptStrategyLabel(t.strategy) : (t.strategy||'Manual');
+        byStrat[label] = (byStrat[label]||0) + 1;
+      });
+      brkEl.textContent = Object.keys(byStrat).map(function(k){ return k+': '+byStrat[k]; }).join('  ·  ');
+    }
+  }
+
+  // Nifty expiry countdown.
+  if (expEl && typeof getNiftyExpiry === 'function') {
+    var now = new Date(), day = now.getDay();
+    var daysToTue = (2 - day + 7) % 7;
+    if (daysToTue === 0 && now.getHours() >= 15) daysToTue = 7;
+    expEl.textContent = (daysToTue === 0 ? 'TODAY' : daysToTue + 'd') + ' · ' + getNiftyExpiry();
+    expEl.style.color = daysToTue <= 1 ? 'var(--r)' : daysToTue <= 2 ? 'var(--w)' : 'var(--txt)';
+  }
+
+  // Real option-chain history recorded (see ocRecDayCount).
+  if (recEl) {
+    var days = (typeof ocRecDayCount === 'function') ? ocRecDayCount('NIFTY') : 0;
+    recEl.textContent = days + (days===1?' day':' days');
+    recEl.style.color = days > 0 ? 'var(--g)' : 'var(--dim)';
+  }
+
+  if (updEl) updEl.textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',{hour12:false});
+}
+
 function updateCombinedPnlWidget() {
   var optEl = document.getElementById('cpnl-options');
   var stkEl = document.getElementById('cpnl-stocks');
@@ -9708,6 +9808,127 @@ var OC_STATE = {
   lotSize:  { NIFTY:65, BANKNIFTY:30,  SENSEX:20  }, // revised 31-Dec-2025 per NSE/SEBI circular
   vix: 14.5   // base VIX — will fluctuate
 };
+
+// ══════════════════════════════════════════════════════════════════
+//  OPTION CHAIN RECORDER — real historical premiums, from today onward
+//  Angel One has no historical option-price API, so the backtest engine
+//  has always used a Black-Scholes ESTIMATE for entry/exit premiums.
+//  Instead of relying on a third-party data source, this records a real
+//  snapshot of the live chain (OC_STATE) every 5-min candle, but ONLY
+//  when OC_STATE.nseSource is true — i.e. only when the chain came from
+//  NSE/Angel One, never when it's fallen back to the synthetic
+//  Black-Scholes model (which would otherwise silently contaminate
+//  "real" recorded data with fake numbers). This can only ever cover
+//  today onward — there's no way to retroactively record the past.
+// ══════════════════════════════════════════════════════════════════
+var OC_REC_LAST_CANDLE_TIME = null;
+var OC_REC_STORE_PREFIX = 'jarvis_ocrec_';
+var OC_REC_RETENTION_DAYS = 180; // bound localStorage growth
+
+function ocRecTimeKey(d) {
+  return d.toLocaleTimeString('en-IN', { hour12:false, timeZone:'Asia/Kolkata' }).slice(0,5); // "HH:MM"
+}
+function ocRecDateKey(d) {
+  return d.toLocaleDateString('en-CA', { timeZone:'Asia/Kolkata' }); // "YYYY-MM-DD"
+}
+
+// Called once per new 5-min candle (see hook in aseEvaluate). Records the
+// CURRENT live chain — not the candle's own historical price, since we
+// have no way to get that; this is why recording only works "from now
+// on", never backfilled.
+function ocRecordSnapshot() {
+  if (!OC_STATE.nseSource) return; // never record synthetic/BS-estimated prices as if real
+  if (!OC_STATE.strikes || !OC_STATE.strikes.length || !OC_STATE.spot) return;
+
+  var now = new Date();
+  var dateKey = ocRecDateKey(now), timeKey = ocRecTimeKey(now);
+  var storeKey = OC_REC_STORE_PREFIX + OC_STATE.index + '_' + dateKey;
+
+  var day = null;
+  try { day = JSON.parse(localStorage.getItem(storeKey) || 'null'); } catch(e) { day = null; }
+  if (!day || typeof day !== 'object') day = { index: OC_STATE.index, date: dateKey, snapshots: {} };
+
+  var strikesObj = {};
+  OC_STATE.strikes.forEach(function(K){
+    var d = OC_STATE.data[K];
+    if (!d) return;
+    var ce = d.ce && d.ce.ltp > 0 ? d.ce.ltp : null;
+    var pe = d.pe && d.pe.ltp > 0 ? d.pe.ltp : null;
+    if (ce == null && pe == null) return;
+    strikesObj[K] = { ce: ce, pe: pe };
+  });
+  if (!Object.keys(strikesObj).length) return;
+
+  day.snapshots[timeKey] = { spot: OC_STATE.spot, strikes: strikesObj };
+  try {
+    localStorage.setItem(storeKey, JSON.stringify(day));
+  } catch(e) {
+    console.warn('[OCRecorder] storage write failed (likely quota) — pruning old days and retrying once', e);
+    try { ocRecPruneOld(); localStorage.setItem(storeKey, JSON.stringify(day)); } catch(e2) { console.warn('[OCRecorder] retry failed, dropping this snapshot', e2); }
+  }
+}
+
+// Deletes recorded days older than OC_REC_RETENTION_DAYS, run once at
+// startup and as a fallback when a write hits quota.
+function ocRecPruneOld() {
+  var cutoff = Date.now() - OC_REC_RETENTION_DAYS*24*60*60*1000;
+  try {
+    Object.keys(localStorage).forEach(function(k){
+      if (k.indexOf(OC_REC_STORE_PREFIX) !== 0) return;
+      var m = k.match(/_(\d{4}-\d{2}-\d{2})$/);
+      if (!m) return;
+      var t = new Date(m[1] + 'T00:00:00+05:30').getTime();
+      if (t < cutoff) localStorage.removeItem(k);
+    });
+  } catch(e) { console.warn('[OCRecorder] prune failed', e); }
+}
+
+// Looks up a real recorded premium for a given index/date/time/strike/type.
+// Tries the exact 5-min slot first, then searches outward up to ±10min in
+// case a heartbeat cycle was missed (tab backgrounded, brief disconnect,
+// etc.) — returns null (never fabricates) if nothing close enough exists.
+function ocGetRecordedPremium(index, dateKey, timeKey, strike, type) {
+  var storeKey = OC_REC_STORE_PREFIX + index + '_' + dateKey;
+  var day = null;
+  try { day = JSON.parse(localStorage.getItem(storeKey) || 'null'); } catch(e) { return null; }
+  if (!day || !day.snapshots) return null;
+
+  function tryKey(tk) {
+    var snap = day.snapshots[tk];
+    if (!snap || !snap.strikes || !snap.strikes[strike]) return null;
+    var v = snap.strikes[strike][type.toLowerCase()];
+    return (v != null && v > 0) ? v : null;
+  }
+
+  var direct = tryKey(timeKey);
+  if (direct != null) return direct;
+
+  // Search outward in 5-min steps up to ±10min
+  var parts = timeKey.split(':'); var baseMin = parseInt(parts[0])*60 + parseInt(parts[1]);
+  for (var d = 5; d <= 10; d += 5) {
+    for (var sign = -1; sign <= 1; sign += 2) {
+      var m = baseMin + sign*d;
+      if (m < 0 || m >= 24*60) continue;
+      var hh = String(Math.floor(m/60)).padStart(2,'0'), mm = String(m%60).padStart(2,'0');
+      var v = tryKey(hh+':'+mm);
+      if (v != null) return v;
+    }
+  }
+  return null;
+}
+
+// How many real snapshot-days are currently recorded for an index —
+// surfaced in the UI so the disclaimer can say something concrete
+// ("X real trading days recorded") instead of a vague claim.
+function ocRecDayCount(index) {
+  var n = 0;
+  try {
+    Object.keys(localStorage).forEach(function(k){
+      if (k.indexOf(OC_REC_STORE_PREFIX + index + '_') === 0) n++;
+    });
+  } catch(e) {}
+  return n;
+}
 
 // ── Black-Scholes engine ──
 function bsNormCDF(x) {
@@ -15477,6 +15698,17 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
 // this strategy needs whole precomputed series (session VWAP, aligned
 // 15-min-timeframe EMA50) rather than a stateless per-bar check — see
 // the block comment above npComputeSignal for the full strategy design.
+// Prefers a real recorded chain premium (see ocGetRecordedPremium) over the
+// Black-Scholes estimate — used by both Nifty Pro backtests below. Only
+// ever finds real data for candles from whenever the recorder started
+// running onward; anything earlier silently falls back to the estimate,
+// same as before.
+function btLookupOrEstimatePremium(dateKey, timeKey, strike, type, spot, dte) {
+  var real = (typeof ocGetRecordedPremium === 'function') ? ocGetRecordedPremium('NIFTY', dateKey, timeKey, strike, type) : null;
+  if (real != null) return { price: real, real: true };
+  return { price: btOptionPrice(spot, strike, dte, type.toLowerCase()), real: false };
+}
+
 function btRunNiftyProV15(data, signalType, capital, posPct) {
   var closes = data.map(function(d){ return d.close; });
   // Both date string formats this app produces end in a trailing
@@ -15494,7 +15726,7 @@ function btRunNiftyProV15(data, signalType, capital, posPct) {
 
   var trades = [];
   var inTrade = false;
-  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0;
+  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0, entryIsReal = false;
   var lotQty = 65, lotsHeld = 1;
   var tradedOnDay = {};
   var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
@@ -15512,7 +15744,9 @@ function btRunNiftyProV15(data, signalType, capital, posPct) {
       inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
       optType = sig.type;
       strike = Math.round(entry/50)*50;
-      entryPremium = btOptionPrice(entry, strike, BT_DTE_DAYS, optType.toLowerCase());
+      var entryLookup = btLookupOrEstimatePremium(dk, timeStrings[i], strike, optType, entry, BT_DTE_DAYS);
+      entryPremium = entryLookup.price;
+      entryIsReal = entryLookup.real;
       lotsHeld = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
       // Convert the script's index-point SL/target into the equivalent
       // premium % move, same convention as the other option strategies.
@@ -15522,7 +15756,8 @@ function btRunNiftyProV15(data, signalType, capital, posPct) {
       tradedOnDay[dk] = true;
     } else {
       var daysElapsed = (i - entryIdx) * (5/60/24);
-      var curPremium = btOptionPrice(closes[i], strike, BT_DTE_DAYS - daysElapsed, optType.toLowerCase());
+      var exitLookup = btLookupOrEstimatePremium(dayKeys[i], timeStrings[i], strike, optType, closes[i], BT_DTE_DAYS - daysElapsed);
+      var curPremium = exitLookup.price;
       var pnlPct = (curPremium - entryPremium) / entryPremium;
       var exitReason = '';
       if (pnlPct >= target) exitReason = 'TARGET HIT';
@@ -15537,7 +15772,8 @@ function btRunNiftyProV15(data, signalType, capital, posPct) {
           entry: entryPremium, exit: curPremium,
           indexEntry: entry, indexExit: closes[i],
           posSize: entryPremium*lotQty*lotsHeld, gross: gross, net: net,
-          pnlPct: (pnlPct*100).toFixed(2), result: exitReason
+          pnlPct: (pnlPct*100).toFixed(2), result: exitReason,
+          dataSource: (entryIsReal && exitLookup.real) ? 'REAL' : (entryIsReal || exitLookup.real) ? 'PARTIAL' : 'EST'
         });
         inTrade = false;
       }
@@ -15562,7 +15798,7 @@ function btRunNiftyProV2(data, signalType, capital, posPct) {
 
   var trades = [];
   var inTrade = false;
-  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0;
+  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0, entryIsReal = false;
   var lotQty = 65, lotsHeld = 1;
   var tradedOnDay = {};
   var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
@@ -15580,7 +15816,9 @@ function btRunNiftyProV2(data, signalType, capital, posPct) {
       inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
       optType = sig.type;
       strike = Math.round(entry/50)*50;
-      entryPremium = btOptionPrice(entry, strike, BT_DTE_DAYS, optType.toLowerCase());
+      var entryLookup = btLookupOrEstimatePremium(dk, timeStrings[i], strike, optType, entry, BT_DTE_DAYS);
+      entryPremium = entryLookup.price;
+      entryIsReal = entryLookup.real;
       lotsHeld = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
       // Same index-risk → premium-% conversion as V1.5, but sig.risk here
       // comes from ATR instead of a 5-bar Donchian window.
@@ -15590,7 +15828,8 @@ function btRunNiftyProV2(data, signalType, capital, posPct) {
       tradedOnDay[dk] = true;
     } else {
       var daysElapsed = (i - entryIdx) * (5/60/24);
-      var curPremium = btOptionPrice(closes[i], strike, BT_DTE_DAYS - daysElapsed, optType.toLowerCase());
+      var exitLookup = btLookupOrEstimatePremium(dayKeys[i], timeStrings[i], strike, optType, closes[i], BT_DTE_DAYS - daysElapsed);
+      var curPremium = exitLookup.price;
       var pnlPct = (curPremium - entryPremium) / entryPremium;
       var exitReason = '';
       if (pnlPct >= target) exitReason = 'TARGET HIT';
@@ -15605,7 +15844,8 @@ function btRunNiftyProV2(data, signalType, capital, posPct) {
           entry: entryPremium, exit: curPremium,
           indexEntry: entry, indexExit: closes[i],
           posSize: entryPremium*lotQty*lotsHeld, gross: gross, net: net,
-          pnlPct: (pnlPct*100).toFixed(2), result: exitReason
+          pnlPct: (pnlPct*100).toFixed(2), result: exitReason,
+          dataSource: (entryIsReal && exitLookup.real) ? 'REAL' : (entryIsReal || exitLookup.real) ? 'PARTIAL' : 'EST'
         });
         inTrade = false;
       }
@@ -15884,7 +16124,10 @@ function btRenderTradeLog(trades) {
   if (discEl) {
     if (hasOptions) {
       discEl.style.display = 'block';
-      discEl.innerHTML = '⚠ ENTRY/EXIT premiums below are Black-Scholes CALCULATED estimates (fixed ~14% IV, ~3 days to expiry assumed) — Angel One has no historical option-price API, so these are not actual traded prices. This is why they won\'t match the real live premiums shown in Paper Trading, which reads the live option chain. Index level shown alongside each premium for reference.';
+      var recordedDays = (typeof ocRecDayCount === 'function') ? ocRecDayCount('NIFTY') : 0;
+      discEl.innerHTML = recordedDays > 0
+        ? '📼 Entry/exit premiums use REAL recorded chain data where available (' + recordedDays + ' trading day(s) recorded so far, tagged <b>REAL</b> below) — Angel One has no historical option-price API, so trades before recording started still fall back to a Black-Scholes ESTIMATE (fixed ~14% IV, ~3 days to expiry), tagged <b>EST</b>. Index level shown alongside each premium for reference.'
+        : '⚠ ENTRY/EXIT premiums below are Black-Scholes CALCULATED estimates (fixed ~14% IV, ~3 days to expiry assumed) — Angel One has no historical option-price API, so these are not actual traded prices. The app is now recording real chain snapshots from today onward (see Auto Signal Engine log); once a few days accumulate, backtests covering that period will use real prices instead. Index level shown alongside each premium for reference.';
     } else {
       discEl.style.display = 'none';
     }
@@ -15899,7 +16142,12 @@ function btRenderTradeLog(trades) {
     var sideBadge = t.optType
       ? '<span style="background:'+(t.optType==='CE'?'rgba(0,255,136,.1)':'rgba(255,61,90,.1)')+';border:1px solid '+(t.optType==='CE'?'rgba(0,255,136,.25)':'rgba(255,61,90,.25)')+';color:'+(t.optType==='CE'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY '+t.optType+' '+t.strike+'</span><div style="font-size:8px;color:var(--dim);margin-top:2px">'+(t.lots||1)+' lot'+((t.lots||1)>1?'s':'')+' × '+(t.lotSize||65)+'</div>'
       : '<span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);color:var(--g);font-size:8px;padding:2px 6px;border-radius:3px;font-family:Share Tech Mono">BUY</span>';
-    var entryCell = t.optType ? '₹'+t.entry.toFixed(2)+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexEntry).toLocaleString('en-IN')+'</div>' : '₹'+t.entry.toFixed(2);
+    var srcBadge = t.dataSource ? (
+      t.dataSource === 'REAL' ? '<span style="background:rgba(0,255,136,.12);color:var(--g);font-size:7px;padding:1px 4px;border-radius:2px;font-family:Share Tech Mono;margin-left:4px" title="Both entry and exit premiums are real recorded chain prices">REAL</span>'
+      : t.dataSource === 'PARTIAL' ? '<span style="background:rgba(255,204,0,.12);color:var(--w);font-size:7px;padding:1px 4px;border-radius:2px;font-family:Share Tech Mono;margin-left:4px" title="One of entry/exit is real, the other is a BS estimate">PARTIAL</span>'
+      : '<span style="background:rgba(255,255,255,.06);color:var(--dim);font-size:7px;padding:1px 4px;border-radius:2px;font-family:Share Tech Mono;margin-left:4px" title="Black-Scholes estimate — no real recorded data for this candle yet">EST</span>'
+    ) : '';
+    var entryCell = t.optType ? '₹'+t.entry.toFixed(2)+srcBadge+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexEntry).toLocaleString('en-IN')+'</div>' : '₹'+t.entry.toFixed(2);
     var exitCell  = t.optType ? '₹'+t.exit.toFixed(2)+'<div style="font-size:8px;color:var(--dim)">idx '+Math.round(t.indexExit).toLocaleString('en-IN')+'</div>' : '₹'+t.exit.toFixed(2);
     return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
       +'<td style="padding:7px 10px;color:var(--dim)">'+t.num+'</td>'
@@ -15926,8 +16174,14 @@ function btRenderVerdict(capital, trades, ticker, period, strategy, usedRealData
   var ratingColor = winRate>=65&&parseFloat(roiPct)>10 ? 'var(--g)' : winRate>=50&&parseFloat(roiPct)>0 ? 'var(--w)' : 'var(--r)';
   var msg = winRate>=65 ? 'This strategy has demonstrated strong historical performance. The signal quality is high with controlled drawdowns. Consider using this strategy with proper position sizing.' : winRate>=50 ? 'This strategy shows moderate performance. While profitable overall, the win rate leaves room for improvement. Focus on higher-quality setups and tighter stop losses.' : 'This strategy underperformed in this period. Consider optimising the entry criteria, using tighter position sizes, or switching to a different timeframe for better results.';
 
+  var realTradeCount = trades.filter(function(t){ return t.dataSource === 'REAL'; }).length;
+  var optionTradeCount = trades.filter(function(t){ return t.optType; }).length;
   var dataDisclaimer = usedRealData
-    ? '✅ This run used REAL Angel One 5-min historical candles — not synthetic data. Option premiums are still Black-Scholes CALCULATED (fixed IV assumption), since Angel One has no historical option-price API. Past performance does not guarantee future results.'
+    ? (optionTradeCount > 0
+        ? (realTradeCount > 0
+            ? '✅ This run used REAL Angel One 5-min historical candles. ' + realTradeCount + ' of ' + optionTradeCount + ' option trade(s) also used REAL recorded chain premiums; the rest fall back to a Black-Scholes ESTIMATE since Angel One has no historical option-price API and recording only covers today onward. Past performance does not guarantee future results.'
+            : '✅ This run used REAL Angel One 5-min historical candles — not synthetic data. Option premiums are still Black-Scholes CALCULATED (fixed IV assumption) for this period, since Angel One has no historical option-price API and no real chain data has been recorded for these dates yet. Past performance does not guarantee future results.')
+        : '✅ This run used REAL Angel One 5-min historical candles — not synthetic data. Past performance does not guarantee future results.')
     : '⚠ This run used SIMULATED/synthetic price data (no real Angel One candles), since either the strategy doesn\'t support real data yet, or no broker connection was available at run time. Treat results as a logic sanity-check only, not a real historical performance test.';
 
   el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(160,100,255,.06),rgba(0,212,255,.03));border:1px solid rgba(160,100,255,.25);border-radius:12px;padding:14px 18px">'
@@ -16235,6 +16489,7 @@ function ptRefreshUI() {
   window.PT_LAST_TOTAL_PNL = totalPnl;
   window.PT_LAST_PORTFOLIO_VAL = portfolioVal;
   try { updateCombinedPnlWidget(); } catch(e) {}
+  try { updateTodayGlance(); } catch(e) {}
   var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
   var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
   var vsNifty = (parseFloat(retPct) - parseFloat(niftyRet)).toFixed(2);
@@ -16344,7 +16599,7 @@ function ptRefreshUI() {
   var hbody = document.getElementById('pt-history-body');
   if (hbody) {
     if (!filteredClosed.length) {
-      hbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
+      hbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
     } else {
       hbody.innerHTML = filteredClosed.slice().reverse().map(function(t){
         var pColor = (t.net||0)>=0?'var(--g)':'var(--r)';
@@ -16361,6 +16616,7 @@ function ptRefreshUI() {
           +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:'+pColor+'">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net||0).toLocaleString('en-IN')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:'+pColor+'">'+(parseFloat(t.pnlPct||0)>=0?'+':'')+t.pnlPct+'%</td>'
           +'<td style="padding:7px 10px"><span style="background:'+rBg+';color:'+(t.result==='PROFIT'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 7px;border-radius:3px;font-family:Share Tech Mono">'+t.result+'</span></td>'
+          +'<td style="padding:7px 10px"><button onclick="ptDeleteTrade('+t.id+')" title="Permanently delete this trade from history" style="padding:3px 9px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:7px;cursor:pointer;letter-spacing:1px;white-space:nowrap">🗑 DELETE</button></td>'
           +'</tr>';
       }).join('');
     }
@@ -17474,6 +17730,7 @@ function sptRefreshUI() {
   window.SPT_LAST_TOTAL_PNL = totalPnl;
   window.SPT_LAST_PORTFOLIO_VAL = portfolioVal;
   try { updateCombinedPnlWidget(); } catch(e) {}
+  try { updateTodayGlance(); } catch(e) {}
 
   var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
   var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
@@ -17579,7 +17836,7 @@ function sptRefreshUI() {
   var hbody = document.getElementById('spt-history-body');
   if (hbody) {
     if (!filteredClosed.length) {
-      hbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
+      hbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
     } else {
       hbody.innerHTML = filteredClosed.slice().reverse().map(function(t){
         var pColor = (t.net||0)>=0?'var(--g)':'var(--r)';
@@ -17598,6 +17855,7 @@ function sptRefreshUI() {
           +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:'+pColor+'">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net||0).toLocaleString('en-IN')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:'+pColor+'">'+(parseFloat(t.pnlPct||0)>=0?'+':'')+t.pnlPct+'%</td>'
           +'<td style="padding:7px 10px"><span style="background:'+rBg+';color:'+(t.result==='PROFIT'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 7px;border-radius:3px;font-family:Share Tech Mono">'+t.result+'</span></td>'
+          +'<td style="padding:7px 10px"><button onclick="sptDeleteTrade('+t.id+')" title="Permanently delete this trade from history" style="padding:3px 9px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:7px;cursor:pointer;letter-spacing:1px;white-space:nowrap">🗑 DELETE</button></td>'
           +'</tr>';
       }).join('');
     }
@@ -18297,6 +18555,19 @@ function aseEvaluate() {
     // evaluation could run on stale/empty candle data every cycle, since
     // both used to kick off in parallel with no ordering.
     try { await aseRefreshChart(); } catch(e) { console.warn('[AutoSignalEngine chart]', e); }
+
+    // Record a real option-chain snapshot once per new candle (not every
+    // 30s heartbeat tick) — see ocRecordSnapshot for why this only ever
+    // covers today onward, and only records genuine NSE/Angel data.
+    try {
+      if (ASE_LAST_CANDLES && ASE_LAST_CANDLES.length) {
+        var latestCandleT = ASE_LAST_CANDLES[ASE_LAST_CANDLES.length-1].time;
+        if (latestCandleT !== OC_REC_LAST_CANDLE_TIME) {
+          OC_REC_LAST_CANDLE_TIME = latestCandleT;
+          ocRecordSnapshot();
+        }
+      }
+    } catch(e) { console.warn('[OCRecorder]', e); }
 
     // Multi-strategy: every strategy checked in the panel gets evaluated
     // independently, every cycle — each has its own readout panel and its
@@ -19128,6 +19399,12 @@ setInterval(function(){
 // earlier in this block prevented execution from reaching this line).
 setTimeout(function(){
   try { aseLog('Engine heartbeat active — full strategy check every 30s · live price line updates every 1.5s.'); } catch(e) {}
+  try {
+    ocRecPruneOld();
+    var recordedDays = ocRecDayCount('NIFTY');
+    if (recordedDays > 0) aseLog('📼 ' + recordedDays + ' day(s) of real option-chain history recorded so far — backtests from today onward will use real premiums where available.');
+    else aseLog('📼 Option-chain recorder active — building real historical premium data from today onward (needs a live NSE/Angel chain, not the BS fallback, to actually record).');
+  } catch(e) {}
 }, 2000);
 
 setTimeout(function(){ try { aseLoadState(); } catch(e) {} }, 500);
