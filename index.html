@@ -1007,6 +1007,28 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   </div>
   <div id="sp-res"></div>
   <div id="sp-debug"></div>
+
+  <!-- FULL DATA BACKUP — everything lives only in this browser's local
+       storage, so one bad localStorage.clear() (or switching browsers/
+       devices without cloud sync) loses it all. This exports every
+       portfolio, recorded option-chain snapshot, and setting as one
+       downloadable JSON file. Deliberately excludes broker
+       credentials/API keys/tokens — those should never end up in a
+       backup file that might get shared or stored somewhere less
+       secure than the browser itself. -->
+  <div class="sp-field full" style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.25);border-radius:7px;padding:12px;margin-top:14px">
+    <label style="color:var(--a)">💾 FULL DATA BACKUP</label>
+    <div style="font-family:Share Tech Mono;font-size:11px;color:var(--dim);margin-top:5px;margin-bottom:10px;line-height:1.7">
+      Everything below lives only in this browser — clearing site data, switching browsers, or a corrupted profile loses it permanently. Export a backup of both paper trading portfolios, recorded real option-chain history, Auto Signal Engine settings, and more, as one JSON file. <b style="color:var(--w)">Your Angel One API key, TOTP secret, MPIN, and login tokens are never included</b> — restoring a backup on a new device still needs those entered fresh via Setup above, same as any new install.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button onclick="jarvisExportBackup()" style="padding:9px 16px;background:rgba(0,212,255,.1);border:1px solid var(--a);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:9px;letter-spacing:1px;cursor:pointer">📦 EXPORT FULL BACKUP</button>
+      <label style="padding:9px 16px;background:rgba(160,100,255,.1);border:1px solid #a064ff;border-radius:5px;color:#a064ff;font-family:Orbitron;font-size:9px;letter-spacing:1px;cursor:pointer">
+        📤 RESTORE FROM BACKUP<input type="file" accept=".json" onchange="jarvisRestoreBackup(this.files[0])" style="display:none">
+      </label>
+      <span id="jarvis-backup-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></span>
+    </div>
+  </div>
 </div>
 
 <div class="nav">
@@ -1314,6 +1336,30 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- STRATEGY PERFORMANCE COMPARISON — ranks every strategy that has
+       closed paper trades (options + stock combined) by real performance,
+       so you can see which ones actually deserve real money. -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">🏆 STRATEGY PERFORMANCE COMPARISON</div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Ranked by total P&amp;L · closed paper trades only</span></div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">STRATEGY</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">TRADES</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">WIN RATE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">TOTAL P&amp;L</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">AVG/TRADE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">MAX DRAWDOWN</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">BEST</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">WORST</th>
+        </tr></thead>
+        <tbody id="strat-perf-body">
+          <tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No closed trades yet on either paper trading book</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -5207,6 +5253,79 @@ function updateTodayGlance() {
   }
 
   if (updEl) updEl.textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',{hour12:false});
+}
+
+// Ranks every strategy (options + stock, combined into one table) by
+// real closed-trade performance — win rate, total/avg P&L, max
+// drawdown (from that strategy's own equity curve, in trade-close
+// order), best/worst trade. This is about live paper trading results,
+// not backtest runs (backtests are per-run/transient and aren't
+// persisted anywhere to compare across strategies this way).
+function computeStrategyPerformance() {
+  var groups = {};
+  (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).forEach(function(t){
+    if (t.status === 'OPEN') return;
+    var key = 'opt:' + (t.strategy||'manual');
+    if (!groups[key]) groups[key] = { label: ptStrategyLabel(t.strategy) + ' · Options', trades: [] };
+    groups[key].trades.push(t);
+  });
+  (SPT_PORTFOLIO && SPT_PORTFOLIO.trades || []).forEach(function(t){
+    if (t.status === 'OPEN') return;
+    var key = 'stk:' + (t.strategy||'manual');
+    if (!groups[key]) groups[key] = { label: sptStrategyLabel(t.strategy) + ' · Stocks', trades: [] };
+    groups[key].trades.push(t);
+  });
+
+  var rows = Object.keys(groups).map(function(key){
+    var trades = groups[key].trades;
+    var n = trades.length;
+    var wins = trades.filter(function(t){ return t.result==='PROFIT'; }).length;
+    var totalNet = trades.reduce(function(s,t){ return s + (t.net||0); }, 0);
+    var best = trades.reduce(function(m,t){ return Math.max(m, t.net||0); }, -Infinity);
+    var worst = trades.reduce(function(m,t){ return Math.min(m, t.net||0); }, Infinity);
+    // Max drawdown from the cumulative equity curve of this strategy's
+    // trades alone, in the order they closed.
+    var cum = 0, peak = 0, maxDD = 0;
+    trades.forEach(function(t){
+      cum += (t.net||0);
+      if (cum > peak) peak = cum;
+      var dd = peak - cum;
+      if (dd > maxDD) maxDD = dd;
+    });
+    return {
+      label: groups[key].label, trades: n, wins: wins,
+      winRate: n ? (wins/n*100) : 0,
+      totalNet: totalNet, avg: n ? totalNet/n : 0,
+      best: best===-Infinity?0:best, worst: worst===Infinity?0:worst,
+      maxDD: maxDD
+    };
+  });
+  rows.sort(function(a,b){ return b.totalNet - a.totalNet; });
+  return rows;
+}
+
+function renderStrategyPerformance() {
+  var body = document.getElementById('strat-perf-body');
+  if (!body) return; // not on this page
+  var rows = computeStrategyPerformance();
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No closed trades yet on either paper trading book</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(function(r){
+    var pnlColor = r.totalNet >= 0 ? 'var(--g)' : 'var(--r)';
+    var wrColor = r.winRate >= 60 ? 'var(--g)' : r.winRate >= 40 ? 'var(--w)' : 'var(--r)';
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:#a064ff">'+r.label+'</td>'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:var(--dim)">'+r.trades+'</td>'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:'+wrColor+'">'+r.winRate.toFixed(0)+'% ('+r.wins+'/'+r.trades+')</td>'
+      + '<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:'+pnlColor+'">'+(r.totalNet>=0?'+':'')+'₹'+Math.round(r.totalNet).toLocaleString('en-IN')+'</td>'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:'+(r.avg>=0?'var(--g)':'var(--r)')+'">'+(r.avg>=0?'+':'')+'₹'+Math.round(r.avg).toLocaleString('en-IN')+'</td>'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:var(--r)">'+(r.maxDD>0?'−':'')+'₹'+Math.round(r.maxDD).toLocaleString('en-IN')+'</td>'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:var(--g)">+₹'+Math.round(r.best).toLocaleString('en-IN')+'</td>'
+      + '<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:10px;color:var(--r)">'+(r.worst<0?'−':'')+'₹'+Math.round(Math.abs(r.worst)).toLocaleString('en-IN')+'</td>'
+      + '</tr>';
+  }).join('');
 }
 
 function updateCombinedPnlWidget() {
@@ -16249,6 +16368,30 @@ function ptInit() {
     };
     ptSave();
   }
+  ptRecalculateCash(); // self-heal: recompute cash from real trade data, every load
+}
+
+// Cash should always equal startCapital − (cost of currently OPEN trades)
+// + (net P&L of CLOSED trades) — recomputing it fresh from the trades
+// array, instead of trusting incrementally-updated cash math, means any
+// past drift (e.g. the delete-trade cash bug — deleting a closed trade
+// used to only undo its buy-time debit, never its close-time credit,
+// permanently inflating cash) self-heals the moment this runs, and it
+// can never silently drift again in the future either.
+function ptRecalculateCash() {
+  if (!PT_PORTFOLIO) return 0;
+  var openCost = PT_PORTFOLIO.trades.filter(function(t){ return t.status==='OPEN'; })
+    .reduce(function(s,t){ return s + (t.cost||0); }, 0);
+  var closedNet = PT_PORTFOLIO.trades.filter(function(t){ return t.status!=='OPEN'; })
+    .reduce(function(s,t){ return s + (t.net||0); }, 0);
+  var correct = PT_PORTFOLIO.startCapital - openCost + closedNet;
+  var diff = correct - PT_PORTFOLIO.cash;
+  if (Math.abs(diff) > 0.5) { // real drift, not just float noise
+    PT_PORTFOLIO.cash = correct;
+    ptSave();
+    console.log('[PaperTrading] Cash balance self-corrected by ₹' + Math.round(diff).toLocaleString('en-IN'));
+  }
+  return diff;
 }
 
 function ptSave() {
@@ -16490,6 +16633,7 @@ function ptRefreshUI() {
   window.PT_LAST_PORTFOLIO_VAL = portfolioVal;
   try { updateCombinedPnlWidget(); } catch(e) {}
   try { updateTodayGlance(); } catch(e) {}
+  try { renderStrategyPerformance(); } catch(e) {}
   var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
   var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
   var vsNifty = (parseFloat(retPct) - parseFloat(niftyRet)).toFixed(2);
@@ -17323,6 +17467,82 @@ function ptDrawBenchmarkChart(portfolioVal, niftyRetPct) {
   drawLine2(ptCurve, '#00ff88');
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  FULL DATA BACKUP — everything lives only in this browser's local
+//  storage (no server of ours holds it), so a cleared cache, a browser
+//  switch, or a corrupted profile loses it all permanently. This
+//  exports every localStorage key EXCEPT broker/AI credentials and
+//  auth tokens into one downloadable JSON file, and can restore from
+//  one. Deliberately excludes: Angel One API key/client ID/MPIN/TOTP
+//  secret/JWT, Groq/Gemini AI keys, and Supabase auth tokens — none of
+//  those should ever end up in a file that might get shared, emailed,
+//  or stored somewhere less secure than the browser's own storage.
+// ══════════════════════════════════════════════════════════════════
+var JARVIS_BACKUP_EXCLUDE_KEYS = [
+  'ja_j','ja_m','ja_t','ja_k','ja_c','ja_f',        // Angel One: JWT, MPIN, TOTP secret, API key, client ID, feed token
+  'ja_gemini','ja_groq',                             // AI provider keys
+  'jarvis_angel_tok_cache',                          // cached Angel session token
+  'jarvis_supa_token','jarvis_supa_refresh'          // Supabase auth tokens
+];
+
+function jarvisExportBackup() {
+  var statusEl = document.getElementById('jarvis-backup-status');
+  try {
+    var data = {};
+    var skipped = 0;
+    Object.keys(localStorage).forEach(function(k){
+      if (JARVIS_BACKUP_EXCLUDE_KEYS.indexOf(k) !== -1) { skipped++; return; }
+      data[k] = localStorage.getItem(k);
+    });
+    var backup = {
+      jarvisBackupVersion: 1,
+      exportedAt: new Date().toISOString(),
+      note: 'Broker/AI credentials and auth tokens are deliberately excluded from this file. Re-enter them via Setup after restoring.',
+      data: data
+    };
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'jarvis-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    if (statusEl) { statusEl.textContent = '✅ Exported ' + Object.keys(data).length + ' keys (excluded ' + skipped + ' credential key(s)).'; statusEl.style.color = 'var(--g)'; }
+  } catch(e) {
+    console.warn('[Backup] export failed', e);
+    if (statusEl) { statusEl.textContent = '⚠ Export failed: ' + e.message; statusEl.style.color = 'var(--r)'; }
+  }
+}
+
+function jarvisRestoreBackup(file) {
+  var statusEl = document.getElementById('jarvis-backup-status');
+  if (!file) return;
+  if (!confirm('Restore from this backup? This will overwrite your current portfolios, recorded option-chain history, and settings with what\'s in the file. This cannot be undone.')) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      var backup = JSON.parse(e.target.result);
+      if (!backup || !backup.data || typeof backup.data !== 'object') throw new Error('Not a valid Jarvis backup file');
+      var restored = 0;
+      Object.keys(backup.data).forEach(function(k){
+        if (JARVIS_BACKUP_EXCLUDE_KEYS.indexOf(k) !== -1) return; // never restore credentials even if an old/tampered file somehow contains them
+        try { localStorage.setItem(k, backup.data[k]); restored++; } catch(err) {}
+      });
+      if (statusEl) { statusEl.textContent = '✅ Restored ' + restored + ' keys. Reloading...'; statusEl.style.color = 'var(--g)'; }
+      setTimeout(function(){ location.reload(); }, 1200);
+    } catch(err) {
+      console.warn('[Backup] restore failed', err);
+      if (statusEl) { statusEl.textContent = '⚠ Restore failed: ' + err.message; statusEl.style.color = 'var(--r)'; }
+    }
+  };
+  reader.onerror = function(){
+    if (statusEl) { statusEl.textContent = '⚠ Could not read that file.'; statusEl.style.color = 'var(--r)'; }
+  };
+  reader.readAsText(file);
+}
+
 function ptExportCSV() {
   if (!PT_PORTFOLIO || !PT_PORTFOLIO.trades.length) { alert('No trades to export.'); return; }
   var rows = [['Instrument','Source','Buy ₹','Exit ₹','Qty','Gross P&L','Net P&L','Return %','Status','Date']];
@@ -17453,6 +17673,24 @@ function sptInit() {
     };
     sptSave();
   }
+  sptRecalculateCash(); // self-heal — see ptRecalculateCash for why
+}
+
+// Same self-heal as ptRecalculateCash, for the stock portfolio.
+function sptRecalculateCash() {
+  if (!SPT_PORTFOLIO) return 0;
+  var openCost = SPT_PORTFOLIO.trades.filter(function(t){ return t.status==='OPEN'; })
+    .reduce(function(s,t){ return s + (t.cost||0); }, 0);
+  var closedNet = SPT_PORTFOLIO.trades.filter(function(t){ return t.status!=='OPEN'; })
+    .reduce(function(s,t){ return s + (t.net||0); }, 0);
+  var correct = SPT_PORTFOLIO.startCapital - openCost + closedNet;
+  var diff = correct - SPT_PORTFOLIO.cash;
+  if (Math.abs(diff) > 0.5) {
+    SPT_PORTFOLIO.cash = correct;
+    sptSave();
+    console.log('[StockPaperTrading] Cash balance self-corrected by ₹' + Math.round(diff).toLocaleString('en-IN'));
+  }
+  return diff;
 }
 
 function sptSave() {
@@ -17501,6 +17739,7 @@ async function sptCloudLoad() {
       if (cloud && cloud.version === 1 && (!SPT_PORTFOLIO || (cloud.trades||[]).length > (SPT_PORTFOLIO.trades||[]).length)) {
         console.log('[StockPaperTrading] Cloud copy ('+(cloud.trades||[]).length+' trades) replacing local copy on load.');
         SPT_PORTFOLIO = cloud;
+        sptRecalculateCash();
         sptSave();
         sptRefreshUI();
       }
@@ -17755,6 +17994,7 @@ function sptRefreshUI() {
   window.SPT_LAST_PORTFOLIO_VAL = portfolioVal;
   try { updateCombinedPnlWidget(); } catch(e) {}
   try { updateTodayGlance(); } catch(e) {}
+  try { renderStrategyPerformance(); } catch(e) {}
 
   var niftyNow = LD && LD.NIFTY50 && LD.NIFTY50.ltp ? LD.NIFTY50.ltp : p.niftyRef;
   var niftyRet = ((niftyNow - p.niftyRef)/p.niftyRef*100).toFixed(2);
@@ -18353,6 +18593,7 @@ async function ptCloudLoad() {
           var localCountBefore = PT_PORTFOLIO ? (PT_PORTFOLIO.trades||[]).length : 0;
           console.log('[PaperTrading] Cloud copy ('+(cloud.trades||[]).length+' trades) replacing local copy ('+localCountBefore+' trades) on load.');
           PT_PORTFOLIO = cloud;
+          ptRecalculateCash(); // self-heal the freshly-loaded cloud copy too
           ptSave();
           ptRefreshUI();
         }
