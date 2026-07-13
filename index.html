@@ -3244,7 +3244,8 @@ setTimeout(nd2SyncAll, 2000);
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="ptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
-        <button onclick="ptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT</button>
+        <button onclick="ptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
+        <button onclick="ptExportPDF()" style="padding:6px 14px;background:rgba(255,61,90,.06);border:1px solid rgba(255,107,53,.3);border-radius:5px;color:var(--o);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🧾 EXPORT PDF</button>
       </div>
     </div>
     <!-- KPIs -->
@@ -3881,7 +3882,8 @@ setTimeout(nd2SyncAll, 2000);
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="sptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
-        <button onclick="sptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT</button>
+        <button onclick="sptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
+        <button onclick="sptExportPDF()" style="padding:6px 14px;background:rgba(255,61,90,.06);border:1px solid rgba(255,107,53,.3);border-radius:5px;color:var(--o);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🧾 EXPORT PDF</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px">
@@ -17543,6 +17545,89 @@ function jarvisRestoreBackup(file) {
   reader.readAsText(file);
 }
 
+// Opens a clean, print-friendly window with the current portfolio KPIs +
+// the SAME filtered trade history currently shown on screen (respects
+// whatever date/strategy filter is selected), then triggers the
+// browser's native print dialog — user picks "Save as PDF" there.
+// Deliberately doesn't pull in a PDF-generation library from a CDN:
+// this app has zero external script dependencies today, and the
+// browser's own print-to-PDF does the job without adding one.
+function ptExportPDF() {
+  if (!PT_PORTFOLIO || !PT_PORTFOLIO.trades.length) { alert('No trades to export.'); return; }
+
+  var dateFilterEl = document.getElementById('pt-hist-filter-date');
+  var stratFilterEl = document.getElementById('pt-hist-filter-strategy');
+  var closedTrades = PT_PORTFOLIO.trades.filter(function(t){ return t.status !== 'OPEN'; });
+  var filtered = closedTrades.filter(function(t){
+    if (dateFilterEl && dateFilterEl.value && (t.dayKey||t.date) !== dateFilterEl.value) return false;
+    if (stratFilterEl && stratFilterEl.value && (t.strategy||'manual') !== stratFilterEl.value) return false;
+    return true;
+  });
+  if (!filtered.length) { alert('No closed trades match the current filter.'); return; }
+
+  function g(id) { var el = document.getElementById(id); return el ? el.textContent : '—'; }
+
+  var rowsHtml = filtered.slice().reverse().map(function(t){
+    var pnlColor = (t.net||0) >= 0 ? '#0a8a4f' : '#c0304a';
+    return '<tr>'
+      + '<td>'+t.instr+'</td>'
+      + '<td>'+(typeof ptStrategyLabel==='function'?ptStrategyLabel(t.strategy):(t.strategy||'Manual'))+(t.autoExitReason?' · '+t.autoExitReason:'')+'</td>'
+      + '<td>'+(t.date||'—')+'</td>'
+      + '<td>'+(t.time||'—')+'</td>'
+      + '<td>'+(t.exitTime||'—')+'</td>'
+      + '<td>₹'+t.buy.toFixed(2)+'</td>'
+      + '<td>₹'+(t.exit||0).toFixed(2)+'</td>'
+      + '<td>'+t.qty+'</td>'
+      + '<td style="color:'+pnlColor+';font-weight:700">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net||0).toLocaleString('en-IN')+'</td>'
+      + '<td style="color:'+pnlColor+'">'+(parseFloat(t.pnlPct||0)>=0?'+':'')+t.pnlPct+'%</td>'
+      + '<td>'+t.result+'</td>'
+      + '</tr>';
+  }).join('');
+
+  var filterNote = [];
+  if (dateFilterEl && dateFilterEl.value) filterNote.push('Date: ' + dateFilterEl.value);
+  if (stratFilterEl && stratFilterEl.value) filterNote.push('Strategy: ' + stratFilterEl.options[stratFilterEl.selectedIndex].text);
+  filterNote = filterNote.length ? filterNote.join(' · ') : 'All dates, all strategies';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>JARVIS Paper Trading — Trade History</title><style>'
+    + 'body{font-family:Arial,sans-serif;color:#111;padding:24px;margin:0}'
+    + 'h1{font-size:18px;margin:0 0 2px}'
+    + '.sub{color:#666;font-size:11px;margin-bottom:16px}'
+    + '.kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}'
+    + '.kpi{border:1px solid #ddd;border-radius:6px;padding:8px 14px;min-width:110px}'
+    + '.kpi .l{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px}'
+    + '.kpi .v{font-size:15px;font-weight:700;margin-top:2px}'
+    + 'table{width:100%;border-collapse:collapse;font-size:10px}'
+    + 'th{background:#f0f0f0;text-align:left;padding:6px 8px;border-bottom:2px solid #ccc;font-size:9px;text-transform:uppercase}'
+    + 'td{padding:5px 8px;border-bottom:1px solid #eee}'
+    + '.foot{margin-top:16px;font-size:9px;color:#999}'
+    + '@media print{body{padding:8px}}'
+    + '</style></head><body>'
+    + '<h1>JARVIS — Paper Trading Trade History</h1>'
+    + '<div class="sub">Generated ' + new Date().toLocaleString('en-IN') + ' · Filter: ' + filterNote + ' · ' + filtered.length + ' trade(s)</div>'
+    + '<div class="kpis">'
+    + '<div class="kpi"><div class="l">Portfolio Value</div><div class="v">'+g('pt-value')+'</div></div>'
+    + '<div class="kpi"><div class="l">Total P&amp;L</div><div class="v">'+g('pt-pnl')+'</div></div>'
+    + '<div class="kpi"><div class="l">Return %</div><div class="v">'+g('pt-ret')+'</div></div>'
+    + '<div class="kpi"><div class="l">vs Nifty</div><div class="v">'+g('pt-vs-nifty')+'</div></div>'
+    + '<div class="kpi"><div class="l">Win Rate</div><div class="v">'+g('pt-winrate')+'</div></div>'
+    + '<div class="kpi"><div class="l">Cash Balance</div><div class="v">'+g('pt-cash')+'</div></div>'
+    + '</div>'
+    + '<table><thead><tr><th>Instrument</th><th>Strategy</th><th>Date</th><th>Buy Time</th><th>Exit Time</th><th>Buy ₹</th><th>Exit ₹</th><th>Qty</th><th>Net P&amp;L ₹</th><th>Return %</th><th>Result</th></tr></thead>'
+    + '<tbody>' + rowsHtml + '</tbody></table>'
+    + '<div class="foot">Paper trading — practice only, no real money. Generated by JARVIS.</div>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  if (!win) { alert('Please allow pop-ups to export as PDF.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.onload = function(){ win.focus(); win.print(); };
+  // Some browsers don't reliably fire onload for document.write'd content — fall back to a short timeout too.
+  setTimeout(function(){ try { win.focus(); win.print(); } catch(e){} }, 400);
+}
+
 function ptExportCSV() {
   if (!PT_PORTFOLIO || !PT_PORTFOLIO.trades.length) { alert('No trades to export.'); return; }
   var rows = [['Instrument','Source','Buy ₹','Exit ₹','Qty','Gross P&L','Net P&L','Return %','Status','Date']];
@@ -18124,6 +18209,82 @@ function sptRefreshUI() {
       }).join('');
     }
   }
+}
+
+// Same as ptExportPDF, for the stock paper trading book.
+function sptExportPDF() {
+  if (!SPT_PORTFOLIO || !SPT_PORTFOLIO.trades.length) { alert('No trades to export.'); return; }
+
+  var dateFilterEl = document.getElementById('spt-hist-filter-date');
+  var stratFilterEl = document.getElementById('spt-hist-filter-strategy');
+  var closedTrades = SPT_PORTFOLIO.trades.filter(function(t){ return t.status !== 'OPEN'; });
+  var filtered = closedTrades.filter(function(t){
+    if (dateFilterEl && dateFilterEl.value && (t.dayKey||t.date) !== dateFilterEl.value) return false;
+    if (stratFilterEl && stratFilterEl.value && (t.strategy||'manual') !== stratFilterEl.value) return false;
+    return true;
+  });
+  if (!filtered.length) { alert('No closed trades match the current filter.'); return; }
+
+  function g(id) { var el = document.getElementById(id); return el ? el.textContent : '—'; }
+
+  var rowsHtml = filtered.slice().reverse().map(function(t){
+    var pnlColor = (t.net||0) >= 0 ? '#0a8a4f' : '#c0304a';
+    return '<tr>'
+      + '<td>'+t.instr+'</td>'
+      + '<td>'+(typeof sptStrategyLabel==='function'?sptStrategyLabel(t.strategy):(t.strategy||'Manual'))+'</td>'
+      + '<td>'+(t.date||'—')+'</td>'
+      + '<td>'+(t.time||'—')+'</td>'
+      + '<td>'+(t.exitTime||'—')+'</td>'
+      + '<td>₹'+t.buy.toFixed(2)+'</td>'
+      + '<td>₹'+(t.exit||0).toFixed(2)+'</td>'
+      + '<td>'+t.qty+'</td>'
+      + '<td style="color:'+pnlColor+';font-weight:700">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net||0).toLocaleString('en-IN')+'</td>'
+      + '<td style="color:'+pnlColor+'">'+(parseFloat(t.pnlPct||0)>=0?'+':'')+t.pnlPct+'%</td>'
+      + '<td>'+t.result+'</td>'
+      + '</tr>';
+  }).join('');
+
+  var filterNote = [];
+  if (dateFilterEl && dateFilterEl.value) filterNote.push('Date: ' + dateFilterEl.value);
+  if (stratFilterEl && stratFilterEl.value) filterNote.push('Strategy: ' + stratFilterEl.options[stratFilterEl.selectedIndex].text);
+  filterNote = filterNote.length ? filterNote.join(' · ') : 'All dates, all strategies';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>JARVIS Stock Paper Trading — Trade History</title><style>'
+    + 'body{font-family:Arial,sans-serif;color:#111;padding:24px;margin:0}'
+    + 'h1{font-size:18px;margin:0 0 2px}'
+    + '.sub{color:#666;font-size:11px;margin-bottom:16px}'
+    + '.kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}'
+    + '.kpi{border:1px solid #ddd;border-radius:6px;padding:8px 14px;min-width:110px}'
+    + '.kpi .l{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px}'
+    + '.kpi .v{font-size:15px;font-weight:700;margin-top:2px}'
+    + 'table{width:100%;border-collapse:collapse;font-size:10px}'
+    + 'th{background:#f0f0f0;text-align:left;padding:6px 8px;border-bottom:2px solid #ccc;font-size:9px;text-transform:uppercase}'
+    + 'td{padding:5px 8px;border-bottom:1px solid #eee}'
+    + '.foot{margin-top:16px;font-size:9px;color:#999}'
+    + '@media print{body{padding:8px}}'
+    + '</style></head><body>'
+    + '<h1>JARVIS — Stock Paper Trading Trade History</h1>'
+    + '<div class="sub">Generated ' + new Date().toLocaleString('en-IN') + ' · Filter: ' + filterNote + ' · ' + filtered.length + ' trade(s)</div>'
+    + '<div class="kpis">'
+    + '<div class="kpi"><div class="l">Portfolio Value</div><div class="v">'+g('spt-value')+'</div></div>'
+    + '<div class="kpi"><div class="l">Total P&amp;L</div><div class="v">'+g('spt-pnl')+'</div></div>'
+    + '<div class="kpi"><div class="l">Return %</div><div class="v">'+g('spt-ret')+'</div></div>'
+    + '<div class="kpi"><div class="l">vs Nifty</div><div class="v">'+g('spt-vs-nifty')+'</div></div>'
+    + '<div class="kpi"><div class="l">Win Rate</div><div class="v">'+g('spt-winrate')+'</div></div>'
+    + '<div class="kpi"><div class="l">Cash Balance</div><div class="v">'+g('spt-cash')+'</div></div>'
+    + '</div>'
+    + '<table><thead><tr><th>Instrument</th><th>Strategy</th><th>Date</th><th>Buy Time</th><th>Exit Time</th><th>Buy ₹</th><th>Exit ₹</th><th>Qty</th><th>Net P&amp;L ₹</th><th>Return %</th><th>Result</th></tr></thead>'
+    + '<tbody>' + rowsHtml + '</tbody></table>'
+    + '<div class="foot">Paper trading — practice only, no real money. Generated by JARVIS.</div>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  if (!win) { alert('Please allow pop-ups to export as PDF.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.onload = function(){ win.focus(); win.print(); };
+  setTimeout(function(){ try { win.focus(); win.print(); } catch(e){} }, 400);
 }
 
 function sptExportCSV() {
