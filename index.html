@@ -4912,9 +4912,9 @@ async function fetchSensex() {
   var y2Url = 'https://query2.finance.yahoo.com/v8/finance/chart/%5EBSESN?range=1d&interval=5m';
 
   var proxies = [
-    'https://corsproxy.io/?' + encodeURIComponent(yUrl),
+    'https://corsproxy.io/?url=' + encodeURIComponent(yUrl),
     'https://api.allorigins.win/raw?url=' + encodeURIComponent(yUrl),
-    'https://corsproxy.io/?' + encodeURIComponent(y2Url),
+    'https://corsproxy.io/?url=' + encodeURIComponent(y2Url),
     'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(yUrl)
   ];
 
@@ -5172,8 +5172,8 @@ async function mpFetchFiiDii() {
     } catch(e) {}
   }
   if (!data) { try { data = await tryParse(await safeFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), {}, 7000)); } catch(e) {} }
-  if (!data) { try { data = await tryParse(await safeFetch('https://corsproxy.io/?' + encodeURIComponent(url), { headers:{'x-requested-with':'XMLHttpRequest'} }, 7000)); } catch(e) {} }
-  if (!data) { try { data = await tryParse(await safeFetch('https://thingproxy.freeboard.io/fetch/' + url, {}, 7000)); } catch(e) {} }
+  if (!data) { try { data = await tryParse(await safeFetch('https://corsproxy.io/?url=' + encodeURIComponent(url), { headers:{'x-requested-with':'XMLHttpRequest'} }, 7000)); } catch(e) {} }
+  if (!data) { try { data = await tryParse(await safeFetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), {}, 7000)); } catch(e) {} }
 
   if (data && data.length) {
     var fiiRow = data.find(function(r){ return /FII|FPI/i.test(r.category||''); });
@@ -8559,8 +8559,8 @@ async function mcNewsFetchWithTimeout(url, ms) {
 async function mcNewsFetchRSS(url) {
   var proxies = [
     'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-    'https://corsproxy.io/?' + encodeURIComponent(url),
-    'https://thingproxy.freeboard.io/fetch/' + url
+    'https://corsproxy.io/?url=' + encodeURIComponent(url),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url)
   ];
   for (var i = 0; i < proxies.length; i++) {
     try {
@@ -10216,15 +10216,15 @@ async function fetchNSEChain(symbol) {
 
   // ── Strategy 3: corsproxy.io ──
   try {
-    var r3 = await safeFetch('https://corsproxy.io/?' + encodeURIComponent(nseUrl),
+    var r3 = await safeFetch('https://corsproxy.io/?url=' + encodeURIComponent(nseUrl),
       { headers:{'x-requested-with':'XMLHttpRequest'} }, 7000);
     var d3 = await tryParse(r3);
     if (d3) { _nseChainCache[symbol]={data:d3,ts:now}; _nseConnected=true; return d3; }
   } catch(e) {}
 
-  // ── Strategy 4: thingproxy.freeboard.io ──
+  // ── Strategy 4: api.codetabs.com (thingproxy.freeboard.io retired — DNS no longer resolves) ──
   try {
-    var r4 = await safeFetch('https://thingproxy.freeboard.io/fetch/' + nseUrl, {}, 7000);
+    var r4 = await safeFetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(nseUrl), {}, 7000);
     var d4 = await tryParse(r4);
     if (d4) { _nseChainCache[symbol]={data:d4,ts:now}; _nseConnected=true; return d4; }
   } catch(e) {}
@@ -19555,13 +19555,21 @@ async function aseEvaluateNiftyProV15() {
   }
 
   var latestCandleTime = candles[candles.length - 1].time;
+
+  // Checked BEFORE the no-new-candle early return below, on purpose —
+  // previously this ran after it, so once a candle had already been
+  // evaluated, every subsequent 30s tick within that same 5-min window
+  // hit the early return and never got here at all. That meant right
+  // after a trade fired, this badge stayed stuck on its pre-trade "NO"
+  // value for up to ~5 minutes, until the next candle boundary finally
+  // triggered a fresh update — not actually wrong data, just badly stale.
+  var tradedToday = aseNpTradedToday();
+  ptSet2('ase-np-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
+
   if (ASE_NP_LAST_CANDLE_TIME === latestCandleTime) {
     ptSet2('ase-np-verdict', 'NO NEW CANDLE', 'var(--dim)');
     return;
   }
-
-  var tradedToday = aseNpTradedToday();
-  ptSet2('ase-np-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
 
   var dayKeys = candles.map(function(c){ return String(c.time).slice(0,10); });
   var timeStrings = candles.map(function(c){ return String(c.time).slice(11,16); });
@@ -19766,13 +19774,16 @@ async function aseEvaluateNiftyProV2() {
   }
 
   var latestCandleTime = candles[candles.length - 1].time;
+
+  // Same fix as V1.5 above — checked before the early return so it
+  // refreshes every 30s tick, not just once per 5-min candle.
+  var tradedToday = aseNp2TradedToday();
+  ptSet2('ase-np2-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
+
   if (ASE_NP2_LAST_CANDLE_TIME === latestCandleTime) {
     ptSet2('ase-np2-verdict', 'NO NEW CANDLE', 'var(--dim)');
     return;
   }
-
-  var tradedToday = aseNp2TradedToday();
-  ptSet2('ase-np2-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
 
   var dayKeys = candles.map(function(c){ return String(c.time).slice(0,10); });
   var timeStrings = candles.map(function(c){ return String(c.time).slice(11,16); });
