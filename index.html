@@ -1318,33 +1318,6 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
         </div>
       </div>
 
-      <!-- QUICK MARKET STATS -->
-      <div class="panel" style="margin-bottom:0">
-        <div class="ph"><div class="pt">⚡ MARKET PULSE</div></div>
-        <div style="padding:10px;display:flex;flex-direction:column;gap:5px" id="marketPulse">
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">Advances</span>
-            <span style="color:var(--g);font-family:Share Tech Mono;font-weight:700" id="mpAdv">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">Declines</span>
-            <span style="color:var(--r);font-family:Share Tech Mono;font-weight:700" id="mpDec">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">52W Highs</span>
-            <span style="color:var(--g);font-family:Share Tech Mono;font-weight:700" id="mp52H">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">52W Lows</span>
-            <span style="color:var(--r);font-family:Share Tech Mono;font-weight:700" id="mp52L">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">FII/DII Flow</span>
-            <span style="font-family:Share Tech Mono;font-weight:700" id="mpFII">—</span>
-          </div>
-        </div>
-      </div>
-
       <!-- COMBINED P&L — options + stock paper trading, one glance -->
       <div class="panel" style="margin-bottom:0">
         <div class="ph"><div class="pt">💰 COMBINED P&amp;L (PAPER)</div></div>
@@ -3318,7 +3291,10 @@ setTimeout(nd2SyncAll, 2000);
             <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Auto-paper-trades every qualifying signal</div>
           </div>
         </div>
-        <div id="ase-last-check" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);text-align:right">Not running</div>
+        <div style="text-align:right">
+          <div id="ase-last-check" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Not running</div>
+          <div id="ase-rec-coverage" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-top:2px" title="How many 5-min candles today got a REAL recorded option-chain snapshot vs. skipped (fell back to estimate)">📼 —</div>
+        </div>
       </div>
 
       <!-- Strategy selector — dropdown with tick marks: check 1 or more to run them all in parallel -->
@@ -10002,13 +9978,63 @@ function ocRecDateKey(d) {
   return d.toLocaleDateString('en-CA', { timeZone:'Asia/Kolkata' }); // "YYYY-MM-DD"
 }
 
+// ── Live recorder coverage diagnostics ──
+// Tracks, for the current trading day, how many 5-min candle cycles ended
+// up with a REAL saved snapshot vs. how many were skipped (and why), so a
+// gap is visible the moment it happens instead of only showing up as a
+// PARTIAL trade in a backtest days later.
+var OC_REC_COV_DATE = null;
+var OC_REC_COV_OK = 0;
+var OC_REC_COV_SKIP = 0;
+var OC_REC_COV_LAST_REASON = null;
+
+function ocRecCovReset(dateKey) {
+  OC_REC_COV_DATE = dateKey; OC_REC_COV_OK = 0; OC_REC_COV_SKIP = 0; OC_REC_COV_LAST_REASON = null;
+}
+
+function ocRecCovUpdateUI() {
+  var el = document.getElementById('ase-rec-coverage');
+  if (!el) return;
+  var total = OC_REC_COV_OK + OC_REC_COV_SKIP;
+  if (!total) { el.textContent = '📼 —'; el.style.color = 'var(--dim)'; return; }
+  var pct = Math.round(OC_REC_COV_OK / total * 100);
+  el.textContent = '📼 ' + OC_REC_COV_OK + '/' + total + ' candles real (' + pct + '%)' + (OC_REC_COV_LAST_REASON ? ' · last skip: ' + OC_REC_COV_LAST_REASON : '');
+  el.style.color = pct >= 80 ? 'var(--g)' : pct >= 50 ? 'var(--w)' : 'var(--r)';
+}
+
+function ocRecCovSkip(reason, timeKey) {
+  var dk = ocRecDateKey(new Date());
+  if (OC_REC_COV_DATE !== dk) ocRecCovReset(dk);
+  OC_REC_COV_SKIP++;
+  OC_REC_COV_LAST_REASON = reason;
+  ocRecCovUpdateUI();
+  try { aseLog('⚠ ' + timeKey + ' candle — snapshot skipped (' + reason + '). This candle will fall back to a BS estimate in backtests.'); } catch(e) {}
+}
+
+function ocRecCovOk(timeKey, filledStrikes, totalStrikes) {
+  var dk = ocRecDateKey(new Date());
+  if (OC_REC_COV_DATE !== dk) ocRecCovReset(dk);
+  OC_REC_COV_OK++;
+  ocRecCovUpdateUI();
+  try { aseLog('📼 ' + timeKey + ' candle recorded — ' + filledStrikes + '/' + totalStrikes + ' strikes live.'); } catch(e) {}
+}
+
 // Called once per new 5-min candle (see hook in aseEvaluate). Records the
 // CURRENT live chain — not the candle's own historical price, since we
 // have no way to get that; this is why recording only works "from now
 // on", never backfilled.
 function ocRecordSnapshot() {
-  if (!OC_STATE.nseSource) return; // never record synthetic/BS-estimated prices as if real
-  if (!OC_STATE.strikes || !OC_STATE.strikes.length || !OC_STATE.spot) return;
+  var timeKeyForLog = ocRecTimeKey(new Date());
+
+  if (!OC_STATE.nseSource) {
+    var fillNote = (typeof OC_STATE.nseFillPct === 'number') ? ('feed fill only ' + OC_STATE.nseFillPct.toFixed(0) + '%') : 'no live NSE/Angel feed this cycle';
+    ocRecCovSkip(fillNote, timeKeyForLog);
+    return; // never record synthetic/BS-estimated prices as if real
+  }
+  if (!OC_STATE.strikes || !OC_STATE.strikes.length || !OC_STATE.spot) {
+    ocRecCovSkip('chain not ready', timeKeyForLog);
+    return;
+  }
 
   var now = new Date();
   var dateKey = ocRecDateKey(now), timeKey = ocRecTimeKey(now);
@@ -10027,14 +10053,24 @@ function ocRecordSnapshot() {
     if (ce == null && pe == null) return;
     strikesObj[K] = { ce: ce, pe: pe };
   });
-  if (!Object.keys(strikesObj).length) return;
+  if (!Object.keys(strikesObj).length) {
+    ocRecCovSkip('no strikes had a valid live LTP', timeKeyForLog);
+    return;
+  }
 
   day.snapshots[timeKey] = { spot: OC_STATE.spot, strikes: strikesObj };
   try {
     localStorage.setItem(storeKey, JSON.stringify(day));
+    ocRecCovOk(timeKey, Object.keys(strikesObj).length, OC_STATE.strikes.length);
   } catch(e) {
     console.warn('[OCRecorder] storage write failed (likely quota) — pruning old days and retrying once', e);
-    try { ocRecPruneOld(); localStorage.setItem(storeKey, JSON.stringify(day)); } catch(e2) { console.warn('[OCRecorder] retry failed, dropping this snapshot', e2); }
+    try {
+      ocRecPruneOld(); localStorage.setItem(storeKey, JSON.stringify(day));
+      ocRecCovOk(timeKey, Object.keys(strikesObj).length, OC_STATE.strikes.length);
+    } catch(e2) {
+      console.warn('[OCRecorder] retry failed, dropping this snapshot', e2);
+      ocRecCovSkip('storage write failed (quota)', timeKeyForLog);
+    }
   }
 }
 
@@ -10610,6 +10646,7 @@ async function buildChainFromAngel(idx, spot, atm, step, numS, T, r, baseIV, ske
   OC_STATE.maxCeStrike=maxCeStrike; OC_STATE.maxPeStrike=maxPeStrike;
   OC_STATE.pcr=totalCeOI>0?(totalPeOI/totalCeOI):1;
   // Mark as Angel source if at least 30% of strikes had real data
+  OC_STATE.nseFillPct = strikes.length ? (filledCount / strikes.length * 100) : 0;
   OC_STATE.nseSource = filledCount > (strikes.length * 0.3);
   return OC_STATE.nseSource;
 }
