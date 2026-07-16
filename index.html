@@ -3143,7 +3143,7 @@ setTimeout(nd2SyncAll, 2000);
           </select>
         </div>
       </div>
-      <button onclick="runBacktest()" style="width:100%;padding:11px;background:linear-gradient(135deg,rgba(160,100,255,.18),rgba(0,212,255,.08));border:1px solid #a064ff;border-radius:7px;color:#a064ff;font-family:Orbitron;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 0 22px rgba(160,100,255,.35)'" onmouseout="this.style.boxShadow='none'">
+      <button onclick="runBacktestSynced()" style="width:100%;padding:11px;background:linear-gradient(135deg,rgba(160,100,255,.18),rgba(0,212,255,.08));border:1px solid #a064ff;border-radius:7px;color:#a064ff;font-family:Orbitron;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 0 22px rgba(160,100,255,.35)'" onmouseout="this.style.boxShadow='none'">
         ▶ RUN BACKTEST
       </button>
     </div>
@@ -8241,6 +8241,11 @@ async function doLogin(){
               try { if (typeof ptCloudLoad === 'function') ptCloudLoad().catch(function(e){console.warn('[ptCloudLoad]',e);}); } catch(e) {}
               try { if (typeof sptCloudLoad === 'function') sptCloudLoad().catch(function(e){console.warn('[sptCloudLoad]',e);}); } catch(e) {}
               try { if (typeof liveTradingCloudLoad === 'function') liveTradingCloudLoad().catch(function(e){console.warn('[liveTradingCloudLoad]',e);}); } catch(e) {}
+              // Pull in any real option-chain snapshots recorded by OTHER
+              // devices (e.g. a PC left open all week) so this device's
+              // backtests stop showing EST-only just because it personally
+              // hasn't recorded much yet.
+              try { if (typeof ocRecCloudPullMerge === 'function') ocRecCloudPullMerge((typeof OC_STATE !== 'undefined' && OC_STATE.index) || 'NIFTY').catch(function(e){console.warn('[ocRecCloudPullMerge]',e);}); } catch(e) {}
             }, 2000);
           } else if(_navAttempts > 20){
             clearInterval(_navTimer);
@@ -10023,6 +10028,80 @@ function ocRecCovOk(timeKey, filledStrikes, totalStrikes) {
 // CURRENT live chain — not the candle's own historical price, since we
 // have no way to get that; this is why recording only works "from now
 // on", never backfilled.
+// ══════════════════════════════════════════════════════════════════
+//  CLOUD SYNC — Option-chain recorder to Supabase
+//  Same 'reports' table pattern as paper trades / stock reports, one
+//  row per (index, day): report_type = 'ocrec_<INDEX>_<YYYY-MM-DD>'.
+//  Without this, each device's recorder only ever sees what IT
+//  personally recorded — a PC that's been open all week and a phone
+//  opened for the first time today would give completely different
+//  REAL/PARTIAL/EST answers for the exact same backtest. This makes
+//  every device read and contribute to one shared snapshot history.
+// ══════════════════════════════════════════════════════════════════
+var OC_REC_CLOUD_PENDING = {}; // storeKey -> true, debounces rapid pushes per day
+
+function ocRecSyncCloud(index, dateKey) {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  var storeKey = OC_REC_STORE_PREFIX + index + '_' + dateKey;
+  if (OC_REC_CLOUD_PENDING[storeKey]) return;
+  OC_REC_CLOUD_PENDING[storeKey] = true;
+  setTimeout(async function(){
+    OC_REC_CLOUD_PENDING[storeKey] = false;
+    var day = null;
+    try { day = JSON.parse(localStorage.getItem(storeKey) || 'null'); } catch(e) { day = null; }
+    if (!day) return;
+    try {
+      await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          user_id: window.SUPA_USER.id,
+          report_type: 'ocrec_' + index + '_' + dateKey,
+          title: 'Option Chain Recording ' + index + ' ' + dateKey,
+          content: JSON.stringify(day),
+          metadata: { snapshot_count: Object.keys(day.snapshots||{}).length, updated_at: new Date().toISOString() }
+        })
+      });
+    } catch(e) { console.warn('[OCRecorder] cloud sync failed', e); }
+  }, 800);
+}
+
+// Pulls every recorded day for this index from the cloud and merges it
+// with whatever's already local — union of both, never a wholesale
+// overwrite, so a gap on one device gets filled by another device's
+// recording of that same moment instead of one copy replacing the other.
+async function ocRecCloudPullMerge(index) {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  try {
+    var r = await supaFetch('/rest/v1/reports?report_type=like.ocrec_' + index + '_*&user_id=eq.' + window.SUPA_USER.id + '&select=report_type,content');
+    if (!r || !r.data || !r.data.length) return;
+    var mergedAny = false;
+    r.data.forEach(function(row){
+      var remote = null;
+      try { remote = JSON.parse(row.content); } catch(e) { remote = null; }
+      if (!remote || !remote.date || !remote.snapshots) return;
+      var storeKey = OC_REC_STORE_PREFIX + index + '_' + remote.date;
+      var local = null;
+      try { local = JSON.parse(localStorage.getItem(storeKey) || 'null'); } catch(e) { local = null; }
+      if (!local || typeof local !== 'object') local = { index: index, date: remote.date, snapshots: {} };
+      var localCountBefore = Object.keys(local.snapshots).length;
+      // Union both sides — a timeKey recorded on either device fills the gap
+      var merged = Object.assign({}, remote.snapshots, local.snapshots);
+      var mergedCount = Object.keys(merged).length;
+      if (mergedCount !== localCountBefore) {
+        local.snapshots = merged;
+        try { localStorage.setItem(storeKey, JSON.stringify(local)); } catch(e) { console.warn('[OCRecorder] merge write failed', e); }
+        mergedAny = true;
+        // If this device's merge added candles the cloud copy didn't have
+        // (i.e. remote was missing some local-only slots), push the
+        // now-fuller day back so the other device picks them up too.
+        if (mergedCount > Object.keys(remote.snapshots).length) ocRecSyncCloud(index, remote.date);
+      }
+    });
+    if (mergedAny) { try { aseLog('☁ Option chain recording merged from cloud — other devices\' real snapshots pulled in.'); } catch(e) {} ocRecCovUpdateUI(); }
+  } catch(e) { console.warn('[OCRecorder] cloud pull/merge failed', e); }
+}
+
 function ocRecordSnapshot() {
   var timeKeyForLog = ocRecTimeKey(new Date());
 
@@ -10062,11 +10141,13 @@ function ocRecordSnapshot() {
   try {
     localStorage.setItem(storeKey, JSON.stringify(day));
     ocRecCovOk(timeKey, Object.keys(strikesObj).length, OC_STATE.strikes.length);
+    ocRecSyncCloud(OC_STATE.index, dateKey);
   } catch(e) {
     console.warn('[OCRecorder] storage write failed (likely quota) — pruning old days and retrying once', e);
     try {
       ocRecPruneOld(); localStorage.setItem(storeKey, JSON.stringify(day));
       ocRecCovOk(timeKey, Object.keys(strikesObj).length, OC_STATE.strikes.length);
+      ocRecSyncCloud(OC_STATE.index, dateKey);
     } catch(e2) {
       console.warn('[OCRecorder] retry failed, dropping this snapshot', e2);
       ocRecCovSkip('storage write failed (quota)', timeKeyForLog);
@@ -15549,6 +15630,21 @@ function advTab(name, btn) {
 var BT_TRADES = [];
 var BT_EQUITY = [];
 
+// Pulls the latest cross-device recorded snapshots first (in case another
+// device has recorded real data this one hasn't seen yet), then runs the
+// backtest as normal. Falls straight through to runBacktest() if the pull
+// fails or times out, so a slow/offline network never blocks the backtest.
+async function runBacktestSynced() {
+  try {
+    var idx = (document.getElementById('bt-ticker').value||'NIFTY').trim().toUpperCase();
+    await Promise.race([
+      ocRecCloudPullMerge(idx),
+      new Promise(function(resolve){ setTimeout(resolve, 3000); }) // don't block the click if cloud is slow
+    ]);
+  } catch(e) { console.warn('[runBacktestSynced] pre-sync failed, continuing with local data', e); }
+  runBacktest();
+}
+
 function runBacktest() {
   var ticker   = (document.getElementById('bt-ticker').value||'NIFTY').trim().toUpperCase();
   var period   = document.getElementById('bt-period').value;
@@ -18999,6 +19095,7 @@ function aseToggle() {
     // so before any real chain data exists yet.
     if (typeof ensureChainTicker === 'function') ensureChainTicker();
     if (typeof buildOptionChain === 'function') buildOptionChain();
+    if (typeof ocRecCloudPullMerge === 'function') ocRecCloudPullMerge((typeof OC_STATE !== 'undefined' && OC_STATE.index) || 'NIFTY').catch(function(e){console.warn('[ocRecCloudPullMerge]',e);});
   }
   else aseLog('Engine turned OFF.');
 }
