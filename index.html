@@ -1005,6 +1005,33 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
     <div class="sp-step"><span class="sn">2</span><span>Go to <strong>enable-totp</strong> page → Enter Client ID + MPIN → Copy the <strong>32-char TOTP Secret</strong></span></div>
     <div class="sp-step"><span class="sn">3</span><span>Fill the fields below → Click <strong>Connect &amp; Test</strong> → Done. Never need to do this again.</span></div>
   </div>
+
+  <!-- LIVE-ORDER BROKER SELECT — data always comes from Angel One (above);
+       this only decides which broker real LIVE TRADING orders are sent to.
+       Each person picks their own broker; the choice + Zerodha creds are
+       saved per-browser in localStorage, same as Angel One creds. -->
+  <div class="sp-field full" style="background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.3);border-radius:7px;padding:10px 12px;margin-bottom:12px">
+    <label style="color:var(--o)">🏦 LIVE ORDER BROKER — where real LIVE TRADING orders get sent</label>
+    <div style="font-family:Share Tech Mono;font-size:11px;color:var(--dim);margin:5px 0 10px;line-height:1.7">
+      Market data (candles, LTP, option chain) always comes from Angel One above, regardless of this setting. This only picks which broker executes real orders when LIVE TRADING is ON.
+    </div>
+    <select id="sp-broker" onchange="jarvisBrokerChanged()" style="width:100%;background:var(--ov5);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none;margin-bottom:10px">
+      <option value="angel">Angel One (place orders on Angel One)</option>
+      <option value="zerodha">Zerodha (place orders via Kite Connect)</option>
+    </select>
+    <div id="sp-zerodha-fields" style="display:none">
+      <div style="font-family:Share Tech Mono;font-size:11px;color:var(--dim);margin-bottom:8px;line-height:1.7">
+        Needs a Kite Connect developer app (₹500/month, separate from a normal Zerodha account) — create one at <a href="https://developers.kite.trade" target="_blank" style="color:var(--o)">developers.kite.trade</a>. Set its <strong>Redirect URL</strong> to this page's URL: <code id="sp-redirect-url" style="color:var(--o)"></code>
+      </div>
+      <div class="sp-field"><label>Kite API Key</label><input type="text" id="sp-kite-key" placeholder="from developers.kite.trade"></div>
+      <div class="sp-field"><label>Kite API Secret</label><input type="password" id="sp-kite-secret" placeholder="from developers.kite.trade"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <button type="button" onclick="jarvisKiteLogin()" style="padding:9px 16px;background:rgba(255,107,53,.1);border:1px solid var(--o);border-radius:5px;color:var(--o);font-family:Orbitron;font-size:9px;letter-spacing:1px;cursor:pointer">🔐 LOGIN WITH ZERODHA</button>
+        <span id="sp-kite-status" style="font-family:Share Tech Mono;font-size:10px;color:var(--dim)">Not connected</span>
+      </div>
+    </div>
+  </div>
+
   <div class="sp-grid">
     <div class="sp-field"><label>API Key</label><input type="text" id="sp-api" placeholder="e.g. aBcDeFgH1234"></div>
     <div class="sp-field"><label>Client ID (Angel One Login)</label><input type="text" id="sp-cid" placeholder="e.g. A12345"></div>
@@ -3560,17 +3587,19 @@ setTimeout(nd2SyncAll, 2000);
     </div>
   </div>
 
-  <!-- LIVE TRADING — ANGEL ONE -->
+  <!-- LIVE TRADING — BROKER-AGNOSTIC (orders go to whichever broker is selected in Setup) -->
   <div class="panel" style="margin-bottom:10px;border-color:rgba(255,61,90,.4)">
     <div class="ph">
-      <div class="pt" style="color:var(--r)">🔴 LIVE TRADING — ANGEL ONE</div>
+      <div class="pt" style="color:var(--r)">🔴 LIVE TRADING — <span id="live-broker-label">ANGEL ONE</span></div>
       <span id="live-status" style="font-family:Orbitron;font-size:10px;letter-spacing:1px;color:var(--dim)">OFF</span>
     </div>
     <div style="padding:14px">
       <div style="padding:10px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:6px;font-family:Share Tech Mono;font-size:10px;color:var(--txt);margin-bottom:12px">
-        ⚠ This fires <b>real orders with real money</b> on your linked Angel One account, mirroring the F&amp;O Auto Signal Engine above — <b>no per-trade confirmation</b>, per your setup. Only the 6 real strategies mirror live (not manual trades). Requires the app tab to stay open — closing it or losing internet stops live firing (and any open live position stays open on the broker's side until you close it yourself).
+        ⚠ This fires <b>real orders with real money</b> on your linked broker account (set in Setup → Live Order Broker), mirroring the F&amp;O Auto Signal Engine above — <b>no per-trade confirmation</b>, per your setup. Only the 6 real strategies mirror live (not manual trades). Requires the app tab to stay open — closing it or losing internet stops live firing (and any open live position stays open on the broker's side until you close it yourself).
         <br><br>
-        ⚠ <b>SEBI/NSE mandate (effective 1-Apr-2026, all Indian brokers):</b> orders now require a <b>registered static IP</b> — register yours at smartapi.angelone.in → My Profile → My APIs. Most home/mobile connections are dynamic, not static; you may need a static-IP add-on from your ISP. Orders also now use <b>LIMIT</b>, not MARKET — Market/IOC orders are banned for algo trading under this same rule, and a LIMIT order fills at your exact price or not at all, rather than slipping.
+        ⚠ <b>SEBI/NSE mandate (effective 1-Apr-2026, all Indian brokers):</b> orders now require a <b>registered static IP</b> — Angel One users register at smartapi.angelone.in → My Profile → My APIs; Zerodha users check the equivalent setting at developers.kite.trade. Most home/mobile connections are dynamic, not static; you may need a static-IP add-on from your ISP. Orders also now use <b>LIMIT</b>, not MARKET — Market/IOC orders are banned for algo trading under this same rule, and a LIMIT order fills at your exact price or not at all, rather than slipping.
+        <br><br>
+        ⚠ <b>Zerodha users:</b> symbol resolution still runs through Angel One's format — do not enable this until you've verified the exact contract Kite receives matches what you intend (see code comment on <code>kitePlaceOrder</code>).
       </div>
 
       <div style="margin-bottom:12px">
@@ -4601,8 +4630,21 @@ var creds = {
   totpSec  : localStorage.getItem('ja_t') || '',
   jwt      : localStorage.getItem('ja_j') || '',
   feed     : localStorage.getItem('ja_f') || '',
-  connected: false
+  connected: false,
+  // ── Live-order broker choice (data always stays on Angel One above) ──
+  broker       : localStorage.getItem('ja_broker') || 'angel', // 'angel' | 'zerodha'
+  kiteApiKey   : localStorage.getItem('ja_kite_key') || '',
+  kiteApiSecret: localStorage.getItem('ja_kite_secret') || '',
+  kiteAccessToken: localStorage.getItem('ja_kite_token') || '',
+  kiteTokenDate: localStorage.getItem('ja_kite_token_date') || '', // access_token expires daily
+  kiteUserId   : localStorage.getItem('ja_kite_user') || '',
+  kiteConnected: false
 };
+
+// ── Point this at your deployed Supabase Edge Function ──
+// (Kite Connect blocks direct browser calls, so all Zerodha traffic
+// relays through this function. See supabase/functions/kite-proxy.)
+var KITE_PROXY_URL = 'https://kmrsqijzjixpmbgcjnxs.supabase.co/functions/v1/kite-proxy';
 
 // ── Real public IP detection ──
 // Angel One's API headers (X-ClientPublicIP) were previously sent as a
@@ -7623,6 +7665,12 @@ function toggleSetup(){
     document.getElementById('sp-jwt').value = creds.jwt;
     document.getElementById('sp-proxy').value = PROXY_URL;
     document.getElementById('sp-gemini').value = localStorage.getItem('ja_gemini') || '';
+    document.getElementById('sp-broker').value = creds.broker;
+    document.getElementById('sp-kite-key').value = creds.kiteApiKey;
+    document.getElementById('sp-kite-secret').value = creds.kiteApiSecret;
+    document.getElementById('sp-redirect-url').textContent = window.location.href.split('?')[0].split('#')[0];
+    jarvisBrokerChanged();
+    jarvisUpdateKiteStatus();
   }
 }
 function saveCreds(){
@@ -7640,7 +7688,177 @@ function saveCreds(){
   if (jwt)  { creds.jwt      = jwt;  localStorage.setItem('ja_j', jwt); }
   if (prxy) { PROXY_URL = prxy; localStorage.setItem('ja_proxy', prxy); }
   if (gem)  { localStorage.setItem('ja_gemini', gem); }
-  showSpRes('ok','✅ Credentials saved permanently.'+(gem?' Groq AI key saved! ✅':'')+(prxy?' Backend proxy set!':' Tip: add Cloudflare Worker URL for all-browser support.'));
+  var broker = document.getElementById('sp-broker').value;
+  var kKey   = document.getElementById('sp-kite-key').value.trim();
+  var kSec   = document.getElementById('sp-kite-secret').value.trim();
+  creds.broker = broker; localStorage.setItem('ja_broker', broker);
+  if (kKey) { creds.kiteApiKey    = kKey; localStorage.setItem('ja_kite_key', kKey); }
+  if (kSec) { creds.kiteApiSecret = kSec; localStorage.setItem('ja_kite_secret', kSec); }
+  showSpRes('ok','✅ Credentials saved permanently.'+(gem?' Groq AI key saved! ✅':'')+(prxy?' Backend proxy set!':' Tip: add Cloudflare Worker URL for all-browser support.')+(broker==='zerodha'?' Live orders → Zerodha.':' Live orders → Angel One.'));
+}
+
+// ══ ZERODHA / KITE CONNECT — LIVE ORDER EXECUTION ══
+// Data (candles, LTP, option chain) stays on Angel One always. This block
+// only handles routing real LIVE TRADING orders to Zerodha when selected,
+// via the kite-proxy Supabase Edge Function (Kite blocks direct browser
+// calls, see KITE_PROXY_URL above).
+
+function jarvisBrokerChanged(){
+  var broker = document.getElementById('sp-broker').value;
+  document.getElementById('sp-zerodha-fields').style.display = (broker === 'zerodha') ? 'block' : 'none';
+  var lbl = document.getElementById('live-broker-label');
+  if(lbl) lbl.textContent = (broker === 'zerodha') ? 'ZERODHA' : 'ANGEL ONE';
+}
+
+function jarvisUpdateKiteStatus(){
+  var el = document.getElementById('sp-kite-status');
+  if(!el) return;
+  var today = new Date().toISOString().slice(0,10);
+  var tokenValid = creds.kiteAccessToken && creds.kiteTokenDate === today;
+  creds.kiteConnected = !!tokenValid;
+  if(tokenValid){
+    el.textContent = '✅ Connected as ' + (creds.kiteUserId || 'Zerodha user');
+    el.style.color = 'var(--g)';
+  } else if(creds.kiteAccessToken){
+    el.textContent = '⚠️ Session expired (Kite tokens expire daily) — click LOGIN again';
+    el.style.color = 'var(--w)';
+  } else {
+    el.textContent = 'Not connected';
+    el.style.color = 'var(--dim)';
+  }
+}
+
+// Step 1: send the user to Zerodha's own login page. They log in with
+// their Zerodha credentials/TOTP directly on Zerodha's site (we never see
+// their password) and get redirected back here with ?request_token=...
+function jarvisKiteLogin(){
+  var key = document.getElementById('sp-kite-key').value.trim();
+  var sec = document.getElementById('sp-kite-secret').value.trim();
+  if(!key || !sec){ showSpRes('err','Enter Kite API Key and Secret first, then click SAVE, then LOGIN WITH ZERODHA.'); return; }
+  creds.kiteApiKey = key; localStorage.setItem('ja_kite_key', key);
+  creds.kiteApiSecret = sec; localStorage.setItem('ja_kite_secret', sec);
+  window.location.href = 'https://kite.zerodha.com/connect/login?v=3&api_key=' + encodeURIComponent(key);
+}
+
+// Step 2: on page load, if the URL has ?request_token=... (Zerodha just
+// redirected back here), exchange it for an access_token via kite-proxy.
+async function jarvisHandleKiteRedirect(){
+  var params = new URLSearchParams(window.location.search);
+  var requestToken = params.get('request_token');
+  var status = params.get('status');
+  if(!requestToken) return;
+  // Clean the token out of the URL so refreshing doesn't re-trigger this
+  var cleanUrl = window.location.href.split('?')[0];
+  window.history.replaceState({}, document.title, cleanUrl);
+  if(status !== 'success'){ console.warn('[Kite] Login redirect did not report success'); return; }
+  if(!creds.kiteApiKey || !creds.kiteApiSecret){
+    console.warn('[Kite] Got request_token but no api_key/secret saved — open Setup, fill Zerodha fields, and try Login again.');
+    return;
+  }
+  try{
+    var r = await fetch(KITE_PROXY_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'login', api_key: creds.kiteApiKey, api_secret: creds.kiteApiSecret, request_token: requestToken })
+    });
+    var data = await r.json();
+    if(data && data.status === 'success' && data.access_token){
+      creds.kiteAccessToken = data.access_token; localStorage.setItem('ja_kite_token', data.access_token);
+      creds.kiteTokenDate = new Date().toISOString().slice(0,10); localStorage.setItem('ja_kite_token_date', creds.kiteTokenDate);
+      creds.kiteUserId = data.user_id || data.user_name || ''; localStorage.setItem('ja_kite_user', creds.kiteUserId);
+      creds.kiteConnected = true;
+      console.log('[Kite] Connected as', creds.kiteUserId);
+      // Open setup so the user sees the connected status if they had it open before redirect
+      jarvisUpdateKiteStatus();
+    } else {
+      console.warn('[Kite] Login exchange failed:', data && (data.error || JSON.stringify(data)));
+    }
+  } catch(e){
+    console.warn('[Kite] Login exchange request failed:', e.message);
+  }
+}
+// Run on load — the request_token only appears right after Zerodha's redirect
+jarvisHandleKiteRedirect();
+// Sync the LIVE TRADING panel's broker label + Setup dropdown to the saved
+// choice immediately, not just when Setup is opened
+(function(){
+  var sel = document.getElementById('sp-broker');
+  if(sel) sel.value = creds.broker;
+  var lbl = document.getElementById('live-broker-label');
+  if(lbl) lbl.textContent = (creds.broker === 'zerodha') ? 'ZERODHA' : 'ANGEL ONE';
+})();
+
+// Places a real order via Zerodha through kite-proxy. Takes EXACTLY the
+// same params object as angelPlaceOrder (tradingsymbol, transactiontype,
+// quantity, price, productType) so the live-trading engine can call
+// either function interchangeably via placeLiveOrder() below.
+//
+// ⚠️ IMPORTANT CAVEAT — option symbol formats differ between brokers.
+// `resolved.tradingsymbol` here is built by buildAngelOptSymbol() in
+// Angel One's own format (used because data/symbol resolution stays on
+// Angel One per this app's design). Zerodha's NFO tradingsymbol format
+// (e.g. NIFTY24D2624800CE) does NOT always match Angel One's string
+// character-for-character. Sending Angel's format straight to Kite risks
+// the order being rejected (safe) OR — worse — Kite matching it to an
+// unintended instrument if the string happens to collide (not safe).
+// Do NOT go live on real money with this until you've either (a) added a
+// proper Angel→Zerodha symbol translation using Kite's own instruments
+// dump (GET /instruments), or (b) manually verified, order by order, that
+// the tradingsymbol Kite receives is the exact contract you intended.
+async function kitePlaceOrder(params){
+  if(!creds.kiteApiKey || !creds.kiteAccessToken){
+    return { ok:false, reason:'Zerodha not connected — open Setup and click LOGIN WITH ZERODHA.' };
+  }
+  var today = new Date().toISOString().slice(0,10);
+  if(creds.kiteTokenDate !== today){
+    return { ok:false, reason:'Zerodha session expired (tokens expire daily) — open Setup and LOGIN WITH ZERODHA again.' };
+  }
+  var order = {
+    tradingsymbol : params.tradingsymbol,
+    exchange      : 'NFO',
+    transaction_type: params.transactiontype, // BUY or SELL
+    quantity      : params.quantity,
+    order_type    : 'LIMIT', // SEBI algo mandate (1-Apr-2026): LIMIT only, same as Angel One path
+    price         : String(params.price),
+    product       : params.productType === 'CARRYFORWARD' ? 'NRML' : 'MIS',
+    validity      : 'DAY',
+    variety       : 'regular'
+  };
+  try{
+    var r = await fetch(KITE_PROXY_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'order', api_key: creds.kiteApiKey, access_token: creds.kiteAccessToken, order: order })
+    });
+    var data = await r.json();
+    if(data && data.status === 'success'){
+      return { ok:true, orderId: data.data && data.data.order_id, raw:data };
+    }
+    return { ok:false, reason:(data && data.message) || 'Kite order failed', raw:data };
+  } catch(e){
+    return { ok:false, unknown:true, reason:'Exception: ' + e.message };
+  }
+}
+
+async function kiteCheckOrders(){
+  if(!creds.kiteApiKey || !creds.kiteAccessToken) return { ok:false, error:'Zerodha not connected' };
+  try{
+    var r = await fetch(KITE_PROXY_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'orders', api_key: creds.kiteApiKey, access_token: creds.kiteAccessToken })
+    });
+    var data = await r.json();
+    return { ok: data && data.status === 'success', raw:data };
+  } catch(e){ return { ok:false, error:e.message }; }
+}
+
+// Single entry point the live-trading engine should call instead of
+// angelPlaceOrder directly — routes to whichever broker is selected.
+async function placeLiveOrder(params){
+  if(creds.broker === 'zerodha'){
+    return await kitePlaceOrder(params);
+  }
+  return await angelPlaceOrder(params);
 }
 async function connectAngel(){
   var hasProxy = !!PROXY_URL;
@@ -9275,7 +9493,12 @@ async function fetchCandlesTF(sym, tok, exchange) {
   var cacheKey = sym + '_' + SIGNAL_TF;
   if (!window.CANDLE_CACHE) window.CANDLE_CACHE = {};
   var cached = window.CANDLE_CACHE[cacheKey];
-  if (cached && Date.now() - cached.ts < 2*60*1000) return cached.candles;
+  // Was 2 minutes — that alone could hide a just-closed 5-min candle from
+  // the Auto Signal Engine for up to 2 of its 5 minutes. Tightened to 30s
+  // (still comfortably inside Angel One's historical-candle rate limit for
+  // the handful of symbols ASE actually polls) so a new candle shows up to
+  // the engine much closer to when it actually closes.
+  if (cached && Date.now() - cached.ts < 30*1000) return cached.candles;
   if (!creds.jwt || !creds.connected) return null;
   try {
     var toDate = new Date();
@@ -17283,7 +17506,7 @@ async function liveTradingEnterPosition(trade) {
   LIVE_TRADING.todayTradeCount++; // counts the attempt, success or fail, toward the daily cap
   liveTradingSave();
 
-  var result = await angelPlaceOrder({
+  var result = await placeLiveOrder({
     tradingsymbol: resolved.tradingsymbol, symboltoken: resolved.symboltoken,
     transactiontype: 'BUY', quantity: LIVE_TRADING.lotQty, productType: LIVE_TRADING.productType,
     price: trade.buy
@@ -17309,7 +17532,7 @@ async function liveTradingExitPosition(trade, exitReason) {
   if (!trade.live || trade.live.status !== 'PLACED') return; // nothing live was actually placed for this one
   if (!LIVE_TRADING) liveTradingInit();
 
-  var result = await angelPlaceOrder({
+  var result = await placeLiveOrder({
     tradingsymbol: trade.live.tradingsymbol, symboltoken: trade.live.symboltoken,
     transactiontype: 'SELL', quantity: trade.live.qty, productType: LIVE_TRADING.productType,
     price: trade.exit
@@ -17382,6 +17605,13 @@ function liveTradingRenderPanel() {
 }
 
 async function liveTradingRefreshOrderBook() {
+  if(creds.broker === 'zerodha'){
+    var kres = await kiteCheckOrders();
+    if(!kres.ok || !kres.raw || !kres.raw.data){ alert('Could not fetch order book — check your Zerodha connection (Setup → LOGIN WITH ZERODHA).'); return; }
+    var krecent = kres.raw.data.slice(-10).map(function(o){ return o.tradingsymbol+' '+o.transaction_type+' × '+o.quantity+' — '+o.status; }).join('\n');
+    alert('Recent Zerodha orders:\n\n' + (krecent || 'No orders found.'));
+    return;
+  }
   var book = await angelGetOrderBook();
   if (!book) { alert('Could not fetch order book — check your Angel One connection.'); return; }
   var recent = book.slice(0, 10).map(function(o){ return o.tradingsymbol+' '+o.transactiontype+' × '+o.quantity+' — '+o.status; }).join('\n');
@@ -19206,7 +19436,7 @@ function aseEvaluate() {
   })();
 }
 
-// Fetches the latest 5-min Nifty candles (cached 2 min by fetchCandlesTF)
+// Fetches the latest 5-min Nifty candles (cached 30s by fetchCandlesTF)
 // and draws them on the chart. Shared by both strategies so the chart
 // updates live no matter which one is active, without duplicate fetches.
 var ASE_LAST_CANDLES = null;
@@ -19356,7 +19586,7 @@ async function aseEvaluateTrendline() {
   ptSet2('ase-tl-upper', tl && tl.upperNow != null ? fN(tl.upperNow, 1) : '—');
   ptSet2('ase-tl-lower', tl && tl.lowerNow != null ? fN(tl.lowerNow, 1) : '—');
 
-  // Only act once per newly closed candle, not on every 30s poll, since
+  // Only act once per newly closed candle, not on every 15s poll, since
   // the trendline itself only changes when a new 5-min candle closes.
   var latestCandleTime = candles[candles.length - 1].time;
   if (ASE_TL_LAST_CANDLE_TIME === latestCandleTime) {
@@ -19910,7 +20140,7 @@ async function aseEvaluateNiftyProV2() {
   var latestCandleTime = candles[candles.length - 1].time;
 
   // Same fix as V1.5 above — checked before the early return so it
-  // refreshes every 30s tick, not just once per 5-min candle.
+  // refreshes every 15s tick, not just once per 5-min candle.
   var tradedToday = aseNp2TradedToday();
   ptSet2('ase-np2-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
 
@@ -20009,7 +20239,10 @@ if (_origFetchAllForASE) {
     try { aseEvaluate(); } catch(e) { console.warn('[AutoSignalEngine]', e); }
   };
 }
-// Also poll independently every 30s as a fallback in case fetchAll isn't firing
+// Also poll independently every 15s as a fallback in case fetchAll isn't firing
+// (was 30s — halved alongside the candle cache tightening above, so a
+// newly-closed candle gets picked up and evaluated sooner instead of
+// waiting up to another 30s on top of the cache delay).
 var ASE_HEARTBEAT_COUNT = 0;
 setInterval(function(){
   ASE_HEARTBEAT_COUNT++;
@@ -20019,13 +20252,13 @@ setInterval(function(){
     console.error('[AutoSignalEngine] interval call threw:', e);
     try { aseLog('⚠ Engine error: ' + e.message); } catch(e2) {}
   }
-}, 30000);
+}, 15000);
 // Visible confirmation the interval itself is alive, independent of
 // whether aseEvaluate succeeds — if this never appears in the on-screen
 // log, the interval itself never registered (likely a script error
 // earlier in this block prevented execution from reaching this line).
 setTimeout(function(){
-  try { aseLog('Engine heartbeat active — full strategy check every 30s · live price line updates every 1.5s.'); } catch(e) {}
+  try { aseLog('Engine heartbeat active — full strategy check every 15s · live price line updates every 1.5s.'); } catch(e) {}
   try {
     ocRecPruneOld();
     var recordedDays = ocRecDayCount('NIFTY');
