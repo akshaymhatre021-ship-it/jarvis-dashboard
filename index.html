@@ -16138,7 +16138,9 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
         // Real lot-based sizing: capital*posPct funds whole LOTS, not an
         // abstract rupee amount — you can only buy options in multiples
         // of the Nifty lot size (65), never a fractional/arbitrary qty.
-        numLots = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
+        // Fixed 1 lot per trade, matching live trading — capital/posPct no
+        // longer scales position size up into 2/4 lots on cheap premiums.
+        numLots = 1;
         lotsHeld = numLots;
         if (strategy === 'quality_breakout' && BT_QB_LAST_SIGNAL) {
           // Risk-based sizing captured at entry: SL distance = trendline
@@ -16280,9 +16282,8 @@ function btRunNiftyProV15(data, signalType, capital, posPct) {
       var entryLookup = btLookupOrEstimatePremium(dk, timeStrings[i], strike, optType, entry, BT_DTE_DAYS);
       entryPremium = entryLookup.price;
       entryIsReal = entryLookup.real;
-      lotsHeld = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
-      // Convert the script's index-point SL/target into the equivalent
-      // premium % move, same convention as the other option strategies.
+      // Fixed 1 lot per trade, matching live trading — no more capital-based scaling.
+      lotsHeld = 1;
       var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / entry * 8));
       sl     = -riskPct;
       target = riskPct * 2.0; // R:R 1:2, matches strategy.exit(limit = close ± risk*2.0)
@@ -16352,9 +16353,8 @@ function btRunNiftyProV2(data, signalType, capital, posPct) {
       var entryLookup = btLookupOrEstimatePremium(dk, timeStrings[i], strike, optType, entry, BT_DTE_DAYS);
       entryPremium = entryLookup.price;
       entryIsReal = entryLookup.real;
-      lotsHeld = Math.max(1, Math.floor((capital * posPct) / (entryPremium * lotQty)));
-      // Same index-risk → premium-% conversion as V1.5, but sig.risk here
-      // comes from ATR instead of a 5-bar Donchian window.
+      // Fixed 1 lot per trade, matching live trading — no more capital-based scaling.
+      lotsHeld = 1;
       var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / entry * 8));
       sl     = -riskPct;
       target = riskPct * 2.0; // R:R 1:2
