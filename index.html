@@ -1090,10 +1090,10 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <!-- F&O CALLS tab removed from nav per user request. Page markup/logic
        left intact (harmless, just unreachable) in case it's wanted back. -->
   <button class="nav-tab" onclick="showPage('chain',this)">🔗 OPT CHAIN</button>
-  <button class="nav-tab" onclick="showPage('tools',this)">🛠 TOOLS</button>
+  <!-- TOOLS tab removed per user request. Page markup/logic left intact but unreachable. -->
   <!-- Stock Pickup / Stock Report tabs removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('mf',this)">💰 MUT. FUNDS</button>
-  <button class="nav-tab" onclick="showPage('advanced',this)" style="border-color:rgba(160,100,255,.3);color:#a064ff;">⚡ ADVANCED</button>
+  <button class="nav-tab" onclick="showPage('advanced',this)" style="border-color:rgba(160,100,255,.3);color:#a064ff;">⚡ F&O</button>
   <button class="nav-tab" onclick="showPage('stockadv',this)" style="border-color:rgba(0,255,136,.3);color:var(--g);">📈 STOCK ADVANCE</button>
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
@@ -1103,30 +1103,8 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dash">
 
-  <!-- ══ JARVIS INTELLIGENCE PANEL ══ -->
-  <div id="ji-panel" style="background:linear-gradient(135deg,rgba(160,100,255,.07),rgba(0,212,255,.04));border:1px solid rgba(160,100,255,.3);border-left:4px solid #a064ff;border-radius:12px;padding:13px 16px;margin-bottom:10px;display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-family:Orbitron;font-size:10px;color:#a064ff;letter-spacing:2px">🧠 JARVIS INTELLIGENCE</div>
-        <div id="ji-iq-badge" style="font-family:Share Tech Mono;font-size:9px;padding:2px 9px;border-radius:10px;background:rgba(160,100,255,.12);color:#a064ff;border:1px solid rgba(160,100,255,.3)">TRADER IQ: —</div>
-        <div id="ji-level-badge" style="font-family:Share Tech Mono;font-size:9px;padding:2px 9px;border-radius:10px;background:rgba(0,255,136,.06);color:#00ff88;border:1px solid rgba(0,255,136,.2)">—</div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="jiRunDeepAnalysis()" id="ji-run-btn" style="padding:5px 13px;background:rgba(160,100,255,.12);border:1px solid rgba(160,100,255,.35);border-radius:6px;color:#a064ff;font-family:Orbitron;font-size:8px;letter-spacing:1px;cursor:pointer">🧠 DEEP ANALYSE</button>
-        <button onclick="document.getElementById('ji-panel').style.display='none'" style="padding:5px 10px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--dim);font-family:Share Tech Mono;font-size:9px;cursor:pointer">✕</button>
-      </div>
-    </div>
-    <!-- Metric strip -->
-    <div id="ji-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin-bottom:10px"></div>
-    <!-- Top insight -->
-    <div id="ji-top-insight" style="background:var(--ov3);border:1px solid rgba(160,100,255,.2);border-radius:8px;padding:10px 13px;margin-bottom:8px;font-family:Share Tech Mono;font-size:11px;color:#c8d8f0;line-height:1.7;min-height:36px"></div>
-    <!-- Improvement chips -->
-    <div id="ji-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-    <!-- AI deep result -->
-    <div id="ji-ai-result" style="display:none;background:var(--ov35);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:12px;font-family:Share Tech Mono;font-size:11px;color:#c8d8f0;line-height:1.8;white-space:pre-wrap;max-height:320px;overflow-y:auto;margin-bottom:8px"></div>
-    <!-- Proactive alert bar -->
-    <div id="ji-alert" style="display:none;padding:8px 12px;border-radius:7px;font-family:Share Tech Mono;font-size:10px;line-height:1.6"></div>
-  </div>
+  <!-- JARVIS INTELLIGENCE panel removed per user request. jiRenderDashboard()
+       etc. still exist but null-check for #ji-panel and simply no-op now. -->
 
   <!-- ══ TODAY AT A GLANCE ══ -->
   <div class="panel" style="margin-bottom:10px;border-color:rgba(0,212,255,.3);background:linear-gradient(135deg,rgba(0,212,255,.05),rgba(160,100,255,.03))">
