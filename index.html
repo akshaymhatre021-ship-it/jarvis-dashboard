@@ -3302,6 +3302,8 @@ setTimeout(nd2SyncAll, 2000);
         </div>
       </div>
 
+      <div id="fo-notif-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--w);cursor:pointer;margin:0 0 12px 2px;padding:6px 10px;background:var(--ov2);border:1px solid var(--border);border-radius:6px;display:inline-block">🔔 Click to enable push notifications for new F&amp;O calls</div>
+
       <!-- Strategy selector — dropdown with tick marks: check 1 or more to run them all in parallel -->
       <div id="ase-strategy-dropdown-wrap" style="position:relative;margin-bottom:6px">
         <button type="button" id="ase-strategy-dropdown-btn" onclick="aseToggleStrategyDropdown()" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;background:var(--ov25);border:1px solid var(--border);border-radius:8px;color:var(--txt);font-family:Share Tech Mono;font-size:10px;cursor:pointer;min-width:0">
@@ -19522,6 +19524,7 @@ function aseEvaluatePcrEmaVix() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['pcr_ema_vix'] = dedupeKey;
     aseLog('✅ Auto-logged BUY '+sideToTrade+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+reasons.filter(Boolean).join(', '));
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('PCR + EMA21 + VIX', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Signal found but could not log: ' + res.error);
   }
@@ -19615,6 +19618,7 @@ async function aseEvaluateTrendline() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['trendline'] = dedupeKey;
     aseLog('✅ Trendline auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+breakout.line);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline Breakout', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Trendline breakout found but could not log: ' + res.error);
   }
@@ -19729,6 +19733,7 @@ async function aseEvaluateTrendlineConfirmed() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['trendline_confirmed'] = dedupeKey;
     aseLog('✅ Confirmed auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+confirmReason);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline + PCR/EMA Confirmed', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Confirmed breakout found but could not log: ' + res.error);
   }
@@ -19861,6 +19866,7 @@ async function aseEvaluateQualityBreakout() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['quality_breakout'] = dedupeKey;
     aseLog('✅ Quality Breakout auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.75) — ADX '+adxRes.adx.toFixed(1));
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Quality Breakout', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Quality breakout found but could not log: ' + res.error);
   }
@@ -19979,6 +19985,7 @@ async function aseEvaluateNiftyProV15() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['nifty_pro_v15'] = dedupeKey;
     aseLog('✅ Nifty Pro V1.5 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2) — one trade/day used');
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V1.5', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V1.5 signal found but could not log: ' + res.error);
   }
@@ -20197,6 +20204,7 @@ async function aseEvaluateNiftyProV2() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['nifty_pro_v2'] = dedupeKey;
     aseLog('✅ Nifty Pro V2 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2, ATR '+fN(sig.atr,1)+') — one trade/day used');
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V2', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V2 signal found but could not log: ' + res.error);
   }
@@ -22260,6 +22268,83 @@ setTimeout(function(){
 
 
 <script>
+/* ═══════════════════════════════════════════════════════════
+   F&O AUTO SIGNAL ENGINE — NEW CALL NOTIFICATIONS
+   Fires whenever any of the 6 Auto Signal Engine strategies
+   auto-logs a fresh F&O paper trade: an in-app toast + short
+   chime always, plus a real browser push notification once the
+   user has granted permission (toggle lives in the Auto Signal
+   Engine panel, #fo-notif-status).
+═══════════════════════════════════════════════════════════ */
+function jarvisFOCallDing() {
+  try {
+    var C = new (window.AudioContext || window.webkitAudioContext)();
+    var tone = function(f,t,d,v){
+      var o=C.createOscillator(), g=C.createGain();
+      o.connect(g); g.connect(C.destination);
+      o.frequency.value=f;
+      g.gain.setValueAtTime(0,C.currentTime+t);
+      g.gain.linearRampToValueAtTime(v||.15,C.currentTime+t+.03);
+      g.gain.linearRampToValueAtTime(0,C.currentTime+t+d);
+      o.start(C.currentTime+t); o.stop(C.currentTime+t+d+.05);
+    };
+    tone(880,0,.14,.16); tone(1320,.12,.18,.14);
+  } catch(e) {}
+}
+
+window.jarvisNotifyFOCall = function(strategyLabel, instr, entry, target, sl) {
+  var title = '⚡ New F&O Call — ' + instr;
+  var body  = strategyLabel + ' · Entry ₹' + entry + ' · TGT ₹' + target + ' · SL ₹' + sl;
+
+  // In-app toast
+  try {
+    if (typeof jarvisToast === 'function') {
+      jarvisToast('🤖 ' + title + ' (' + body + ')', 'success', 9000);
+    } else {
+      var toast = document.getElementById('err-toast');
+      if (toast) {
+        toast.style.cssText = 'display:block;position:fixed;top:70px;right:20px;transform:none;left:auto;background:rgba(0,20,0,.97);border:2px solid #00ff88;border-radius:10px;padding:14px 18px;font-family:monospace;font-size:11px;color:#00ff88;z-index:99999;max-width:320px;line-height:1.7;box-shadow:0 4px 20px rgba(0,255,136,.25)';
+        toast.innerHTML = '⚡ <b>NEW F&O CALL</b><br><span style="color:#c8d8f0">'+instr+'</span><br><span style="font-size:9px;color:#4a6080">'+body+'</span>';
+        setTimeout(function(){ toast.style.cssText=''; toast.innerHTML=''; toast.style.display='none'; }, 11000);
+      }
+    }
+  } catch(e) {}
+
+  jarvisFOCallDing();
+
+  // Browser push notification (only fires if permission already granted)
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      var n = new Notification(title, { body: body, tag: 'fo-call-' + Date.now() });
+      n.onclick = function(){ window.focus(); try{ showPage('advanced', null); }catch(e){} n.close(); };
+      setTimeout(function(){ try{ n.close(); }catch(e){} }, 20000);
+    } catch(e) {}
+  }
+};
+
+/* ─── Permission toggle UI (mirrors the SIP reminder pattern) ─── */
+function setupFOCallNotifUI() {
+  var el = document.getElementById('fo-notif-status');
+  if (!el) return;
+  if (!('Notification' in window)) {
+    el.textContent = '⚠️ Push notifications not supported in this browser';
+    el.style.color = '#ff3d5a'; el.style.cursor = 'default';
+    return;
+  }
+  var p = Notification.permission;
+  el.textContent = p==='granted' ? '🔔 ON — you\'ll get a push notification for every new auto F&O call' :
+                    p==='denied'  ? '❌ Blocked — enable notifications in browser settings' :
+                    '🔔 Click to enable push notifications for new F&O calls';
+  el.style.color  = p==='granted' ? '#00ff88' : p==='denied' ? '#ff3d5a' : '#ffcc00';
+  el.style.cursor = p==='default' ? 'pointer' : 'default';
+  if (p==='default') {
+    el.onclick = function(){ Notification.requestPermission().then(function(){ setupFOCallNotifUI(); }); };
+  } else {
+    el.onclick = null;
+  }
+}
+setTimeout(setupFOCallNotifUI, 1500);
+
 /* ═══════════════════════════════════════════════════════════
    F&O CALL ENGINE — COMPLETE REWRITE
    fo2Generate, fo2Render, fo2SwitchIndex, fo2UpdateIndexBar
