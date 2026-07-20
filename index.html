@@ -10518,6 +10518,7 @@ function daysToExpiry(expiryDateStr) {
 // NSE requires: 1) GET nseindia.com homepage to set cookies, 2) GET option-chain API with those cookies
 // We try multiple CORS proxies since NSE blocks direct browser requests
 var _nseChainCache = {}; // symbol -> { data, ts }
+var _nseInFlight = {}; // symbol -> true while a fetchNSEChain call is actively running
 var _nseConnected = false;
 
 async function fetchNSEChain(symbol) {
@@ -10527,18 +10528,45 @@ async function fetchNSEChain(symbol) {
   if (_nseChainCache[symbol] && (now - _nseChainCache[symbol].ts) < 3000) {
     return _nseChainCache[symbol].data;
   }
+  // Re-entrancy guard — if a previous call for this symbol is still in
+  // flight (NSE/proxy hanging for 30s+), the 15s Auto Signal Engine tick
+  // used to fire ANOTHER overlapping call on top of it every cycle, so
+  // dozens of zombie requests piled up against the same Worker/NSE over a
+  // few minutes. That pile-up is almost certainly what was tripping NSE's
+  // 403 rate-limit block. Skip firing a new call while one's still running.
+  if (_nseInFlight[symbol]) {
+    return _nseChainCache[symbol] ? _nseChainCache[symbol].data : null;
+  }
+  _nseInFlight[symbol] = true;
+  try {
+    return await _fetchNSEChainInner(symbol, now);
+  } finally {
+    _nseInFlight[symbol] = false;
+  }
+}
 
+async function _fetchNSEChainInner(symbol, now) {
   var nseUrl = 'https://www.nseindia.com/api/option-chain-indices?symbol=' + encodeURIComponent(symbol);
 
-  // Helper: safe fetch with timeout, never throws, never logs
+  // Helper: safe fetch with a REAL abort on timeout (not just a JS-side
+  // race) — the previous version only stopped *waiting* in JS when the
+  // timeout fired, but never cancelled the underlying browser request, so
+  // slow/hanging requests kept running for minutes in the background (see
+  // the 1.6min entries in the Network tab) instead of actually stopping.
   async function safeFetch(url, opts, ms) {
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, ms || 7000);
     try {
-      var r = await Promise.race([
-        fetch(url, opts || {}).catch(function(){ return null; }),
-        new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms || 7000); })
-      ]).catch(function(){ return null; });
+      var fetchOpts = {};
+      for (var k in (opts || {})) fetchOpts[k] = opts[k];
+      fetchOpts.signal = controller.signal;
+      var r = await fetch(url, fetchOpts);
+      clearTimeout(timer);
       return r;
-    } catch(e) { return null; }
+    } catch(e) {
+      clearTimeout(timer);
+      return null; // covers abort, network error, CORS error — never throws
+    }
   }
 
   // Helper: try to parse NSE JSON from response
