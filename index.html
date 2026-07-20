@@ -875,6 +875,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
 }
 
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="scan"></div>
@@ -3302,7 +3303,43 @@ setTimeout(nd2SyncAll, 2000);
         </div>
       </div>
 
-      <div id="fo-notif-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--w);cursor:pointer;margin:0 0 12px 2px;padding:6px 10px;background:var(--ov2);border:1px solid var(--border);border-radius:6px;display:inline-block">🔔 Click to enable push notifications for new F&amp;O calls</div>
+      <div id="fo-notif-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--w);cursor:pointer;margin:0 0 8px 2px;padding:6px 10px;background:var(--ov2);border:1px solid var(--border);border-radius:6px;display:inline-block">🔔 Click to enable push notifications for new F&amp;O calls</div>
+
+      <!-- Notifications settings — collapsible -->
+      <div style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <button type="button" onclick="var p=document.getElementById('notif-settings-panel');var open=p.style.display!=='none';p.style.display=open?'none':'block';document.getElementById('notif-settings-caret').textContent=open?'▾':'▴';" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 11px;background:var(--ov25);border:none;color:var(--txt);font-family:Share Tech Mono;font-size:10px;cursor:pointer">
+          <span>⚙️ Notification settings — Telegram, quiet hours, per-strategy mute, history</span>
+          <span id="notif-settings-caret" style="color:var(--a)">▾</span>
+        </button>
+        <div id="notif-settings-panel" style="display:none;padding:12px;background:var(--ov1)">
+
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:6px">📲 TELEGRAM — free, sends every F&amp;O alert + EOD PDF straight to your phone. Create a bot via @BotFather, message it once, then get your chat ID from api.telegram.org/bot&lt;token&gt;/getUpdates.</div>
+          <input type="text" id="tg-bot-token" placeholder="Bot token (from @BotFather)" style="width:100%;padding:8px 10px;margin-bottom:6px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;color:var(--txt);font-family:Share Tech Mono;font-size:10px">
+          <input type="text" id="tg-chat-id" placeholder="Chat ID" style="width:100%;padding:8px 10px;margin-bottom:6px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;color:var(--txt);font-family:Share Tech Mono;font-size:10px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <button type="button" onclick="jarvisTelegramTest()" style="padding:7px 14px;background:rgba(0,212,255,.12);border:1px solid var(--a);border-radius:6px;color:var(--a);font-family:Share Tech Mono;font-size:9px;cursor:pointer">Send test message</button>
+            <span id="tg-test-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></span>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:Share Tech Mono;font-size:10px;color:var(--txt);cursor:pointer">
+            <input type="checkbox" id="notif-quiet-hours" style="accent-color:var(--a);width:14px;height:14px">
+            🌙 Quiet hours — only alert during market hours (9:15–15:30 IST, Mon–Fri)
+          </label>
+
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:6px">🔕 MUTE PER STRATEGY — checked strategies won't push alerts (entry or close), but still trade + log normally</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-bottom:12px">
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-pcr_ema_vix" style="accent-color:var(--r);width:12px;height:12px">PCR+EMA+VIX</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-trendline" style="accent-color:var(--r);width:12px;height:12px">Trendline Breakout</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-trendline_confirmed" style="accent-color:var(--r);width:12px;height:12px">Trendline Confirmed</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-quality_breakout" style="accent-color:var(--r);width:12px;height:12px">Quality Breakout</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-nifty_pro_v15" style="accent-color:var(--r);width:12px;height:12px">Nifty Pro V1.5</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-nifty_pro_v2" style="accent-color:var(--r);width:12px;height:12px">Nifty Pro V2</label>
+          </div>
+
+          <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:6px">🕘 RECENT NOTIFICATIONS (last 20)</div>
+          <div id="fo-notif-history" style="max-height:220px;overflow-y:auto;background:var(--ov25);border:1px solid var(--border);border-radius:6px;padding:8px"></div>
+        </div>
+      </div>
 
       <!-- Strategy selector — dropdown with tick marks: check 1 or more to run them all in parallel -->
       <div id="ase-strategy-dropdown-wrap" style="position:relative;margin-bottom:6px">
@@ -16978,10 +17015,12 @@ function ptCheckAutoExits() {
       ptCloseTrade(t.id, live, true);
       t.autoExitReason = reason;
       closedAny = true;
+      if (t.auto && typeof jarvisNotifyTradeClosed === 'function') { try { jarvisNotifyTradeClosed(t, live, reason); } catch(e) {} }
     } else if (live >= t.target) {
       ptCloseTrade(t.id, live, true);
       t.autoExitReason = 'AUTO TARGET';
       closedAny = true;
+      if (t.auto && typeof jarvisNotifyTradeClosed === 'function') { try { jarvisNotifyTradeClosed(t, live, 'AUTO TARGET'); } catch(e) {} }
     }
   });
   if (closedAny) ptSave();
@@ -19370,6 +19409,7 @@ function aseIsExpiryDayOpenGuard() {
 
 // Core evaluation — called every fetch cycle (piggybacks on runSignalEngine's cadence)
 function aseEvaluate() {
+  window.ASE_LAST_HEARTBEAT_TS = Date.now();
   var statusEl = document.getElementById('ase-last-check');
   if (statusEl) statusEl.textContent = 'Checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
@@ -19524,7 +19564,7 @@ function aseEvaluatePcrEmaVix() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['pcr_ema_vix'] = dedupeKey;
     aseLog('✅ Auto-logged BUY '+sideToTrade+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+reasons.filter(Boolean).join(', '));
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('PCR + EMA21 + VIX', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('PCR + EMA21 + VIX', 'pcr_ema_vix', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Signal found but could not log: ' + res.error);
   }
@@ -19618,7 +19658,7 @@ async function aseEvaluateTrendline() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['trendline'] = dedupeKey;
     aseLog('✅ Trendline auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+breakout.line);
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline Breakout', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline Breakout', 'trendline', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Trendline breakout found but could not log: ' + res.error);
   }
@@ -19733,7 +19773,7 @@ async function aseEvaluateTrendlineConfirmed() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['trendline_confirmed'] = dedupeKey;
     aseLog('✅ Confirmed auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+confirmReason);
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline + PCR/EMA Confirmed', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline + PCR/EMA Confirmed', 'trendline_confirmed', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Confirmed breakout found but could not log: ' + res.error);
   }
@@ -19866,7 +19906,7 @@ async function aseEvaluateQualityBreakout() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['quality_breakout'] = dedupeKey;
     aseLog('✅ Quality Breakout auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.75) — ADX '+adxRes.adx.toFixed(1));
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Quality Breakout', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Quality Breakout', 'quality_breakout', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Quality breakout found but could not log: ' + res.error);
   }
@@ -19985,7 +20025,7 @@ async function aseEvaluateNiftyProV15() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['nifty_pro_v15'] = dedupeKey;
     aseLog('✅ Nifty Pro V1.5 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2) — one trade/day used');
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V1.5', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V1.5', 'nifty_pro_v15', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V1.5 signal found but could not log: ' + res.error);
   }
@@ -20204,7 +20244,7 @@ async function aseEvaluateNiftyProV2() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['nifty_pro_v2'] = dedupeKey;
     aseLog('✅ Nifty Pro V2 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2, ATR '+fN(sig.atr,1)+') — one trade/day used');
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V2', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V2', 'nifty_pro_v2', instr, chainLtp, target, sl);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V2 signal found but could not log: ' + res.error);
   }
@@ -22292,35 +22332,158 @@ function jarvisFOCallDing() {
   } catch(e) {}
 }
 
-window.jarvisNotifyFOCall = function(strategyLabel, instr, entry, target, sl) {
+window.jarvisNotifyFOCall = function(strategyLabel, strategyKey, instr, entry, target, sl) {
+  if (JARVIS_NOTIF_SETTINGS.mute[strategyKey]) return;
+  if (JARVIS_NOTIF_SETTINGS.quietHoursOnly && !jarvisInMarketHours()) return;
   var title = '⚡ New F&O Call — ' + instr;
   var body  = strategyLabel + ' · Entry ₹' + entry + ' · TGT ₹' + target + ' · SL ₹' + sl;
+  jarvisPushRaw('entry', title, body, '#00d4ff');
+};
 
-  // In-app toast
+/* ─── Trade closed (target / SL / trailing-SL hit) ─── */
+window.jarvisNotifyTradeClosed = function(t, exitPrice, reason) {
+  if (!t || !t.auto) return; // only Auto Signal Engine trades, not manual paper trades
+  if (JARVIS_NOTIF_SETTINGS.mute[t.strategy]) return;
+  var win = (t.net || 0) >= 0;
+  var icon  = reason === 'AUTO TARGET' ? '✅' : reason === 'TRAIL SL' ? '🔒' : '⛔';
+  var label = reason === 'AUTO TARGET' ? 'TARGET HIT' : reason === 'TRAIL SL' ? 'TRAILING SL HIT' : 'STOP LOSS HIT';
+  var stratLabel = (typeof ptStrategyLabel === 'function') ? ptStrategyLabel(t.strategy) : (t.strategy || '');
+  var pnlTxt = (t.net >= 0 ? '+' : '') + '₹' + Math.round(t.net || 0);
+  var title = icon + ' ' + label + ' — ' + t.instr;
+  var body  = stratLabel + ' · Exit ₹' + exitPrice + ' · P&L ' + pnlTxt;
+  jarvisPushRaw('close', title, body, win ? '#00ff88' : '#ff3d5a');
+};
+
+/* ─── Settings (Telegram creds, mutes, quiet hours) — persisted ─── */
+var JARVIS_NOTIF_SETTINGS = (function(){
+  var def = { telegramBotToken:'', telegramChatId:'', mute:{}, quietHoursOnly:true, lastEodDate:'', lastExpiryReminderDate:'' };
+  try {
+    var stored = JSON.parse(localStorage.getItem('jarvis_notif_settings'));
+    if (stored) return Object.assign({}, def, stored, { mute: Object.assign({}, def.mute, stored.mute||{}) });
+  } catch(e) {}
+  return def;
+})();
+function jarvisNotifSettingsSave() { try { localStorage.setItem('jarvis_notif_settings', JSON.stringify(JARVIS_NOTIF_SETTINGS)); } catch(e) {} }
+
+function jarvisInMarketHours() {
+  var ist = (typeof getIST === 'function') ? getIST() : new Date();
+  var day = ist.getDay();
+  if (day === 0 || day === 6) return false; // weekend
+  var mins = ist.getHours()*60 + ist.getMinutes();
+  return mins >= (9*60+15) && mins <= (15*60+30);
+}
+
+/* ─── Notification history (last 20) ─── */
+var JARVIS_NOTIF_HISTORY = [];
+try { JARVIS_NOTIF_HISTORY = JSON.parse(localStorage.getItem('jarvis_notif_history')) || []; } catch(e) {}
+function jarvisNotifHistoryPush(entry) {
+  JARVIS_NOTIF_HISTORY.unshift(Object.assign({ time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) }, entry));
+  if (JARVIS_NOTIF_HISTORY.length > 20) JARVIS_NOTIF_HISTORY.length = 20;
+  try { localStorage.setItem('jarvis_notif_history', JSON.stringify(JARVIS_NOTIF_HISTORY)); } catch(e) {}
+  jarvisRenderNotifHistory();
+}
+function jarvisRenderNotifHistory() {
+  var el = document.getElementById('fo-notif-history');
+  if (!el) return;
+  if (!JARVIS_NOTIF_HISTORY.length) { el.innerHTML = '<div style="color:var(--dim);font-size:9px;padding:4px 0">No notifications yet.</div>'; return; }
+  el.innerHTML = JARVIS_NOTIF_HISTORY.map(function(h){
+    return '<div style="padding:5px 2px;border-bottom:1px solid var(--border);font-size:9px;font-family:Share Tech Mono">'+
+      '<span style="color:var(--dim)">['+h.time+']</span> <b style="color:'+(h.color||'#c8d8f0')+'">'+h.title+'</b><br>'+
+      '<span style="color:#7a8db0">'+h.body+'</span></div>';
+  }).join('');
+}
+setTimeout(jarvisRenderNotifHistory, 1500);
+
+/* ─── Low-level dispatcher: toast + sound + browser push + history + Telegram ─── */
+function jarvisPushRaw(category, title, body, colorHex, opts) {
+  opts = opts || {};
+  jarvisNotifHistoryPush({ title: title, body: body, color: colorHex, category: category });
+
   try {
     if (typeof jarvisToast === 'function') {
-      jarvisToast('🤖 ' + title + ' (' + body + ')', 'success', 9000);
+      jarvisToast('🔔 ' + title + ' — ' + body, 'success', 9000);
     } else {
       var toast = document.getElementById('err-toast');
       if (toast) {
-        toast.style.cssText = 'display:block;position:fixed;top:70px;right:20px;transform:none;left:auto;background:rgba(0,20,0,.97);border:2px solid #00ff88;border-radius:10px;padding:14px 18px;font-family:monospace;font-size:11px;color:#00ff88;z-index:99999;max-width:320px;line-height:1.7;box-shadow:0 4px 20px rgba(0,255,136,.25)';
-        toast.innerHTML = '⚡ <b>NEW F&O CALL</b><br><span style="color:#c8d8f0">'+instr+'</span><br><span style="font-size:9px;color:#4a6080">'+body+'</span>';
+        toast.style.cssText = 'display:block;position:fixed;top:70px;right:20px;transform:none;left:auto;background:rgba(0,20,0,.97);border:2px solid '+colorHex+';border-radius:10px;padding:14px 18px;font-family:monospace;font-size:11px;color:'+colorHex+';z-index:99999;max-width:320px;line-height:1.7;box-shadow:0 4px 20px rgba(0,255,136,.25)';
+        toast.innerHTML = '<b>'+title+'</b><br><span style="font-size:9px;color:#4a6080">'+body+'</span>';
         setTimeout(function(){ toast.style.cssText=''; toast.innerHTML=''; toast.style.display='none'; }, 11000);
       }
     }
   } catch(e) {}
 
-  jarvisFOCallDing();
+  if (!opts.silent) jarvisFOCallDing();
 
-  // Browser push notification (only fires if permission already granted)
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
-      var n = new Notification(title, { body: body, tag: 'fo-call-' + Date.now() });
+      var n = new Notification(title, { body: body, tag: category + '-' + Date.now() });
       n.onclick = function(){ window.focus(); try{ showPage('advanced', null); }catch(e){} n.close(); };
       setTimeout(function(){ try{ n.close(); }catch(e){} }, 20000);
     } catch(e) {}
   }
-};
+
+  if (opts.telegram !== false) { try { jarvisTelegramSendText(title + '\n' + body); } catch(e) {} }
+}
+
+function jarvisFOCallDing() {
+  try {
+    var C = new (window.AudioContext || window.webkitAudioContext)();
+    var tone = function(f,t,d,v){
+      var o=C.createOscillator(), g=C.createGain();
+      o.connect(g); g.connect(C.destination);
+      o.frequency.value=f;
+      g.gain.setValueAtTime(0,C.currentTime+t);
+      g.gain.linearRampToValueAtTime(v||.15,C.currentTime+t+.03);
+      g.gain.linearRampToValueAtTime(0,C.currentTime+t+d);
+      o.start(C.currentTime+t); o.stop(C.currentTime+t+d+.05);
+    };
+    tone(880,0,.14,.16); tone(1320,.12,.18,.14);
+  } catch(e) {}
+}
+
+/* ─── Telegram — free, no server needed, sends straight from the browser ─── */
+function jarvisTelegramSendText(text) {
+  if (!JARVIS_NOTIF_SETTINGS.telegramBotToken || !JARVIS_NOTIF_SETTINGS.telegramChatId) return Promise.resolve(false);
+  return fetch('https://api.telegram.org/bot' + JARVIS_NOTIF_SETTINGS.telegramBotToken + '/sendMessage', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: JARVIS_NOTIF_SETTINGS.telegramChatId, text: text })
+  }).then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) console.warn('[Telegram] sendMessage failed', j); return !!j.ok; })
+    .catch(function(e){ console.warn('[Telegram] sendMessage error', e); return false; });
+}
+function jarvisTelegramSendDocument(blob, filename, caption) {
+  if (!JARVIS_NOTIF_SETTINGS.telegramBotToken || !JARVIS_NOTIF_SETTINGS.telegramChatId) return Promise.resolve(false);
+  var fd = new FormData();
+  fd.append('chat_id', JARVIS_NOTIF_SETTINGS.telegramChatId);
+  fd.append('caption', caption || '');
+  fd.append('document', blob, filename);
+  return fetch('https://api.telegram.org/bot' + JARVIS_NOTIF_SETTINGS.telegramBotToken + '/sendDocument', { method: 'POST', body: fd })
+    .then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) console.warn('[Telegram] sendDocument failed', j); return !!j.ok; })
+    .catch(function(e){ console.warn('[Telegram] sendDocument error', e); return false; });
+}
+function jarvisTelegramTest() {
+  var status = document.getElementById('tg-test-status');
+  if (status) status.textContent = 'Sending test message…';
+  jarvisTelegramSendText('✅ JARVIS is connected — you\'ll get F&O call alerts and the EOD PDF summary here.').then(function(ok){
+    if (status) { status.textContent = ok ? '✅ Test message sent — check Telegram' : '❌ Failed — check bot token / chat ID'; status.style.color = ok ? '#00ff88' : '#ff3d5a'; }
+  });
+}
+
+/* ─── Settings UI wiring (Telegram fields, mute checkboxes, quiet hours) ─── */
+function jarvisNotifSettingsUIInit() {
+  var tokenEl = document.getElementById('tg-bot-token');
+  var chatEl  = document.getElementById('tg-chat-id');
+  var quietEl = document.getElementById('notif-quiet-hours');
+  if (tokenEl) { tokenEl.value = JARVIS_NOTIF_SETTINGS.telegramBotToken; tokenEl.onchange = function(){ JARVIS_NOTIF_SETTINGS.telegramBotToken = tokenEl.value.trim(); jarvisNotifSettingsSave(); }; }
+  if (chatEl)  { chatEl.value  = JARVIS_NOTIF_SETTINGS.telegramChatId;  chatEl.onchange  = function(){ JARVIS_NOTIF_SETTINGS.telegramChatId  = chatEl.value.trim();  jarvisNotifSettingsSave(); }; }
+  if (quietEl) { quietEl.checked = JARVIS_NOTIF_SETTINGS.quietHoursOnly; quietEl.onchange = function(){ JARVIS_NOTIF_SETTINGS.quietHoursOnly = quietEl.checked; jarvisNotifSettingsSave(); }; }
+  ['pcr_ema_vix','trendline','trendline_confirmed','quality_breakout','nifty_pro_v15','nifty_pro_v2'].forEach(function(key){
+    var cb = document.getElementById('mute-' + key);
+    if (!cb) return;
+    cb.checked = !!JARVIS_NOTIF_SETTINGS.mute[key];
+    cb.onchange = function(){ JARVIS_NOTIF_SETTINGS.mute[key] = cb.checked; jarvisNotifSettingsSave(); };
+  });
+}
+setTimeout(jarvisNotifSettingsUIInit, 1500);
 
 /* ─── Permission toggle UI (mirrors the SIP reminder pattern) ─── */
 function setupFOCallNotifUI() {
@@ -22344,6 +22507,188 @@ function setupFOCallNotifUI() {
   }
 }
 setTimeout(setupFOCallNotifUI, 1500);
+
+/* ═══════════════════════════════════════════════════════════
+   ENGINE HEALTH WATCHDOG
+   aseEvaluate() stamps ASE_LAST_HEARTBEAT_TS every time it runs
+   (every ~15s while the engine is on). If that stamp goes stale
+   for >90s during market hours while the engine is supposed to
+   be ON, something has stopped it (throttled background tab,
+   crashed fetch loop, etc) — fire one alert until it recovers.
+   Also alerts on actual browser online/offline transitions.
+═══════════════════════════════════════════════════════════ */
+var ASE_LAST_HEARTBEAT_TS = 0;
+var JARVIS_ENGINE_ALERTED = false;
+setInterval(function(){
+  if (typeof ASE_ON === 'undefined' || !ASE_ON) { JARVIS_ENGINE_ALERTED = false; return; }
+  if (!jarvisInMarketHours()) { JARVIS_ENGINE_ALERTED = false; return; }
+  if (!ASE_LAST_HEARTBEAT_TS) return;
+  var staleMs = Date.now() - ASE_LAST_HEARTBEAT_TS;
+  if (staleMs > 90000) {
+    if (!JARVIS_ENGINE_ALERTED) {
+      JARVIS_ENGINE_ALERTED = true;
+      jarvisPushRaw('health', '🛑 Engine stopped', 'No heartbeat for ' + Math.round(staleMs/1000) + 's — reopen the app to resume auto signals.', '#ff3d5a');
+    }
+  } else {
+    JARVIS_ENGINE_ALERTED = false;
+  }
+}, 60000);
+window.addEventListener('offline', function(){
+  jarvisPushRaw('health', '📡 Connection lost', 'Your device went offline — auto signals are paused until it reconnects.', '#ffcc00');
+});
+window.addEventListener('online', function(){
+  jarvisPushRaw('health', '📡 Back online', 'Connection restored — auto signals are resuming.', '#00ff88');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   EXPIRY DAY REMINDER
+   Once per day (after 9 AM IST), checks open Auto Signal Engine
+   trades for an expiry date embedded in the instrument name
+   (e.g. "NIFTY 24750CE 7 Jul 2026") and alerts once if any expire
+   today.
+═══════════════════════════════════════════════════════════ */
+function jarvisCheckExpiryReminder() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) return;
+  var ist = (typeof getIST === 'function') ? getIST() : new Date();
+  if (ist.getHours() < 9) return;
+  var todayKey = ist.toLocaleDateString('en-CA');
+  if (JARVIS_NOTIF_SETTINGS.lastExpiryReminderDate === todayKey) return;
+
+  var open = PT_PORTFOLIO.trades.filter(function(t){ return t.status === 'OPEN' && t.auto; });
+  if (!open.length) return;
+
+  var mo = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  var todayD = new Date(ist.getFullYear(), ist.getMonth(), ist.getDate()).getTime();
+  var expiringToday = open.filter(function(t){
+    var m = String(t.instr).match(/(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/);
+    if (!m || !(m[2] in mo)) return false;
+    var d = new Date(parseInt(m[3],10), mo[m[2]], parseInt(m[1],10)).getTime();
+    return d === todayD;
+  });
+
+  if (expiringToday.length) {
+    JARVIS_NOTIF_SETTINGS.lastExpiryReminderDate = todayKey;
+    jarvisNotifSettingsSave();
+    var names = expiringToday.map(function(t){ return t.instr; }).join(', ');
+    jarvisPushRaw('expiry', '📅 Expiry today', expiringToday.length + ' open position(s) expire today: ' + names, '#ffcc00');
+  }
+}
+setInterval(jarvisCheckExpiryReminder, 5*60*1000);
+setTimeout(jarvisCheckExpiryReminder, 8000);
+
+/* ═══════════════════════════════════════════════════════════
+   EOD SUMMARY — push notification + PDF sent to Telegram
+   Fires once, shortly after 15:30 IST on trading days, for
+   today's Auto Signal Engine trades only.
+═══════════════════════════════════════════════════════════ */
+function jarvisCheckEodSummary() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) return;
+  var ist = (typeof getIST === 'function') ? getIST() : new Date();
+  var day = ist.getDay();
+  if (day === 0 || day === 6) return;
+  var mins = ist.getHours()*60 + ist.getMinutes();
+  if (mins < (15*60+31)) return;
+  var todayKey = ist.toLocaleDateString('en-CA');
+  if (JARVIS_NOTIF_SETTINGS.lastEodDate === todayKey) return;
+  JARVIS_NOTIF_SETTINGS.lastEodDate = todayKey;
+  jarvisNotifSettingsSave();
+  jarvisSendEodSummary(todayKey);
+}
+setInterval(jarvisCheckEodSummary, 2*60*1000);
+setTimeout(jarvisCheckEodSummary, 10000);
+
+function jarvisSendEodSummary(dayKey) {
+  var all    = PT_PORTFOLIO.trades.filter(function(t){ return t.auto && t.dayKey === dayKey; });
+  var closed = all.filter(function(t){ return t.status !== 'OPEN'; });
+  var wins   = closed.filter(function(t){ return (t.net||0) >= 0; });
+  var losses = closed.filter(function(t){ return (t.net||0) < 0; });
+  var open   = all.filter(function(t){ return t.status === 'OPEN'; });
+  var net    = closed.reduce(function(a,t){ return a + (t.net||0); }, 0);
+
+  var title = '📊 EOD F&O Summary';
+  var body  = all.length + ' calls · ' + wins.length + ' win' + (wins.length===1?'':'s') + ' · ' + losses.length + ' SL · net ' + (net>=0?'+':'') + '₹' + Math.round(net);
+  jarvisPushRaw('eod', title, body, net>=0 ? '#00ff88' : '#ff3d5a', { telegram: false }); // Telegram gets the richer PDF version below instead of a plain text dupe
+
+  try {
+    var blob = jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey);
+    jarvisTelegramSendDocument(blob, 'JARVIS_EOD_' + dayKey + '.pdf', title + '\n' + body);
+  } catch(e) { console.warn('[EOD PDF]', e); }
+}
+
+function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
+  if (!window.jspdf) { console.warn('[EOD PDF] jsPDF not loaded'); return null; }
+  var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+  var W = 210, x = 15, y = 18;
+  var BG='#030712', PANEL='#0d1424', BORDER='#1a2840', CYAN='#00d4ff', GREEN='#00ff88', RED='#ff3d5a', AMBER='#ffcc00', TXT='#c8d8f0', DIM='#7a8db0';
+
+  doc.setFillColor(BG); doc.rect(0, 0, W, 297, 'F');
+  doc.setDrawColor(CYAN); doc.setLineWidth(0.6); doc.line(x, y, W-x, y);
+
+  doc.setTextColor(CYAN); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('JARVIS', x, y+9);
+  doc.setTextColor(TXT); doc.setFontSize(11);
+  doc.text('END-OF-DAY F&O SUMMARY', W-x, y+5, { align: 'right' });
+  doc.setTextColor(DIM); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text(dayKey + '  ·  NSE Session Closed 15:30 IST', W-x, y+10, { align: 'right' });
+
+  y += 20;
+  var stats = [['CALLS', String(all.length)], ['WINS', String(wins.length)], ['LOSSES', String(losses.length)], ['OPEN', String(open.length)], ['NET P&L', (net>=0?'+':'') + '₹' + Math.round(net)]];
+  var cw = (W - 2*x) / stats.length;
+  stats.forEach(function(s, i){
+    var cx = x + i*cw;
+    doc.setFillColor(PANEL); doc.setDrawColor(BORDER); doc.rect(cx, y, cw-2, 16, 'FD');
+    doc.setTextColor(DIM); doc.setFontSize(6.5); doc.text(s[0], cx+3, y+5);
+    var color = i===4 ? (net>=0?GREEN:RED) : (i===1?GREEN:i===2?RED:i===3?AMBER:CYAN);
+    doc.setTextColor(color); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text(s[1], cx+3, y+12);
+    doc.setFont('helvetica','normal');
+  });
+
+  y += 24;
+  doc.setTextColor('#a064ff'); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+  doc.text("TODAY'S AUTO-LOGGED CALLS", x, y);
+  y += 4;
+
+  var headers = ['TIME','STRATEGY','INSTRUMENT','ENTRY','EXIT','RESULT','P&L'];
+  var colW = [15, 30, 55, 15, 15, 25, 25];
+  var rowH = 7;
+  doc.setFillColor('#111b30'); doc.rect(x, y, W-2*x, rowH, 'F');
+  doc.setTextColor(CYAN); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  var cx2 = x;
+  headers.forEach(function(h, i){ doc.text(h, cx2+1.5, y+4.8); cx2 += colW[i]; });
+  y += rowH;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
+  var stratLabels = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2' };
+  all.slice(0, 22).forEach(function(t, ri){
+    if (y > 275) { doc.addPage(); doc.setFillColor(BG); doc.rect(0,0,W,297,'F'); y = 18; }
+    doc.setFillColor(ri % 2 === 0 ? PANEL : '#0f1928'); doc.rect(x, y, W-2*x, rowH, 'F');
+    var isOpen = t.status === 'OPEN';
+    var win = !isOpen && (t.net||0) >= 0;
+    var resultTxt = isOpen ? 'OPEN' : (win ? 'TARGET' : 'SL HIT');
+    var resultColor = isOpen ? AMBER : (win ? GREEN : RED);
+    var pnlTxt = isOpen ? '—' : ((t.net>=0?'+':'') + '₹' + Math.round(t.net||0));
+    var row = [ t.time||'', stratLabels[t.strategy]||t.strategy||'', String(t.instr||'').slice(0,32), '₹'+t.buy, isOpen?'—':'₹'+t.exit, resultTxt, pnlTxt ];
+    doc.setTextColor(TXT);
+    cx2 = x;
+    row.forEach(function(val, i){
+      if (i === 5) doc.setTextColor(resultColor); else if (i === 6) doc.setTextColor(pnlTxt.indexOf('+')===0?GREEN:pnlTxt.indexOf('-')===0?RED:DIM); else doc.setTextColor(TXT);
+      doc.text(String(val), cx2+1.5, y+4.8);
+      cx2 += colW[i];
+    });
+    y += rowH;
+  });
+
+  y += 8;
+  doc.setDrawColor(BORDER); doc.setLineWidth(0.3); doc.line(x, y, W-x, y);
+  y += 5;
+  doc.setTextColor(DIM); doc.setFontSize(6.5);
+  var disclaimer = 'All figures are from JARVIS\'s paper-trading Auto Signal Engine for educational tracking only. Not investment advice, not a broker contract note. F&O trading involves significant risk of capital loss.';
+  var lines = doc.splitTextToSize(disclaimer, W-2*x);
+  doc.text(lines, x, y);
+
+  return doc.output('blob');
+}
 
 /* ═══════════════════════════════════════════════════════════
    F&O CALL ENGINE — COMPLETE REWRITE
