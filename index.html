@@ -4812,12 +4812,18 @@ async function multiPost(url, headers, body) {
         }).catch(function(){ return null; }),
         new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 10000); })
       ]).catch(function(){ return null; });
-      if (!r0 || !r0.ok) throw new Error('worker-fail');
+      if (!r0) throw new Error('worker-fail');
+      // Parse the body even on a non-2xx status — Angel One (and the Worker
+      // relaying it) often return a real JSON error body (errorcode, message)
+      // alongside a 403/401, and that detail used to get thrown away here,
+      // making expired-session and rate-limit errors indistinguishable from
+      // a dead proxy. Only fall through to the next strategy if there's truly
+      // no parseable body.
       var raw0 = await r0.text().catch(function(){ return ''; });
       var d0;
       try { d0 = JSON.parse(raw0); } catch(pe) { d0 = null; }
-      if (d0 && (d0.status !== undefined || d0.jwtToken)) return d0;
-      if (d0 && d0.errorcode) return d0;
+      if (d0 && (d0.status !== undefined || d0.jwtToken || d0.errorcode)) return d0;
+      throw new Error('worker-fail');
     } catch(e) { /* silent — fall through to direct */ }
   }
 
@@ -4827,10 +4833,11 @@ async function multiPost(url, headers, body) {
       fetch(url, opts).catch(function(){ return null; }),
       new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 5000); })
     ]).catch(function(){ return null; });
-    if (!r || !r.ok) return null;
+    if (!r) return null;
     var txt = await r.text().catch(function(){ return ''; });
-    var d = JSON.parse(txt);
-    if (d && (d.status !== undefined || d.jwtToken)) return d;
+    var d = null;
+    try { d = JSON.parse(txt); } catch(pe) {}
+    if (d && (d.status !== undefined || d.jwtToken || d.errorcode)) return d;
   } catch(e) { /* silent */ }
 
   return null;
@@ -4937,7 +4944,18 @@ async function angelHistory(token, exchange, interval, from, to) {
   var histUrl = BASE + '/rest/secure/angelbroking/historical/v1/getCandleData';
   try {
     var d = await multiPost(histUrl, hdrs, body);
-    return (d && d.status && d.data) ? d.data : null;
+    if (d && d.status && d.data) return d.data;
+    if (d && d.errorcode) {
+      // Token actually expired/invalid — clear it so the next autoConnect
+      // cycle re-logs in with saved MPIN+TOTP instead of retrying a dead
+      // session forever. A generic rate-limit block (no errorcode, just a
+      // bare 403) is left alone here — that's handled by the stagger delay
+      // in srCatchUpAllSignals, not by clearing a perfectly valid token.
+      if (d.errorcode === 'AB1010' || d.errorcode === 'AB1050') {
+        creds.jwt = ''; localStorage.removeItem('ja_j');
+      }
+    }
+    return null;
   } catch(e) { return null; }
 }
 
@@ -10599,15 +10617,11 @@ async function _fetchNSEChainInner(symbol, now) {
     if (d2) { _nseChainCache[symbol]={data:d2,ts:now}; _nseConnected=true; return d2; }
   } catch(e) {}
 
-  // ── Strategy 3: corsproxy.io ──
-  try {
-    var r3 = await safeFetch('https://corsproxy.io/?url=' + encodeURIComponent(nseUrl),
-      { headers:{'x-requested-with':'XMLHttpRequest'} }, 7000);
-    var d3 = await tryParse(r3);
-    if (d3) { _nseChainCache[symbol]={data:d3,ts:now}; _nseConnected=true; return d3; }
-  } catch(e) {}
+  // (corsproxy.io removed — its /?url= endpoint now returns 404 on every
+  // request for this target, confirmed in live logs. It was a guaranteed
+  // wasted 7s timeout each cycle with zero chance of success.)
 
-  // ── Strategy 4: api.codetabs.com (thingproxy.freeboard.io retired — DNS no longer resolves) ──
+  // ── Strategy 3: api.codetabs.com (thingproxy.freeboard.io retired — DNS no longer resolves) ──
   try {
     var r4 = await safeFetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(nseUrl), {}, 7000);
     var d4 = await tryParse(r4);
@@ -15304,6 +15318,11 @@ async function srCatchUpAllSignals() {
         srFmtDate(fromDate),
         srFmtDate(toDate)
       );
+      // Angel One's historical-candle endpoint has a much stricter rate
+      // limit than quote/LTP — firing one request per signal back-to-back
+      // with no gap bursts straight through it and gets 403'd. A small
+      // stagger between calls keeps this loop under that limit.
+      await new Promise(function(res){ setTimeout(res, 350); });
       if (!candles || !candles.length) continue;
 
       var buyPrice    = srParsePrice(h.buy);
