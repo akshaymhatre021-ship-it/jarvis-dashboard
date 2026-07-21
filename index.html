@@ -14906,7 +14906,19 @@ async function srLoadFromCloud() {
 }
 
 // ── Main catchup function — called after Angel One login completes ──
+var SR_CATCHUP_LAST_RUN = 0;
 async function srCatchUpAllSignals() {
+  // This checks target/SL hits using DAILY candles, which only finalize
+  // once per trading day — re-running the full candle-fetch sweep every
+  // 30s (fetchAll's cadence) gave zero new information intraday but was
+  // the main source of the "Access denied because of exceeding access
+  // rate" 403s from Angel One's historical-data endpoint (21 signals ×
+  // one getCandleData call each, every single 30s tick, all day). Cap it
+  // to once every 15 minutes — plenty for daily-candle-based checks.
+  var nowTs = Date.now();
+  if (nowTs - SR_CATCHUP_LAST_RUN < 15*60*1000) return;
+  SR_CATCHUP_LAST_RUN = nowTs;
+
   // Get all RUNNING signals that have a known ticker in TM
   var running = SR_HISTORY.filter(function(h) {
     return h.result === 'RUNNING' && TM[h.stock];
@@ -15071,7 +15083,10 @@ async function srManualCatchUp() {
     alert('✅ No RUNNING signals to catch up.\nAll signals are already resolved.');
     return;
   }
-  await srCatchUpAllSignals();
+  await new Promise(function(res){
+    SR_CATCHUP_LAST_RUN = 0; // manual trigger always runs, ignoring the background cooldown
+    srCatchUpAllSignals().then(res).catch(res);
+  });
   SR_CURRENT = null;
   srGenReport();
 }
