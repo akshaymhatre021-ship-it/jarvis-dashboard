@@ -10841,7 +10841,15 @@ function renderOptionChain() {
   setEl('oc-total-pe-oi', fmtOI(OC_STATE.totalPeOI));
   setEl('oc-pcr-val', pcr.toFixed(2));
   setEl('oc-sentiment', pcr>=1.2?'🐂 Bullish':pcr<=0.8?'🐻 Bearish':'↔ Neutral');
-  setEl('ocLastUpdate', new Date().toLocaleTimeString('en-IN'));
+  // Preserve the source tag (🟢 NSE/ANGEL LIVE vs 🟡 BS Model) that
+  // _buildChainDataInner already set — this render step used to stomp it
+  // with a bare timestamp on every single cycle, so the clock always
+  // looked like it was ticking on fresh live data even during cycles that
+  // silently fell back to the synthetic estimate. Now it reflects
+  // OC_STATE.nseSource, so a stuck/fallback cycle is actually visible
+  // instead of looking identical to a live one.
+  var srcTag = OC_STATE.nseSource ? '🟢 LIVE — ' : '🟡 BS Model (NSE/Angel unavailable) — ';
+  setEl('ocLastUpdate', srcTag + new Date().toLocaleTimeString('en-IN'));
 
   // Render rows
   var html = '';
