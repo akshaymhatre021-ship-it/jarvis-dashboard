@@ -4787,8 +4787,29 @@ function tFetch(url, opts, ms) {
 }
 
 // ── multiPost: Cloudflare Worker first, then direct fetch fallback ──
+// Global throttle for Angel One's historical-candle endpoint. Several
+// different functions (srCatchUpAllSignals, loadChartReal, aseRefreshChart)
+// each call getCandleData independently, and each was already spaced out
+// *within itself* — but at startup they all fire within seconds of each
+// other, and TOGETHER they still blew straight through Angel's rate limit
+// ("Access denied because of exceeding access rate"). This queue forces a
+// minimum real-world gap between ANY two historical-candle requests
+// app-wide, regardless of which function triggered them.
+var _angelHistQueue = Promise.resolve();
+var _angelHistLastCallTs = 0;
+var ANGEL_HIST_MIN_GAP_MS = 1100;
+function angelHistThrottleGate() {
+  var p = _angelHistQueue.then(function(){
+    var wait = Math.max(0, ANGEL_HIST_MIN_GAP_MS - (Date.now() - _angelHistLastCallTs));
+    return new Promise(function(res){ setTimeout(res, wait); });
+  }).then(function(){ _angelHistLastCallTs = Date.now(); });
+  _angelHistQueue = p;
+  return p;
+}
+
 async function multiPost(url, headers, body) {
   var opts = { method:'POST', headers: headers, body: body };
+  if (url && url.indexOf('historical') !== -1) { await angelHistThrottleGate(); }
 
   // ── Attempt 0: YOUR Cloudflare Worker — works in ALL browsers, no extension needed ──
   if (PROXY_URL) {
