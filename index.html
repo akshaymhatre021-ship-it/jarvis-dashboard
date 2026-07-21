@@ -3233,12 +3233,23 @@ setTimeout(nd2SyncAll, 2000);
         <div style="font-family:Orbitron;font-size:11px;color:var(--g);letter-spacing:2px;margin-bottom:4px">📋 PAPER TRADING — VIRTUAL PORTFOLIO</div>
         <div style="font-family:Share Tech Mono;font-size:10px;color:var(--dim)">Practice without real money • Track performance vs Nifty</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="pt-strategy-filter" onchange="ptSetStrategyFilter(this.value)" style="padding:6px 10px;background:var(--ov45);border:1px solid rgba(160,100,255,.3);border-radius:5px;color:#a064ff;font-family:Share Tech Mono;font-size:10px;cursor:pointer;outline:none">
+          <option value="all">All Strategies</option>
+          <option value="pcr_ema_vix">PCR+EMA21+VIX</option>
+          <option value="trendline">Trendline Breakout</option>
+          <option value="trendline_confirmed">Trendline+Confirm</option>
+          <option value="quality_breakout">Quality Breakout</option>
+          <option value="nifty_pro_v15">Nifty Pro V1.5</option>
+          <option value="nifty_pro_v2">Nifty Pro V2</option>
+          <option value="manual">Manual</option>
+        </select>
         <button onclick="ptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
         <button onclick="ptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
         <button onclick="ptExportPDF()" style="padding:6px 14px;background:rgba(255,61,90,.06);border:1px solid rgba(255,107,53,.3);border-radius:5px;color:var(--o);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🧾 EXPORT PDF</button>
       </div>
     </div>
+    <div id="pt-filter-note" style="display:none;margin-top:8px;font-family:Share Tech Mono;font-size:9px;color:#a064ff">🔍 Showing P&amp;L, win rate, positions &amp; history filtered to this strategy only. Portfolio Value / Cash Balance always reflect the whole account (shared virtual cash pool across all strategies).</div>
     <!-- KPIs -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px">
       <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
@@ -3846,65 +3857,8 @@ setTimeout(nd2SyncAll, 2000);
 <!-- ══ STOCK ADVANCE PAGE ══ -->
 <div class="page" id="page-stockadv">
 
-<!-- Sub-tabs -->
-<div class="nav" style="margin-bottom:12px">
-  <button class="nav-tab active" id="stockadv-tab-backtest" onclick="stockAdvTab('backtest',this)" style="color:var(--g);border-color:rgba(0,255,136,.3)">📊 STOCK BACKTESTING</button>
-  <button class="nav-tab" id="stockadv-tab-paper" onclick="stockAdvTab('paper',this)">📋 STOCK PAPER TRADING</button>
-</div>
-
-<!-- ══ STOCK BACKTESTING — prefills & runs in the main Backtesting Engine ══ -->
-<div id="stockadv-page-backtest">
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph"><div class="pt" style="color:var(--g)">📊 BACKTEST A STOCK STRATEGY</div>
-      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Runs on the main Backtesting Engine — the full report opens there</span>
-    </div>
-    <div style="padding:14px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
-        <div>
-          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STOCK SYMBOL</label>
-          <input id="sbt-ticker" type="text" placeholder="e.g. RELIANCE, TCS, INFY" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
-        </div>
-        <div>
-          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">STRATEGY</label>
-          <select id="sbt-strategy" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
-            <option value="jarvis">JARVIS Standard (EMA+RSI)</option>
-            <option value="ema_cross">EMA Crossover Only</option>
-            <option value="rsi">RSI Reversal Strategy</option>
-            <option value="macd">MACD Momentum</option>
-            <option value="breakout">Volume Breakout</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">PERIOD</label>
-          <select id="sbt-period" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:11px;outline:none">
-            <option value="1m">1 Month</option>
-            <option value="3m" selected>3 Months</option>
-            <option value="6m">6 Months</option>
-            <option value="1y">1 Year</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">CAPITAL (₹)</label>
-          <input id="sbt-capital" type="number" value="100000" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1000" step="1000">
-        </div>
-        <div>
-          <label style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px">POSITION SIZE (%)</label>
-          <input id="sbt-pos" type="number" value="20" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--txt);font-family:Share Tech Mono;font-size:12px;outline:none" min="1" max="100">
-        </div>
-      </div>
-      <div id="sbt-msg" style="display:none;padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px;margin-bottom:8px"></div>
-      <button onclick="runStockBacktest()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,212,255,.05));border:1px solid var(--g);border-radius:7px;color:var(--g);font-family:Orbitron;font-size:11px;letter-spacing:2px;cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 0 18px rgba(0,255,136,.25)'" onmouseout="this.style.boxShadow='none'">
-        🚀 RUN BACKTEST — OPENS FULL REPORT
-      </button>
-      <div style="margin-top:10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-        Uses the same Backtesting Engine as the ⚡ Advanced tab (real Angel One daily candles when available for the symbol you enter, synthetic data as fallback) — you'll be taken there for the full KPIs, equity curve, win/loss breakdown, monthly P&amp;L and trade log.
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ══ STOCK PAPER TRADING ══ -->
-<div id="stockadv-page-paper" style="display:none">
+<div id="stockadv-page-paper">
 
   <!-- Portfolio Header -->
   <div id="spt-header" style="background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,212,255,.03));border:1px solid rgba(0,255,136,.2);border-left:4px solid var(--g);border-radius:12px;padding:14px 18px;margin-bottom:10px;position:relative;overflow:hidden">
@@ -8305,8 +8259,7 @@ function showPage(id,btn){
         try{ advTab('backtest', document.getElementById('adv-tab-backtest')); }catch(e){}
       }
       if(id==='stockadv'){
-        try{ sptInit(); sptRefreshUI(); }catch(e){}
-        try{ stockAdvTab('backtest', document.getElementById('stockadv-tab-backtest')); }catch(e){}
+        try{ stockAdvTab('paper', null); }catch(e){}
       }
       if(id==='finadvice'){
         // Redraw pie chart on tab switch in case canvas was zero-width on first load
@@ -16759,12 +16712,36 @@ function ptStrategyLabel(key) {
   return labels[key] || key || 'Manual';
 }
 
+var PT_STRATEGY_FILTER = localStorage.getItem('jarvis_pt_strat_filter') || 'all';
+function ptSetStrategyFilter(val) {
+  PT_STRATEGY_FILTER = val || 'all';
+  try { localStorage.setItem('jarvis_pt_strat_filter', PT_STRATEGY_FILTER); } catch(e) {}
+  ptRefreshUI();
+}
+
 function ptRefreshUI() {
   if (!PT_PORTFOLIO) ptInit();
   ptCheckAutoExits();
   var p = PT_PORTFOLIO;
-  var openTrades = p.trades.filter(function(t){return t.status==='OPEN';});
-  var closedTrades = p.trades.filter(function(t){return t.status!=='OPEN';});
+
+  // Restore the filter dropdown's selected value (e.g. after a fresh page load)
+  var filterEl = document.getElementById('pt-strategy-filter');
+  if (filterEl && filterEl.value !== PT_STRATEGY_FILTER) filterEl.value = PT_STRATEGY_FILTER;
+  var noteEl = document.getElementById('pt-filter-note');
+  if (noteEl) noteEl.style.display = (PT_STRATEGY_FILTER === 'all') ? 'none' : 'block';
+
+  // Strategy filter — applies to P&L, win rate, open positions & history
+  // below. Portfolio Value / Cash Balance intentionally stay whole-account:
+  // it's one shared virtual cash pool, not a separate pot per strategy.
+  var allTrades = (PT_STRATEGY_FILTER === 'all')
+    ? p.trades
+    : p.trades.filter(function(t){ return (t.strategy || 'manual') === PT_STRATEGY_FILTER; });
+
+  var openTrades = allTrades.filter(function(t){return t.status==='OPEN';});
+  var closedTrades = allTrades.filter(function(t){return t.status!=='OPEN';});
+
+  // Unfiltered versions — still needed for whole-account KPIs below
+  var openTradesAll = p.trades.filter(function(t){return t.status==='OPEN';});
 
   // Calc unrealised P&L from open trades using live prices
   var unrealised = openTrades.reduce(function(a,t){
@@ -16774,10 +16751,16 @@ function ptRefreshUI() {
 
   var realisedPnl = closedTrades.reduce(function(a,t){return a+(t.net||0);},0);
   var totalPnl = realisedPnl + unrealised;
-  var portfolioVal = p.cash + openTrades.reduce(function(a,t){ var live = ptGetLivePrice(t); return a + live * t.qty; },0);
+  var portfolioVal = p.cash + openTradesAll.reduce(function(a,t){ var live = ptGetLivePrice(t); return a + live * t.qty; },0);
   var retPct = ((portfolioVal - p.startCapital) / p.startCapital * 100).toFixed(2);
   var pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
-  window.PT_LAST_TOTAL_PNL = totalPnl;
+
+  // window.PT_LAST_TOTAL_PNL feeds the combined P&L widget elsewhere in the
+  // dashboard (options + stocks) — that must always be the true whole-account
+  // total, never the strategy-filtered figure shown in the KPI card above.
+  var unrealisedAll = openTradesAll.reduce(function(a,t){ var live = ptGetLivePrice(t); return a + (live - t.buy) * t.qty; },0);
+  var realisedPnlAll = p.trades.filter(function(t){return t.status!=='OPEN';}).reduce(function(a,t){return a+(t.net||0);},0);
+  window.PT_LAST_TOTAL_PNL = realisedPnlAll + unrealisedAll;
   window.PT_LAST_PORTFOLIO_VAL = portfolioVal;
   try { updateCombinedPnlWidget(); } catch(e) {}
   try { updateTodayGlance(); } catch(e) {}
@@ -17829,53 +17812,19 @@ async function liveTradingCloudLoad() {
 //  STOCK ADVANCE — sub-tab switching
 // ══════════════════════════════════════════════════════════════════
 function stockAdvTab(name, btn) {
-  ['backtest','paper'].forEach(function(t){
-    var el = document.getElementById('stockadv-page-'+t);
-    if (el) el.style.display = t===name ? 'block' : 'none';
-  });
-  document.querySelectorAll('#page-stockadv .nav .nav-tab').forEach(function(b){ b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  if (name === 'paper') {
-    sptInit();
-    sptRefreshUI();
-    sptEnsureTicker();
-    saseLoadState();
-  }
+  // Stock Backtesting sub-tab removed — Stock Paper Trading is now the
+  // only view in this section, always visible, no tab switcher needed.
+  var el = document.getElementById('stockadv-page-paper');
+  if (el) el.style.display = 'block';
+  sptInit();
+  sptRefreshUI();
+  sptEnsureTicker();
+  saseLoadState();
 }
 
-// ── Stock Backtesting: reuses the main Backtesting Engine wholesale ──
-// Rather than duplicate ~700 lines of KPI/chart/trade-log rendering, this
-// prefills the real engine's inputs and runs it there, then takes you to
-// see the full report. Same trusted engine, same output, no drift between
-// two versions of the same logic.
-function runStockBacktest() {
-  var ticker = document.getElementById('sbt-ticker').value.trim().toUpperCase();
-  var msg = document.getElementById('sbt-msg');
-  if (!ticker) {
-    msg.style.cssText='display:block;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);color:var(--r);padding:6px 10px;border-radius:4px;font-family:Share Tech Mono;font-size:11px';
-    msg.textContent='⚠ Enter a stock symbol first (e.g. RELIANCE, TCS, INFY).';
-    return;
-  }
-  var btTicker = document.getElementById('bt-ticker');
-  var btPeriod = document.getElementById('bt-period');
-  var btStrategy = document.getElementById('bt-strategy');
-  var btCapital = document.getElementById('bt-capital');
-  var btPos = document.getElementById('bt-pos');
-  if (btTicker) btTicker.value = ticker;
-  if (btPeriod) btPeriod.value = document.getElementById('sbt-period').value;
-  if (btStrategy) btStrategy.value = document.getElementById('sbt-strategy').value;
-  if (btCapital) btCapital.value = document.getElementById('sbt-capital').value;
-  if (btPos) btPos.value = document.getElementById('sbt-pos').value;
-
-  var advBtn = document.querySelector('[onclick*="showPage(\'advanced\'"]');
-  showPage('advanced', advBtn);
-  advTab('backtest', document.getElementById('adv-tab-backtest'));
-  if (typeof runBacktest === 'function') runBacktest();
-  setTimeout(function(){
-    var target = document.getElementById('bt-kpi-value') || document.getElementById('adv-page-backtest');
-    if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
-  }, 150);
-}
+// (runStockBacktest removed along with the Stock Backtesting sub-tab —
+// stock strategies can still be backtested directly from the main
+// ⚡ Advanced → 📊 BACKTESTING ENGINE tab.)
 
 // ══════════════════════════════════════════════════════════════════
 //  STOCK PAPER TRADING — independent virtual portfolio for cash-equity
