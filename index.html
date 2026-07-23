@@ -10212,16 +10212,18 @@ async function _fetchNSEChainInner(symbol, now) {
       var r1 = await safeFetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({action:'nse_chain', symbol:symbol}) }, 8000);
       var d1 = await tryParse(r1);
-      if (d1) { _nseChainCache[symbol]={data:d1,ts:now}; _nseConnected=true; return d1; }
-    } catch(e) {}
+      if (d1) { _nseChainCache[symbol]={data:d1,ts:now}; _nseConnected=true; console.log('[NSE Chain] ✅ Strategy 1 (Worker) succeeded — '+(d1.records.data.length)+' rows'); return d1; }
+      console.warn('[NSE Chain] ❌ Strategy 1 (Worker) failed — status '+(r1?r1.status:'no response'));
+    } catch(e) { console.warn('[NSE Chain] ❌ Strategy 1 (Worker) threw:', e.message); }
   }
 
   // ── Strategy 2: api.allorigins.win ──
   try {
     var r2 = await safeFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(nseUrl), {}, 7000);
     var d2 = await tryParse(r2);
-    if (d2) { _nseChainCache[symbol]={data:d2,ts:now}; _nseConnected=true; return d2; }
-  } catch(e) {}
+    if (d2) { _nseChainCache[symbol]={data:d2,ts:now}; _nseConnected=true; console.log('[NSE Chain] ✅ Strategy 2 (allorigins) succeeded — '+(d2.records.data.length)+' rows'); return d2; }
+    console.warn('[NSE Chain] ❌ Strategy 2 (allorigins) failed — status '+(r2?r2.status:'no response'));
+  } catch(e) { console.warn('[NSE Chain] ❌ Strategy 2 (allorigins) threw:', e.message); }
 
   // (corsproxy.io removed — its /?url= endpoint now returns 404 on every
   // request for this target, confirmed in live logs. It was a guaranteed
@@ -10231,10 +10233,12 @@ async function _fetchNSEChainInner(symbol, now) {
   try {
     var r4 = await safeFetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(nseUrl), {}, 7000);
     var d4 = await tryParse(r4);
-    if (d4) { _nseChainCache[symbol]={data:d4,ts:now}; _nseConnected=true; return d4; }
-  } catch(e) {}
+    if (d4) { _nseChainCache[symbol]={data:d4,ts:now}; _nseConnected=true; console.log('[NSE Chain] ✅ Strategy 3 (codetabs) succeeded — '+(d4.records.data.length)+' rows'); return d4; }
+    console.warn('[NSE Chain] ❌ Strategy 3 (codetabs) failed — status '+(r4?r4.status:'no response'));
+  } catch(e) { console.warn('[NSE Chain] ❌ Strategy 3 (codetabs) threw:', e.message); }
 
   _nseConnected = false;
+  console.warn('[NSE Chain] 🛑 ALL 3 strategies failed this cycle — returning null to caller.');
   return null; // all proxies failed — caller falls back to BS model
 }
 
@@ -10699,8 +10703,10 @@ async function _buildChainDataInner() {
   var nseSymbol = idx==='BANKNIFTY' ? 'BANKNIFTY' : idx==='SENSEX' ? 'SENSEX' : 'NIFTY';
   var nseData = null;
   try { nseData = await fetchNSEChain(nseSymbol); } catch(e) { console.warn('[Chain] fetchNSEChain threw:', e.message); }
+  console.log('[Chain] fetchNSEChain returned:', nseData ? ('object with '+(nseData.records&&nseData.records.data?nseData.records.data.length:'?')+' rows') : 'null');
 
   if (nseData && parseNSEChain(nseData, spot, atm, step, Math.max(T,0.001), r, baseIV, skewFactor)) {
+    console.log('[Chain] ✅ parseNSEChain succeeded — using NSE live data this cycle.');
     // ── ENHANCEMENT: Patch LTPs with Angel One NFO live quotes ──
     if (creds && creds.jwt) {
       try { await patchOCWithAngelLTP(idx, step, atm, numS); } catch(e) {}
