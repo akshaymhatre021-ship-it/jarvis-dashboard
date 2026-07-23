@@ -10481,14 +10481,17 @@ async function fetchAngelNFOQuotes(items) {
   }
 
   var tokens = Object.keys(tokenMap);
-  if (!tokens.length) return results;
+  if (!tokens.length) {
+    console.warn('[Angel Chain] Token resolution returned 0/'+items.length+' strikes — searchScrip likely failing or rate-limited. Falling back.');
+    return results;
+  }
 
   // Angel One supports up to 50 tokens per quote request
   for (var ti = 0; ti < tokens.length; ti += 50) {
     var tBatch = tokens.slice(ti, ti+50);
     try {
       var qData = await angelQuote({ NFO: tBatch }, 'FULL');
-      if (qData && qData.fetched) {
+      if (qData && qData.fetched && qData.fetched.length) {
         qData.fetched.forEach(function(q) {
           var info = tokenMap[q.symbolToken];
           if (!info || !q.ltp) return;
@@ -10502,8 +10505,12 @@ async function fetchAngelNFOQuotes(items) {
             chgOi: q.changeinOpenInterest || 0
           };
         });
+      } else {
+        console.warn('[Angel Chain] angelQuote returned no fetched data for '+tBatch.length+' tokens.', qData);
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[Angel Chain] angelQuote threw for a '+tBatch.length+'-token batch:', e.message);
+    }
   }
   return results;
 }
@@ -10557,7 +10564,10 @@ async function buildChainFromAngel(idx, spot, atm, step, numS, T, r, baseIV, ske
   });
 
   var quotes = await fetchAngelNFOQuotes(items);
-  if (!Object.keys(quotes).length) return false;
+  if (!Object.keys(quotes).length) {
+    console.warn('[Angel Chain] buildChainFromAngel: 0 quotes resolved for '+items.length+' requested legs — falling back to BS model.');
+    return false;
+  }
 
   OC_STATE.prevData = JSON.parse(JSON.stringify(OC_STATE.data||{}));
   OC_STATE.data = {};
@@ -10688,7 +10698,7 @@ async function _buildChainDataInner() {
   var ssEl = document.getElementById('signalStatus');
   var nseSymbol = idx==='BANKNIFTY' ? 'BANKNIFTY' : idx==='SENSEX' ? 'SENSEX' : 'NIFTY';
   var nseData = null;
-  try { nseData = await fetchNSEChain(nseSymbol); } catch(e) {}
+  try { nseData = await fetchNSEChain(nseSymbol); } catch(e) { console.warn('[Chain] fetchNSEChain threw:', e.message); }
 
   if (nseData && parseNSEChain(nseData, spot, atm, step, Math.max(T,0.001), r, baseIV, skewFactor)) {
     // ── ENHANCEMENT: Patch LTPs with Angel One NFO live quotes ──
@@ -10708,8 +10718,14 @@ async function _buildChainDataInner() {
         var srcEl = document.getElementById('ocLastUpdate');
         if (srcEl) srcEl.textContent = '🟢 ANGEL ONE LIVE — ' + new Date().toLocaleTimeString('en-IN');
         return;
+      } else {
+        console.warn('[Chain] buildChainFromAngel returned false — both NSE and Angel-direct failed this cycle, using BS model.');
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[Chain] buildChainFromAngel threw:', e.message);
+    }
+  } else {
+    console.warn('[Chain] Skipping Angel-direct chain — not connected (no creds.jwt).');
   }
 
   // ── Fallback: Black-Scholes synthetic chain ──
