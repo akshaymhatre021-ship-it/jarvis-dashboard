@@ -1099,7 +1099,49 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
+
+  <!-- ══ GLOBAL NOTIFICATION BELL — accessible from any tab ══ -->
+  <div style="position:relative;margin-left:auto;display:flex;align-items:center">
+    <button id="global-notif-bell" onclick="jarvisToggleNotifDropdown()" style="position:relative;padding:9px 13px;background:var(--ov3);border:1px solid var(--border);border-radius:6px;color:var(--txt);font-size:15px;cursor:pointer;line-height:1">
+      🔔
+      <span id="global-notif-badge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 3px;background:var(--r);border-radius:8px;color:#fff;font-family:Share Tech Mono;font-size:9px;font-weight:700;line-height:16px;text-align:center">0</span>
+    </button>
+    <div id="global-notif-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;max-height:420px;overflow-y:auto;background:rgba(5,10,20,.98);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:9999;padding:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+        <span style="font-family:Orbitron;font-size:10px;color:var(--a);letter-spacing:1px">🔔 NOTIFICATIONS</span>
+        <span style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);cursor:pointer" onclick="jarvisClearNotifHistory()">Clear all</span>
+      </div>
+      <div id="global-notif-list"></div>
+    </div>
+  </div>
 </div>
+
+<script>
+function jarvisToggleNotifDropdown() {
+  var dd = document.getElementById('global-notif-dropdown');
+  if (!dd) return;
+  var opening = dd.style.display === 'none' || !dd.style.display;
+  dd.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    var badge = document.getElementById('global-notif-badge');
+    if (badge) badge.style.display = 'none';
+    try { localStorage.setItem('jarvis_notif_seen_count', String(JARVIS_NOTIF_HISTORY.length)); } catch(e) {}
+  }
+}
+// Close the dropdown when clicking anywhere outside it
+document.addEventListener('click', function(e){
+  var dd = document.getElementById('global-notif-dropdown');
+  var bell = document.getElementById('global-notif-bell');
+  if (!dd || dd.style.display === 'none') return;
+  if (dd.contains(e.target) || (bell && bell.contains(e.target))) return;
+  dd.style.display = 'none';
+});
+function jarvisClearNotifHistory() {
+  if (typeof JARVIS_NOTIF_HISTORY !== 'undefined') { JARVIS_NOTIF_HISTORY.length = 0; }
+  try { localStorage.removeItem('jarvis_notif_history'); localStorage.setItem('jarvis_notif_seen_count','0'); } catch(e) {}
+  if (typeof jarvisRenderNotifHistory === 'function') jarvisRenderNotifHistory();
+}
+</script>
 
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dash">
@@ -1258,14 +1300,6 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
       <canvas id="perfChart"></canvas>
     </div>
 
-    <!-- LIVE ALERTS -->
-    <div class="panel">
-      <div class="ph">
-        <div class="pt">🔔 LIVE ALERTS</div>
-        <span class="live-tag">LIVE</span>
-      </div>
-      <div class="al-list" id="alertList"></div>
-    </div>
   </div>
 
   <!-- LIVE TICKER -->
@@ -1274,73 +1308,41 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
     <div class="t-track"><div class="t-inner" id="tickerInner">Loading live prices…</div></div>
   </div>
 
-  <!-- MONEYCONTROL NEWS + MARKET SENTIMENT -->
-  <div style="display:grid;grid-template-columns:1fr 320px;gap:9px;margin-bottom:9px">
-
-    <!-- NEWS FEED -->
-    <div class="panel" style="margin-bottom:0">
-      <div class="ph" style="background:linear-gradient(90deg,rgba(255,107,53,.07),transparent)">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="pt" style="color:var(--o)">📰 LIVE MARKET NEWS — ET / BS / NDTV</div>
-          <span id="mcNewsStatus" style="font-size:9px;font-family:Share Tech Mono;color:var(--dim)">Loading...</span>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="mcNewsFilter" onchange="filterMCNews()" style="background:var(--ov4);border:1px solid var(--border);border-radius:4px;color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:3px 7px;cursor:pointer">
-            <option value="all">All News</option>
-            <option value="nifty">Nifty</option>
-            <option value="banknifty">Bank Nifty</option>
-            <option value="results">Results</option>
-            <option value="rbi">RBI/Policy</option>
-            <option value="ipo">IPO</option>
-          </select>
-          <button onclick="fetchMCNews(true)" style="padding:3px 10px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:4px;color:var(--o);font-family:Orbitron;font-size:9px;cursor:pointer;letter-spacing:1px">↺</button>
-        </div>
+  <!-- MARKET SENTIMENT -->
+  <div class="panel">
+    <div class="ph"><div class="pt" style="color:var(--w)">🧭 MARKET SENTIMENT</div></div>
+    <div style="padding:14px">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-family:Orbitron;font-size:22px;font-weight:900;margin-bottom:3px" id="sentimentLabel">—</div>
+        <div style="font-size:10px;color:var(--dim);font-family:Share Tech Mono" id="sentimentSub">Analysing market...</div>
       </div>
-      <div id="mcNewsList" style="max-height:320px;overflow-y:auto">
-        <div style="padding:20px;text-align:center;color:var(--dim);font-family:Share Tech Mono;font-size:11px">⏳ Fetching latest news...</div>
+      <!-- Gauge -->
+      <div style="position:relative;height:8px;background:linear-gradient(90deg,var(--r),var(--w),var(--g));border-radius:4px;margin-bottom:6px;overflow:visible">
+        <div id="sentimentNeedle" style="position:absolute;top:-4px;width:3px;height:16px;background:#fff;border-radius:2px;transition:left .6s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 8px rgba(255,255,255,.6);left:50%"></div>
       </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:Share Tech Mono;color:var(--dim);margin-bottom:12px">
+        <span style="color:var(--r)">FEAR</span><span>NEUTRAL</span><span style="color:var(--g)">GREED</span>
+      </div>
+      <!-- Factors -->
+      <div style="display:flex;flex-direction:column;gap:5px" id="sentimentFactors"></div>
     </div>
+  </div>
 
-    <!-- MARKET SENTIMENT + QUICK STATS -->
-    <div style="display:flex;flex-direction:column;gap:9px">
-
-      <!-- SENTIMENT METER -->
-      <div class="panel" style="margin-bottom:0">
-        <div class="ph"><div class="pt" style="color:var(--w)">🧭 MARKET SENTIMENT</div></div>
-        <div style="padding:14px">
-          <div style="text-align:center;margin-bottom:12px">
-            <div style="font-family:Orbitron;font-size:22px;font-weight:900;margin-bottom:3px" id="sentimentLabel">—</div>
-            <div style="font-size:10px;color:var(--dim);font-family:Share Tech Mono" id="sentimentSub">Analysing market...</div>
-          </div>
-          <!-- Gauge -->
-          <div style="position:relative;height:8px;background:linear-gradient(90deg,var(--r),var(--w),var(--g));border-radius:4px;margin-bottom:6px;overflow:visible">
-            <div id="sentimentNeedle" style="position:absolute;top:-4px;width:3px;height:16px;background:#fff;border-radius:2px;transition:left .6s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 8px rgba(255,255,255,.6);left:50%"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:9px;font-family:Share Tech Mono;color:var(--dim);margin-bottom:12px">
-            <span style="color:var(--r)">FEAR</span><span>NEUTRAL</span><span style="color:var(--g)">GREED</span>
-          </div>
-          <!-- Factors -->
-          <div style="display:flex;flex-direction:column;gap:5px" id="sentimentFactors"></div>
-        </div>
+  <!-- COMBINED P&L — options + stock paper trading, one glance -->
+  <div class="panel">
+    <div class="ph"><div class="pt">💰 COMBINED P&amp;L (PAPER)</div></div>
+    <div style="padding:10px;display:flex;flex-direction:column;gap:5px">
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+        <span style="color:var(--dim);font-family:Share Tech Mono">Options Paper Trading</span>
+        <span style="font-family:Share Tech Mono;font-weight:700" id="cpnl-options">—</span>
       </div>
-
-      <!-- COMBINED P&L — options + stock paper trading, one glance -->
-      <div class="panel" style="margin-bottom:0">
-        <div class="ph"><div class="pt">💰 COMBINED P&amp;L (PAPER)</div></div>
-        <div style="padding:10px;display:flex;flex-direction:column;gap:5px">
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">Options Paper Trading</span>
-            <span style="font-family:Share Tech Mono;font-weight:700" id="cpnl-options">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="color:var(--dim);font-family:Share Tech Mono">Stock Paper Trading</span>
-            <span style="font-family:Share Tech Mono;font-weight:700" id="cpnl-stocks">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:6px 0 0;font-size:12px">
-            <span style="color:var(--txt);font-family:Share Tech Mono;font-weight:700">TOTAL</span>
-            <span style="font-family:Orbitron;font-weight:800;font-size:14px" id="cpnl-total">—</span>
-          </div>
-        </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+        <span style="color:var(--dim);font-family:Share Tech Mono">Stock Paper Trading</span>
+        <span style="font-family:Share Tech Mono;font-weight:700" id="cpnl-stocks">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0 0;font-size:12px">
+        <span style="color:var(--txt);font-family:Share Tech Mono;font-weight:700">TOTAL</span>
+        <span style="font-family:Orbitron;font-weight:800;font-size:14px" id="cpnl-total">—</span>
       </div>
     </div>
   </div>
@@ -3743,7 +3745,7 @@ setTimeout(nd2SyncAll, 2000);
     <div class="ph"><div class="pt">📜 TRADE HISTORY</div><span id="pt-closed-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 closed trades</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 0">
       <select id="pt-hist-filter-date" onchange="ptRefreshUI()" style="background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
-        <option value="">All Dates</option>
+        <option value="">All Months</option>
       </select>
       <select id="pt-hist-filter-strategy" onchange="ptRefreshUI()" style="background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
         <option value="">All Strategies</option>
@@ -16867,20 +16869,31 @@ function ptRefreshUI() {
   // Trade History filters — populate dropdowns from what's actually in history,
   // then filter the closed list before rendering (dashboard/day-wise charts
   // below still use the full unfiltered closedTrades, only this table filters)
+  var monthNamesShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function ptMonthKeyOf(t) {
+    var dayKey = t.dayKey || t.date || '';
+    var m = String(dayKey).match(/^(\d{4})-(\d{2})/); // dayKey is always "YYYY-MM-DD" (en-CA)
+    return m ? (m[1] + '-' + m[2]) : dayKey;
+  }
   var dateFilterEl = document.getElementById('pt-hist-filter-date');
   var stratFilterEl = document.getElementById('pt-hist-filter-strategy');
   if (dateFilterEl) {
     var curDateVal = dateFilterEl.value;
-    var distinctDates = []; // [{key, label}], newest first
+    var distinctMonths = []; // [{key:'2026-07', label:'Jul 2026'}], newest first
     closedTrades.forEach(function(t){
-      var key = t.dayKey || t.date;
-      if (key && !distinctDates.some(function(d){return d.key===key;})) distinctDates.push({key:key, label:t.date||key});
+      var monthKey = ptMonthKeyOf(t);
+      if (!monthKey) return;
+      if (!distinctMonths.some(function(d){return d.key===monthKey;})) {
+        var mm = monthKey.match(/^(\d{4})-(\d{2})$/);
+        var label = mm ? (monthNamesShort[parseInt(mm[2],10)-1] + ' ' + mm[1]) : monthKey;
+        distinctMonths.push({key:monthKey, label:label});
+      }
     });
-    distinctDates.sort(function(a,b){ return a.key < b.key ? 1 : -1; });
-    dateFilterEl.innerHTML = '<option value="">All Dates</option>' + distinctDates.map(function(d){
+    distinctMonths.sort(function(a,b){ return a.key < b.key ? 1 : -1; });
+    dateFilterEl.innerHTML = '<option value="">All Months</option>' + distinctMonths.map(function(d){
       return '<option value="'+d.key+'">'+d.label+'</option>';
     }).join('');
-    dateFilterEl.value = distinctDates.some(function(d){return d.key===curDateVal;}) ? curDateVal : '';
+    dateFilterEl.value = distinctMonths.some(function(d){return d.key===curDateVal;}) ? curDateVal : '';
   }
   if (stratFilterEl) {
     var curStratVal = stratFilterEl.value;
@@ -16895,7 +16908,7 @@ function ptRefreshUI() {
     stratFilterEl.value = distinctStrats.indexOf(curStratVal) !== -1 ? curStratVal : '';
   }
   var filteredClosed = closedTrades.filter(function(t){
-    if (dateFilterEl && dateFilterEl.value && (t.dayKey||t.date) !== dateFilterEl.value) return false;
+    if (dateFilterEl && dateFilterEl.value && ptMonthKeyOf(t) !== dateFilterEl.value) return false;
     if (stratFilterEl && stratFilterEl.value && (t.strategy||'manual') !== stratFilterEl.value) return false;
     return true;
   });
@@ -22077,14 +22090,32 @@ function jarvisNotifHistoryPush(entry) {
   jarvisRenderNotifHistory();
 }
 function jarvisRenderNotifHistory() {
+  var itemsHtml;
+  if (!JARVIS_NOTIF_HISTORY.length) {
+    itemsHtml = '<div style="color:var(--dim);font-size:9px;padding:4px 0">No notifications yet.</div>';
+  } else {
+    itemsHtml = JARVIS_NOTIF_HISTORY.map(function(h){
+      return '<div style="padding:5px 2px;border-bottom:1px solid var(--border);font-size:9px;font-family:Share Tech Mono">'+
+        '<span style="color:var(--dim)">['+h.time+']</span> <b style="color:'+(h.color||'#c8d8f0')+'">'+h.title+'</b><br>'+
+        '<span style="color:#7a8db0">'+h.body+'</span></div>';
+    }).join('');
+  }
+
   var el = document.getElementById('fo-notif-history');
-  if (!el) return;
-  if (!JARVIS_NOTIF_HISTORY.length) { el.innerHTML = '<div style="color:var(--dim);font-size:9px;padding:4px 0">No notifications yet.</div>'; return; }
-  el.innerHTML = JARVIS_NOTIF_HISTORY.map(function(h){
-    return '<div style="padding:5px 2px;border-bottom:1px solid var(--border);font-size:9px;font-family:Share Tech Mono">'+
-      '<span style="color:var(--dim)">['+h.time+']</span> <b style="color:'+(h.color||'#c8d8f0')+'">'+h.title+'</b><br>'+
-      '<span style="color:#7a8db0">'+h.body+'</span></div>';
-  }).join('');
+  if (el) el.innerHTML = itemsHtml;
+
+  var elGlobal = document.getElementById('global-notif-list');
+  if (elGlobal) elGlobal.innerHTML = itemsHtml;
+
+  // Unread badge — anything added since the bell was last opened
+  var badge = document.getElementById('global-notif-badge');
+  if (badge) {
+    var seenCount = 0;
+    try { seenCount = parseInt(localStorage.getItem('jarvis_notif_seen_count') || '0', 10) || 0; } catch(e) {}
+    var unread = Math.max(0, JARVIS_NOTIF_HISTORY.length - seenCount);
+    if (unread > 0) { badge.textContent = unread > 9 ? '9+' : String(unread); badge.style.display = 'block'; }
+    else { badge.style.display = 'none'; }
+  }
 }
 setTimeout(jarvisRenderNotifHistory, 1500);
 
