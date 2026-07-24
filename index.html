@@ -1347,6 +1347,33 @@ function jarvisClearNotifHistory() {
     </div>
   </div>
 
+  <!-- QUICK ACTIONS -->
+  <div class="panel">
+    <div class="ph"><div class="pt">⚡ QUICK ACTIONS</div></div>
+    <div style="padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+      <button onclick="var b=document.querySelector('.nav-tab[onclick*=\"advanced\"]'); showPage('advanced', b); setTimeout(function(){ advTab('paper', document.getElementById('adv-tab-paper')); setTimeout(function(){ var el=document.getElementById('ase-strategy-dropdown-wrap'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },150); },100)" style="padding:10px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.25);border-radius:7px;color:var(--a);font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">🤖 Auto Signal Engine</button>
+      <button onclick="jarvisQuickSendEodNow()" style="padding:10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.25);border-radius:7px;color:var(--g);font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">📊 Send Today's EOD Now</button>
+      <button onclick="jarvisQuickToggleQuietHours()" id="qa-quiet-btn" style="padding:10px;background:rgba(255,204,0,.06);border:1px solid rgba(255,204,0,.25);border-radius:7px;color:#ffcc00;font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">🌙 Toggle Quiet Hours</button>
+      <button onclick="var b=document.querySelector('.nav-tab[onclick*=\"advanced\"]'); showPage('advanced', b); setTimeout(function(){ advTab('paper', document.getElementById('adv-tab-paper')); },100)" style="padding:10px;background:rgba(160,100,255,.06);border:1px solid rgba(160,100,255,.25);border-radius:7px;color:#a064ff;font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">📋 Virtual Portfolio</button>
+    </div>
+  </div>
+
+  <!-- STRATEGY LEADERBOARD (mini) — top 3 by net P&L, full table lives in F&O tab -->
+  <div class="panel">
+    <div class="ph"><div class="pt">🏆 STRATEGY LEADERBOARD</div></div>
+    <div id="dash-strat-leaderboard" style="padding:10px">
+      <div style="color:var(--dim);font-size:10px;font-family:Share Tech Mono;padding:8px 0">No closed trades yet.</div>
+    </div>
+  </div>
+
+  <!-- TODAY'S TRADING JOURNAL — every open/close across F&O + stocks today -->
+  <div class="panel">
+    <div class="ph"><div class="pt">📓 TODAY'S TRADING JOURNAL</div></div>
+    <div id="dash-trading-journal" style="padding:10px;max-height:280px;overflow-y:auto">
+      <div style="color:var(--dim);font-size:10px;font-family:Share Tech Mono;padding:8px 0">No activity yet today.</div>
+    </div>
+  </div>
+
   <!-- STRATEGY PERFORMANCE COMPARISON — ranks every strategy that has
        closed paper trades (options + stock combined) by real performance,
        so you can see which ones actually deserve real money. -->
@@ -3935,10 +3962,14 @@ setTimeout(nd2SyncAll, 2000);
           <option value="macd">MACD Momentum</option>
           <option value="breakout">Volume Breakout</option>
           <option value="long_term">Long-Term Investing (200 DMA + Golden Cross)</option>
+          <option value="trend_pullback">Trend Pullback (positional, weeks+)</option>
         </select>
       </div>
       <div id="sase-longterm-note" style="display:none;margin-bottom:12px;padding:8px 10px;background:rgba(255,193,7,.06);border:1px solid rgba(255,193,7,.25);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--w)">
         ⚠ Long-Term Investing here scores the <b>technical</b> entry rules only (price vs 200 DMA, Golden Cross, RSI 50–65, volume, 52-week highs). The Fundamental Score (revenue/profit growth, ROE, debt) and Valuation Score (P/E, PEG, EV/EBITDA) from your plan need a fundamentals data source Angel One's API doesn't provide — tell me if you have one (screener.in export, a paid API, etc.) and I'll wire it in. Auto-trades use a wider ±20%/-15% target/SL and auto-close on a Death Cross (50 DMA crossing below 200 DMA), matching your sell rules — staged 30/30/40 entries aren't automated yet, so add follow-on tranches manually for now.
+      </div>
+      <div id="sase-pullback-note" style="display:none;margin-bottom:12px;padding:8px 10px;background:rgba(160,100,255,.06);border:1px solid rgba(160,100,255,.25);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:#a064ff">
+        🎯 Trend Pullback buys weakness within strength — an established uptrend (50 DMA above 200 DMA, price above 200 DMA) that has pulled back toward its 20/50-day average with RSI recovering from a dip, rather than chasing a stock at highs. Built for multi-week holds: wider +12%/−6% target/SL (2:1 reward:risk) than the default swing setting, sized like a positional conviction buy.
       </div>
 
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">SCAN UNIVERSE — ~100 KNOWN NSE STOCKS + YOUR ADDITIONS</div>
@@ -3989,6 +4020,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="macd">MACD Momentum</option>
             <option value="breakout">Volume Breakout</option>
             <option value="long_term">Long-Term Investing (200 DMA + Golden Cross)</option>
+            <option value="trend_pullback">Trend Pullback (positional, weeks+)</option>
           </select>
         </div>
         <div>
@@ -5348,8 +5380,94 @@ function computeStrategyPerformance() {
   return rows;
 }
 
+function jarvisRenderTradingJournal() {
+  var el = document.getElementById('dash-trading-journal');
+  if (!el) return;
+  var todayKey = new Date().toLocaleDateString('en-CA');
+  var entries = [];
+
+  (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).forEach(function(t){
+    if (t.dayKey !== todayKey) return;
+    entries.push({ time: t.time||'', sortKey: t.time||'00:00', label: t.instr, strategy: ptStrategyLabel(t.strategy), kind: 'open', book: 'F&O' });
+    if (t.status !== 'OPEN') {
+      var win = (t.net||0) >= 0;
+      entries.push({ time: t.exitTime||t.time||'', sortKey: t.exitTime||t.time||'00:00', label: t.instr, strategy: ptStrategyLabel(t.strategy), kind: win?'win':'loss', net: t.net, book: 'F&O' });
+    }
+  });
+  (SPT_PORTFOLIO && SPT_PORTFOLIO.trades || []).forEach(function(t){
+    if (t.dayKey !== todayKey) return;
+    entries.push({ time: t.time||'', sortKey: t.time||'00:00', label: t.instr, strategy: sptStrategyLabel(t.strategy), kind: 'open', book: 'Stock' });
+    if (t.status !== 'OPEN') {
+      var win2 = (t.net||0) >= 0;
+      entries.push({ time: t.exitTime||t.time||'', sortKey: t.exitTime||t.time||'00:00', label: t.instr, strategy: sptStrategyLabel(t.strategy), kind: win2?'win':'loss', net: t.net, book: 'Stock' });
+    }
+  });
+
+  if (!entries.length) {
+    el.innerHTML = '<div style="color:var(--dim);font-size:10px;font-family:Share Tech Mono;padding:8px 0">No activity yet today.</div>';
+    return;
+  }
+  entries.sort(function(a,b){ return a.sortKey < b.sortKey ? 1 : -1; }); // newest first
+  el.innerHTML = entries.map(function(e){
+    var icon = e.kind==='open' ? '🔵' : e.kind==='win' ? '✅' : '⛔';
+    var text = e.kind==='open' ? 'Opened' : e.kind==='win' ? 'Closed — WIN' : 'Closed — LOSS';
+    var pnlTxt = e.kind==='open' ? '' : ' <span style="color:'+(e.kind==='win'?'var(--g)':'var(--r)')+';font-weight:700">'+(e.net>=0?'+':'')+'₹'+Math.round(e.net).toLocaleString('en-IN')+'</span>';
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-family:Share Tech Mono;font-size:10px">'+
+      '<span style="flex-shrink:0">'+icon+'</span>'+
+      '<div style="min-width:0;flex:1"><span style="color:var(--dim)">['+e.time+']</span> <b style="color:var(--txt)">'+text+'</b> — '+e.label+pnlTxt+
+      '<div style="color:var(--dim);font-size:8px">'+e.strategy+' · '+e.book+'</div></div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── Quick Actions (dashboard) ──
+function jarvisQuickSendEodNow() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) { alert('Portfolio not initialised yet — open the F&O tab once first.'); return; }
+  var todayKey = (typeof getIST === 'function' ? getIST() : new Date()).toLocaleDateString('en-CA');
+  try {
+    jarvisSendEodSummary(todayKey);
+    if (typeof jarvisToast === 'function') jarvisToast('📊 EOD summary sent (check Telegram if configured)', 'success', 6000);
+    else alert('EOD summary sent — check Telegram if configured.');
+  } catch(e) {
+    alert('Could not send EOD summary: ' + e.message);
+  }
+}
+function jarvisQuickToggleQuietHours() {
+  if (typeof JARVIS_NOTIF_SETTINGS === 'undefined') { alert('Notification settings not loaded yet.'); return; }
+  JARVIS_NOTIF_SETTINGS.quietHoursOnly = !JARVIS_NOTIF_SETTINGS.quietHoursOnly;
+  try { jarvisNotifSettingsSave(); } catch(e) {}
+  var el = document.getElementById('notif-quiet-hours');
+  if (el) el.checked = JARVIS_NOTIF_SETTINGS.quietHoursOnly;
+  var btn = document.getElementById('qa-quiet-btn');
+  if (btn) btn.textContent = JARVIS_NOTIF_SETTINGS.quietHoursOnly ? '🌙 Quiet Hours: ON' : '🌙 Quiet Hours: OFF';
+  if (typeof jarvisToast === 'function') jarvisToast('Quiet hours ' + (JARVIS_NOTIF_SETTINGS.quietHoursOnly?'enabled':'disabled'), 'success', 4000);
+}
+
 function renderStrategyPerformance() {
+  // ── Mini leaderboard on the dashboard (top 3 by net P&L) ──
+  var lb = document.getElementById('dash-strat-leaderboard');
+  if (lb) {
+    var top3 = computeStrategyPerformance().slice(0, 3);
+    if (!top3.length) {
+      lb.innerHTML = '<div style="color:var(--dim);font-size:10px;font-family:Share Tech Mono;padding:8px 0">No closed trades yet.</div>';
+    } else {
+      var medals = ['🥇','🥈','🥉'];
+      lb.innerHTML = top3.map(function(r, i){
+        var color = r.totalNet >= 0 ? 'var(--g)' : 'var(--r)';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;'+(i<top3.length-1?'border-bottom:1px solid var(--border);':'')+'">'+
+          '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+
+            '<span style="font-size:14px">'+medals[i]+'</span>'+
+            '<div style="min-width:0"><div style="font-family:Share Tech Mono;font-size:10px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.label+'</div>'+
+            '<div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim)">'+r.trades+' trades · '+r.winRate.toFixed(0)+'% win</div></div>'+
+          '</div>'+
+          '<span style="font-family:Orbitron;font-weight:700;font-size:11px;color:'+color+';flex-shrink:0;margin-left:8px">'+(r.totalNet>=0?'+':'')+'₹'+Math.round(r.totalNet).toLocaleString('en-IN')+'</span>'+
+        '</div>';
+      }).join('');
+    }
+  }
+
   var body = document.getElementById('strat-perf-body');
+  jarvisRenderTradingJournal();
   if (!body) return; // not on this page
   var rows = computeStrategyPerformance();
   if (!rows.length) {
@@ -8245,7 +8363,7 @@ function showPage(id,btn){
   }
   setTimeout(function(){
     try{
-      if(id==='dash'){drawPerfChart();renderHeatmap();}
+      if(id==='dash'){drawPerfChart();renderHeatmap();try{renderStrategyPerformance();}catch(e){}try{jarvisRenderTradingJournal();}catch(e){}}
       if(id==='reports'){drawMonthChart();renderReports();}
       if(id==='fo'){ try{try{renderFOCalls()}catch(_rfc){console.warn("[JARVIS] renderFOCalls:",_rfc.message);}}catch(e){} fo2UpdateIndexBar(); fo2Generate(); }
       if(id==='chain')buildOptionChain();
@@ -17989,7 +18107,7 @@ function sptReset() {
 function sptStrategyLabel(key) {
   var labels = {
     jarvis: 'JARVIS Standard', ema_cross: 'EMA Crossover', rsi: 'RSI Reversal',
-    macd: 'MACD Momentum', breakout: 'Volume Breakout', long_term: 'Long-Term Investing', manual: 'Manual'
+    macd: 'MACD Momentum', breakout: 'Volume Breakout', long_term: 'Long-Term Investing', trend_pullback: 'Trend Pullback', manual: 'Manual'
   };
   return labels[key] || key || 'Manual';
 }
@@ -18582,6 +18700,51 @@ function saseComputeScore(strategy, closes, volumes) {
       if (last >= high52w * 0.99) { score += 10; reasons.push('At/near 52-week high'); }
     }
     reasons.push('(technical-only — fundamentals/valuation not connected)');
+  } else if (strategy === 'trend_pullback') {
+    // ── TREND PULLBACK — buy weakness within strength, hold for weeks ──
+    // Unlike 'long_term' (which wants price already AT/NEAR highs — buying
+    // strength), this wants the OPPOSITE entry timing within the same
+    // uptrend: a stock that's proven itself (trend intact) but has cooled
+    // off toward support, giving a better entry price and tighter logical
+    // stop than chasing a stock already extended. That's what makes a
+    // multi-week hold survivable — you're not starting from an extended
+    // price the moment normal volatility shakes you out.
+    var ema20pb = ema20;
+    var ema50pb = ema50;
+    var prevRsiPb = closes.length > 1 ? calcRSI(closes.slice(0, -1), 14) : rsi14;
+
+    // 1. Trend filter — must be a genuine established uptrend, not a blip.
+    //    Positional holds need the underlying trend to actually be there;
+    //    this is the same "Golden Trend" check long_term uses.
+    var uptrendIntact = (sma50 != null && sma200 != null && sma50 > sma200 && last > sma200);
+    if (uptrendIntact) { score += 35; reasons.push('Uptrend intact (50DMA>200DMA, price>200DMA)'); }
+
+    // 2. Pullback — price has cooled toward its 20/50-day average rather
+    //    than sitting extended at highs. Within ~3% of EMA20 or EMA50 (from
+    //    above) counts as "pulled back to support", not "broken down".
+    if (ema20pb != null) {
+      var distToEma20 = (last - ema20pb) / ema20pb;
+      if (distToEma20 >= -0.03 && distToEma20 <= 0.02) { score += 25; reasons.push('Pulled back to 20-day support'); }
+      else if (ema50pb != null) {
+        var distToEma50 = (last - ema50pb) / ema50pb;
+        if (distToEma50 >= -0.03 && distToEma50 <= 0.02) { score += 18; reasons.push('Pulled back to 50-day support'); }
+      }
+    }
+
+    // 3. RSI recovering from a dip, not freshly falling — wants the bounce
+    //    to already be starting, same "turning up" logic as the RSI
+    //    strategy but in a higher, healthier range (35-55) appropriate for
+    //    a pullback-in-uptrend rather than a full oversold reversal.
+    if (rsi14 >= 35 && rsi14 <= 55 && rsi14 > prevRsiPb) { score += 25; reasons.push('RSI recovering from pullback ('+rsi14.toFixed(1)+')'); }
+    else if (rsi14 >= 35 && rsi14 <= 55) { score += 10; reasons.push('RSI in healthy pullback zone'); }
+
+    // 4. Not chasing a stock that's already run too far this week — avoid
+    //    buying right after a big one-day pop, which tends to mean-revert
+    //    against a fresh position before the multi-week trend reasserts.
+    if (closes.length >= 6) {
+      var fiveDayReturn = (last - closes[closes.length-6]) / closes[closes.length-6];
+      if (fiveDayReturn < 0.08) { score += 15; reasons.push('Not extended (5-day return '+(fiveDayReturn*100).toFixed(1)+'%)'); }
+    }
   } else { // 'jarvis' — composite of all of the above, same spirit as the options JARVIS Standard
     if (ema50 && ema20 > ema50) { score += 30; reasons.push('Uptrend (EMA20>EMA50)'); }
     if (rsi14 > 40 && rsi14 < 65) { score += 20; reasons.push('RSI healthy ('+rsi14.toFixed(1)+')'); }
@@ -18706,12 +18869,17 @@ async function saseScanUniverse(manual) {
       var live = (LD && LD[r.symbol] && LD[r.symbol].ltp) ? LD[r.symbol].ltp : r.last;
       if (!live) return;
       var isLongTerm = SASE_STRATEGY === 'long_term';
+      var isPullback = SASE_STRATEGY === 'trend_pullback';
       // Long-term positions use a much wider swing (matches the plan's
       // "falls 15–20% below purchase price" sell rule and a multi-month
       // holding horizon) instead of the tight intraday/swing default.
-      var target = Math.round(live * (isLongTerm ? 1.20 : 1.03) * 100) / 100;
-      var sl     = Math.round(live * (isLongTerm ? 0.85 : 0.985) * 100) / 100;
-      var qty    = Math.max(1, Math.floor((isLongTerm ? 50000 : 20000) / live)); // bigger position for a long-term conviction buy
+      // Trend Pullback sits between the two: wider than a swing trade (needs
+      // room for weeks of normal volatility) but tighter than long_term
+      // (this is a technical multi-week thesis, not a buy-and-hold one) —
+      // roughly a 2:1 reward:risk built for that horizon.
+      var target = Math.round(live * (isLongTerm ? 1.20 : isPullback ? 1.12 : 1.03) * 100) / 100;
+      var sl     = Math.round(live * (isLongTerm ? 0.85 : isPullback ? 0.94 : 0.985) * 100) / 100;
+      var qty    = Math.max(1, Math.floor((isLongTerm ? 50000 : isPullback ? 40000 : 20000) / live)); // bigger position for a positional/long-term conviction buy
       var res = sptAddAutoTrade({ instr: r.symbol, side: 'BUY', buy: live, qty: qty, target: target, sl: sl, strategy: SASE_STRATEGY, reasons: r.reason });
       if (res) {
         SASE_LAST_AUTO_KEY[r.symbol] = todayKey;
@@ -18817,10 +18985,12 @@ function saseToggle() {
 function saseUpdateLongTermNote() {
   var note = document.getElementById('sase-longterm-note');
   if (note) note.style.display = SASE_STRATEGY === 'long_term' ? 'block' : 'none';
+  var pbNote = document.getElementById('sase-pullback-note');
+  if (pbNote) pbNote.style.display = SASE_STRATEGY === 'trend_pullback' ? 'block' : 'none';
 }
 
 function saseSetStrategy(val) {
-  var valid = ['jarvis','ema_cross','rsi','macd','breakout','long_term'];
+  var valid = ['jarvis','ema_cross','rsi','macd','breakout','long_term','trend_pullback'];
   SASE_STRATEGY = valid.indexOf(val) !== -1 ? val : 'jarvis';
   try { localStorage.setItem('jarvis_sase_strategy', SASE_STRATEGY); } catch(e) {}
   saseUpdateLongTermNote();
@@ -22209,6 +22379,12 @@ function jarvisNotifSettingsUIInit() {
   });
 }
 setTimeout(jarvisNotifSettingsUIInit, 1500);
+setTimeout(function(){
+  var btn = document.getElementById('qa-quiet-btn');
+  if (btn && typeof JARVIS_NOTIF_SETTINGS !== 'undefined') {
+    btn.textContent = JARVIS_NOTIF_SETTINGS.quietHoursOnly ? '🌙 Quiet Hours: ON' : '🌙 Quiet Hours: OFF';
+  }
+}, 1600);
 
 /* ─── Permission toggle UI (mirrors the SIP reminder pattern) ─── */
 function setupFOCallNotifUI() {
