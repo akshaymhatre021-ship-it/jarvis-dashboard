@@ -1353,6 +1353,7 @@ function jarvisClearNotifHistory() {
     <div style="padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
       <button onclick="var b=document.querySelector('.nav-tab[onclick*=\"advanced\"]'); showPage('advanced', b); setTimeout(function(){ advTab('paper', document.getElementById('adv-tab-paper')); setTimeout(function(){ var el=document.getElementById('ase-strategy-dropdown-wrap'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },150); },100)" style="padding:10px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.25);border-radius:7px;color:var(--a);font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">🤖 Auto Signal Engine</button>
       <button onclick="jarvisQuickSendEodNow()" style="padding:10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.25);border-radius:7px;color:var(--g);font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">📊 Send Today's EOD Now</button>
+      <button onclick="jarvisQuickSendRollupNow()" style="padding:10px;background:rgba(160,100,255,.06);border:1px solid rgba(160,100,255,.25);border-radius:7px;color:#a064ff;font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">📅 Send This Week's Rollup Now</button>
       <button onclick="jarvisQuickToggleQuietHours()" id="qa-quiet-btn" style="padding:10px;background:rgba(255,204,0,.06);border:1px solid rgba(255,204,0,.25);border-radius:7px;color:#ffcc00;font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">🌙 Toggle Quiet Hours</button>
       <button onclick="var b=document.querySelector('.nav-tab[onclick*=\"advanced\"]'); showPage('advanced', b); setTimeout(function(){ advTab('paper', document.getElementById('adv-tab-paper')); },100)" style="padding:10px;background:rgba(160,100,255,.06);border:1px solid rgba(160,100,255,.25);border-radius:7px;color:#a064ff;font-family:Share Tech Mono;font-size:10px;cursor:pointer;text-align:left">📋 Virtual Portfolio</button>
     </div>
@@ -3271,6 +3272,7 @@ setTimeout(nd2SyncAll, 2000);
           <option value="quality_breakout">Quality Breakout</option>
           <option value="nifty_pro_v15">Nifty Pro V1.5</option>
           <option value="nifty_pro_v2">Nifty Pro V2</option>
+          <option value="oi_buildup">OI Buildup</option>
           <option value="manual">Manual</option>
         </select>
         <button onclick="ptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
@@ -3364,6 +3366,7 @@ setTimeout(nd2SyncAll, 2000);
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-quality_breakout" style="accent-color:var(--r);width:12px;height:12px">Quality Breakout</label>
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-nifty_pro_v15" style="accent-color:var(--r);width:12px;height:12px">Nifty Pro V1.5</label>
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-nifty_pro_v2" style="accent-color:var(--r);width:12px;height:12px">Nifty Pro V2</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-oi_buildup" style="accent-color:var(--r);width:12px;height:12px">OI Buildup</label>
           </div>
 
           <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:6px">🕘 RECENT NOTIFICATIONS (last 20)</div>
@@ -3399,9 +3402,44 @@ setTimeout(nd2SyncAll, 2000);
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#00ff88;cursor:pointer" onmouseover="this.style.background='rgba(0,255,136,.07)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-nifty_pro_v2" onchange="aseToggleStrategy('nifty_pro_v2', this.checked)" style="accent-color:#00ff88;width:14px;height:14px;flex-shrink:0"> ✨ Nifty Pro V2 (+MACD +VOL +ATR)
           </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#ffcc00;cursor:pointer" onmouseover="this.style.background='rgba(255,204,0,.07)'" onmouseout="this.style.background='transparent'">
+            <input type="checkbox" id="ase-strat-chk-oi_buildup" onchange="aseToggleStrategy('oi_buildup', this.checked)" style="accent-color:#ffcc00;width:14px;height:14px;flex-shrink:0"> 🆕 OI Buildup (Long/Short, v1)
+          </label>
         </div>
       </div>
       <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin:0 0 12px 2px">Check 1–3+ strategies to run them together — each fires its own paper trades independently (no agreement required between them). Chart overlay below follows the first one checked.</div>
+
+      <!-- OI BUILDUP readout panel -->
+      <div style="border:1px solid rgba(255,204,0,.25);border-radius:8px;padding:10px;margin-bottom:12px;background:rgba(255,204,0,.02)">
+        <div style="font-family:Orbitron;font-size:10px;color:#ffcc00;letter-spacing:1px;margin-bottom:8px">🆕 OI BUILDUP — v1 (ATM Long/Short Buildup)</div>
+        <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:8px;line-height:1.5">BUY CE: ATM Call shows Long Buildup (price↑ + OI↑, both &gt;15%) with volume confirmation · BUY PE: ATM Put shows Long Buildup (price↑ + OI↑, both &gt;15%) with volume confirmation. Requires confirmed LIVE chain data (NSE/Angel) — never trades on the Black-Scholes fallback. R:R fixed at 1:1.5, one trade per strike per session.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px">
+          <div style="background:var(--ov35);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-family:Share Tech Mono;font-size:7.5px;color:var(--dim)">CE OI CHG</div>
+            <div id="ase-oib-ce-oi" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
+          </div>
+          <div style="background:var(--ov35);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-family:Share Tech Mono;font-size:7.5px;color:var(--dim)">CE PRICE CHG</div>
+            <div id="ase-oib-ce-px" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
+          </div>
+          <div style="background:var(--ov35);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-family:Share Tech Mono;font-size:7.5px;color:var(--dim)">PE OI CHG</div>
+            <div id="ase-oib-pe-oi" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
+          </div>
+          <div style="background:var(--ov35);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-family:Share Tech Mono;font-size:7.5px;color:var(--dim)">PE PRICE CHG</div>
+            <div id="ase-oib-pe-px" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
+          </div>
+          <div style="background:var(--ov35);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-family:Share Tech Mono;font-size:7.5px;color:var(--dim)">DATA SOURCE</div>
+            <div id="ase-oib-source" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
+          </div>
+          <div style="background:var(--ov35);border:1px solid var(--border);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-family:Share Tech Mono;font-size:7.5px;color:var(--dim)">VERDICT</div>
+            <div id="ase-oib-verdict" style="font-family:Orbitron;font-size:11px;color:var(--dim)">—</div>
+          </div>
+        </div>
+      </div>
 
       <!-- Live condition readout: PCR/EMA/VIX strategy -->
       <div id="ase-readout-pcr" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
@@ -5388,7 +5426,7 @@ function jarvisRenderTradingJournal() {
 
   (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).forEach(function(t){
     if (t.dayKey !== todayKey) return;
-    entries.push({ time: t.time||'', sortKey: t.time||'00:00', label: t.instr, strategy: ptStrategyLabel(t.strategy), kind: 'open', book: 'F&O' });
+    entries.push({ time: t.time||'', sortKey: t.time||'00:00', label: t.instr, strategy: ptStrategyLabel(t.strategy), kind: 'open', book: 'F&O', reason: t.reasons||'' });
     if (t.status !== 'OPEN') {
       var win = (t.net||0) >= 0;
       entries.push({ time: t.exitTime||t.time||'', sortKey: t.exitTime||t.time||'00:00', label: t.instr, strategy: ptStrategyLabel(t.strategy), kind: win?'win':'loss', net: t.net, book: 'F&O' });
@@ -5396,7 +5434,7 @@ function jarvisRenderTradingJournal() {
   });
   (SPT_PORTFOLIO && SPT_PORTFOLIO.trades || []).forEach(function(t){
     if (t.dayKey !== todayKey) return;
-    entries.push({ time: t.time||'', sortKey: t.time||'00:00', label: t.instr, strategy: sptStrategyLabel(t.strategy), kind: 'open', book: 'Stock' });
+    entries.push({ time: t.time||'', sortKey: t.time||'00:00', label: t.instr, strategy: sptStrategyLabel(t.strategy), kind: 'open', book: 'Stock', reason: t.reasons||'' });
     if (t.status !== 'OPEN') {
       var win2 = (t.net||0) >= 0;
       entries.push({ time: t.exitTime||t.time||'', sortKey: t.exitTime||t.time||'00:00', label: t.instr, strategy: sptStrategyLabel(t.strategy), kind: win2?'win':'loss', net: t.net, book: 'Stock' });
@@ -5412,10 +5450,11 @@ function jarvisRenderTradingJournal() {
     var icon = e.kind==='open' ? '🔵' : e.kind==='win' ? '✅' : '⛔';
     var text = e.kind==='open' ? 'Opened' : e.kind==='win' ? 'Closed — WIN' : 'Closed — LOSS';
     var pnlTxt = e.kind==='open' ? '' : ' <span style="color:'+(e.kind==='win'?'var(--g)':'var(--r)')+';font-weight:700">'+(e.net>=0?'+':'')+'₹'+Math.round(e.net).toLocaleString('en-IN')+'</span>';
+    var reasonLine = (e.kind==='open' && e.reason) ? '<div style="color:#7a8db0;font-size:8px;margin-top:2px;line-height:1.4">💡 '+e.reason+'</div>' : '';
     return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-family:Share Tech Mono;font-size:10px">'+
       '<span style="flex-shrink:0">'+icon+'</span>'+
       '<div style="min-width:0;flex:1"><span style="color:var(--dim)">['+e.time+']</span> <b style="color:var(--txt)">'+text+'</b> — '+e.label+pnlTxt+
-      '<div style="color:var(--dim);font-size:8px">'+e.strategy+' · '+e.book+'</div></div>'+
+      '<div style="color:var(--dim);font-size:8px">'+e.strategy+' · '+e.book+'</div>'+reasonLine+'</div>'+
     '</div>';
   }).join('');
 }
@@ -5430,6 +5469,23 @@ function jarvisQuickSendEodNow() {
     else alert('EOD summary sent — check Telegram if configured.');
   } catch(e) {
     alert('Could not send EOD summary: ' + e.message);
+  }
+}
+function jarvisQuickSendRollupNow() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) { alert('Portfolio not initialised yet — open the F&O tab once first.'); return; }
+  try {
+    var ist = (typeof getIST === 'function') ? getIST() : new Date();
+    var monday = new Date(ist);
+    monday.setDate(ist.getDate() - ist.getDay() + 1); // Monday of the current week
+    var startKey = monday.toLocaleDateString('en-CA');
+    var endKey = ist.toLocaleDateString('en-CA');
+    var agg = jarvisAggregateTrades(startKey, endKey);
+    if (!agg.closed.length) { alert('No closed trades this week yet — nothing to send.'); return; }
+    jarvisSendRollupSummary('week', startKey, endKey, 'This Week (manual)');
+    if (typeof jarvisToast === 'function') jarvisToast('📅 Rollup sent (check Telegram if configured)', 'success', 6000);
+    else alert('Rollup sent — check Telegram if configured.');
+  } catch(e) {
+    alert('Could not send rollup: ' + e.message);
   }
 }
 function jarvisQuickToggleQuietHours() {
@@ -16857,7 +16913,7 @@ function ptStrategyLabel(key) {
   var labels = {
     pcr_ema_vix: 'PCR+EMA21+VIX', trendline: 'Trendline Breakout', trendline_confirmed: 'Trendline+Confirm',
     quality_breakout: 'Quality Breakout', nifty_pro_v15: 'Nifty Pro V1.5', nifty_pro_v2: 'Nifty Pro V2',
-    pipeline_test: 'Pipeline Test (removed)', manual: 'Manual', auto: 'Auto (unspecified)'
+    oi_buildup: 'OI Buildup', pipeline_test: 'Pipeline Test (removed)', manual: 'Manual', auto: 'Auto (unspecified)'
   };
   return labels[key] || key || 'Manual';
 }
@@ -16974,6 +17030,7 @@ function ptRefreshUI() {
             +'<span style="color:var(--dim)">To SL: <span style="color:var(--r)">'+distSl+'</span></span>'
           +'</div>'
           + (t.slTrailed ? '<div style="font-family:Share Tech Mono;font-size:9px;color:var(--g);margin-bottom:8px">🔒 Trailing SL active — locked up from original ₹'+(t.slOriginal!==undefined?t.slOriginal:t.sl)+' as price ran in your favour. Won\'t move back down.</div>' : '')
+          + (t.reasons ? '<div style="font-family:Share Tech Mono;font-size:9px;color:#7a8db0;margin-bottom:8px">💡 <b style="color:#a064ff">Why this trade:</b> '+t.reasons+'</div>' : '')
           +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
             +'<button onclick="ptShowExitModal('+t.id+')" style="padding:4px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">✅ CLOSE TRADE</button>'
             +'<button onclick="ptToggleTrail('+t.id+')" title="Auto-ratchets your SL up to lock in profit as price runs toward target, and auto-closes on target/SL hit" style="padding:4px 12px;background:'+(t.trailSL!==false?'rgba(0,255,136,.08)':'rgba(255,255,255,.04)')+';border:1px solid '+(t.trailSL!==false?'rgba(0,255,136,.3)':'var(--border)')+';border-radius:4px;color:'+(t.trailSL!==false?'var(--g)':'var(--dim)')+';font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">'+(t.trailSL!==false?'🔒 TRAIL SL: ON':'🔓 TRAIL SL: OFF')+'</button>'
@@ -17042,7 +17099,7 @@ function ptRefreshUI() {
         var rBg = t.result==='PROFIT'?'rgba(0,255,136,.12)':'rgba(255,61,90,.12)';
         return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
           +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:var(--a)">'+t.instr+'</td>'
-          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:#a064ff">'+ptStrategyLabel(t.strategy)+(t.autoExitReason?' <span style="color:var(--dim)">· '+t.autoExitReason+'</span>':'')+'</td>'
+          +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:#a064ff" title="'+(t.reasons?t.reasons.replace(/"/g,'&quot;'):'')+'">'+ptStrategyLabel(t.strategy)+(t.autoExitReason?' <span style="color:var(--dim)">· '+t.autoExitReason+'</span>':'')+(t.reasons?' <span style="color:var(--dim);cursor:help">💡</span>':'')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.date||'—')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.time||'—')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+(t.exitTime||'—')+'</td>'
@@ -19327,6 +19384,7 @@ function aseEvaluate() {
         else if (s === 'quality_breakout') { await aseEvaluateQualityBreakout(); }
         else if (s === 'nifty_pro_v15') { await aseEvaluateNiftyProV15(); }
         else if (s === 'nifty_pro_v2') { await aseEvaluateNiftyProV2(); }
+        else if (s === 'oi_buildup') { await aseEvaluateOIBuildup(); }
         else { aseEvaluatePcrEmaVix(); }
       } catch(e) { console.warn('[AutoSignalEngine ' + s + ']', e); }
     }
@@ -19441,7 +19499,7 @@ function aseEvaluatePcrEmaVix() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['pcr_ema_vix'] = dedupeKey;
     aseLog('✅ Auto-logged BUY '+sideToTrade+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+reasons.filter(Boolean).join(', '));
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('PCR + EMA21 + VIX', 'pcr_ema_vix', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('PCR + EMA21 + VIX', 'pcr_ema_vix', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Signal found but could not log: ' + res.error);
   }
@@ -19535,7 +19593,7 @@ async function aseEvaluateTrendline() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['trendline'] = dedupeKey;
     aseLog('✅ Trendline auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+breakout.line);
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline Breakout', 'trendline', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline Breakout', 'trendline', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Trendline breakout found but could not log: ' + res.error);
   }
@@ -19650,7 +19708,7 @@ async function aseEvaluateTrendlineConfirmed() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['trendline_confirmed'] = dedupeKey;
     aseLog('✅ Confirmed auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+confirmReason);
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline + PCR/EMA Confirmed', 'trendline_confirmed', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline + PCR/EMA Confirmed', 'trendline_confirmed', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Confirmed breakout found but could not log: ' + res.error);
   }
@@ -19783,7 +19841,7 @@ async function aseEvaluateQualityBreakout() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['quality_breakout'] = dedupeKey;
     aseLog('✅ Quality Breakout auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.75) — ADX '+adxRes.adx.toFixed(1));
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Quality Breakout', 'quality_breakout', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Quality Breakout', 'quality_breakout', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Quality breakout found but could not log: ' + res.error);
   }
@@ -19902,7 +19960,7 @@ async function aseEvaluateNiftyProV15() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['nifty_pro_v15'] = dedupeKey;
     aseLog('✅ Nifty Pro V1.5 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2) — one trade/day used');
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V1.5', 'nifty_pro_v15', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V1.5', 'nifty_pro_v15', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V1.5 signal found but could not log: ' + res.error);
   }
@@ -20121,9 +20179,131 @@ async function aseEvaluateNiftyProV2() {
   if (res && res.trade) {
     ASE_LAST_LOGGED_KEY['nifty_pro_v2'] = dedupeKey;
     aseLog('✅ Nifty Pro V2 auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:2, ATR '+fN(sig.atr,1)+') — one trade/day used');
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V2', 'nifty_pro_v2', instr, chainLtp, target, sl);
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V2', 'nifty_pro_v2', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V2 signal found but could not log: ' + res.error);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  OI BUILDUP STRATEGY — v1
+//  BUY CE when ATM Call shows Long Buildup (price + OI both rising
+//  strongly, confirmed by rising volume); BUY PE on the same pattern
+//  for ATM Put. Deliberately simple for v1 — no PCR-shift confirmation,
+//  no time-of-day weighting, no EMA/price-structure filter yet (those
+//  are the planned v2 refinements). Hard-requires confirmed live NSE/
+//  Angel chain data — never trades on the Black-Scholes fallback, since
+//  OI is meaningless when synthetic.
+// ══════════════════════════════════════════════════════════════════
+var ASE_OIB_BASELINE = {};        // "STRIKE_CE"/"STRIKE_PE" -> {ltp, vol, ts}
+var ASE_OIB_LAST_CANDLE_TIME = null;
+
+function aseSetOIB(id, val, color) {
+  var el = document.getElementById(id);
+  if (el) { el.textContent = val; if (color) el.style.color = color; }
+}
+
+async function aseEvaluateOIBuildup() {
+  if (!ASE_ON) { aseSetOIB('ase-oib-verdict', 'OFF', 'var(--dim)'); return; }
+
+  var srcOk = (typeof OC_STATE !== 'undefined' && OC_STATE.nseSource === true);
+  aseSetOIB('ase-oib-source', srcOk ? '🟢 LIVE' : '🟡 BS MODEL', srcOk ? 'var(--g)' : '#ffcc00');
+  if (!srcOk) { aseSetOIB('ase-oib-verdict', 'NO LIVE DATA', 'var(--r)'); return; }
+
+  if (typeof aseIsExpiryDayOpenGuard === 'function' && aseIsExpiryDayOpenGuard()) { aseSetOIB('ase-oib-verdict', 'NO TRADE: EXPIRY OPEN', 'var(--r)'); return; }
+  var inWindow = (typeof aseInSessionWindow === 'function') ? aseInSessionWindow() : true;
+  if (!inWindow) { aseSetOIB('ase-oib-verdict', 'OUTSIDE WINDOW', 'var(--dim)'); return; }
+
+  if (!OC_STATE.atm || !OC_STATE.data || !OC_STATE.data[OC_STATE.atm]) { aseSetOIB('ase-oib-verdict', 'WAITING DATA', 'var(--w)'); return; }
+  var atm = OC_STATE.atm;
+  var ce = OC_STATE.data[atm].ce, pe = OC_STATE.data[atm].pe;
+  if (!ce || !pe) { aseSetOIB('ase-oib-verdict', 'WAITING DATA', 'var(--w)'); return; }
+
+  // 5-minute baseline — same cadence as the candle-based strategies, so
+  // "price change" and "OI change" mean something real rather than
+  // reacting to 15s tick noise.
+  var now = new Date();
+  var candleKey = now.getHours() + ':' + (Math.floor(now.getMinutes()/5)*5);
+  var ceKey = atm + '_CE', peKey = atm + '_PE';
+  var ceBase = ASE_OIB_BASELINE[ceKey];
+  var peBase = ASE_OIB_BASELINE[peKey];
+
+  // chgOi is NSE's real "change in OI since previous session close" when
+  // sourced live — already the right timeframe for buildup analysis, no
+  // baseline needed for this half of the reading.
+  var ceOiChgPct = (ce.oi && ce.chgOi) ? (ce.chgOi / Math.max(ce.oi - ce.chgOi, 1) * 100) : 0;
+  var peOiChgPct = (pe.oi && pe.chgOi) ? (pe.chgOi / Math.max(pe.oi - pe.chgOi, 1) * 100) : 0;
+  var cePxChgPct = ceBase ? ((ce.ltp - ceBase.ltp) / ceBase.ltp * 100) : 0;
+  var pePxChgPct = peBase ? ((pe.ltp - peBase.ltp) / peBase.ltp * 100) : 0;
+
+  aseSetOIB('ase-oib-ce-oi', (ceOiChgPct>=0?'+':'')+ceOiChgPct.toFixed(1)+'%', ceOiChgPct>=0?'var(--g)':'var(--r)');
+  aseSetOIB('ase-oib-ce-px', ceBase ? ((cePxChgPct>=0?'+':'')+cePxChgPct.toFixed(1)+'%') : '—', cePxChgPct>=0?'var(--g)':'var(--r)');
+  aseSetOIB('ase-oib-pe-oi', (peOiChgPct>=0?'+':'')+peOiChgPct.toFixed(1)+'%', peOiChgPct>=0?'var(--g)':'var(--r)');
+  aseSetOIB('ase-oib-pe-px', peBase ? ((pePxChgPct>=0?'+':'')+pePxChgPct.toFixed(1)+'%') : '—', pePxChgPct>=0?'var(--g)':'var(--r)');
+
+  if (ASE_OIB_LAST_CANDLE_TIME === candleKey) { aseSetOIB('ase-oib-verdict', 'NO NEW CANDLE', 'var(--dim)'); return; }
+
+  if (!ceBase || !peBase) {
+    ASE_OIB_BASELINE[ceKey] = { ltp: ce.ltp, vol: ce.vol, ts: Date.now() };
+    ASE_OIB_BASELINE[peKey] = { ltp: pe.ltp, vol: pe.vol, ts: Date.now() };
+    ASE_OIB_LAST_CANDLE_TIME = candleKey;
+    aseSetOIB('ase-oib-verdict', 'BUILDING BASELINE', 'var(--w)');
+    return;
+  }
+
+  var OI_THRESHOLD = 15; // % OI change required
+  var PX_THRESHOLD = 15; // % price change required
+
+  var ceVolConfirm = ce.vol > (ceBase.vol||0) && ce.vol > 10000;
+  var peVolConfirm = pe.vol > (peBase.vol||0) && pe.vol > 10000;
+
+  var ceLongBuildup = cePxChgPct > PX_THRESHOLD && ceOiChgPct > OI_THRESHOLD && ceVolConfirm;
+  var peLongBuildup = pePxChgPct > PX_THRESHOLD && peOiChgPct > OI_THRESHOLD && peVolConfirm;
+
+  var sideToTrade = null, reasons = [];
+  // If both sides somehow qualify in the same candle, skip — contradictory
+  // signal (fresh buying in calls AND puts at once), not worth acting on.
+  if (ceLongBuildup && !peLongBuildup) {
+    sideToTrade = 'CE';
+    reasons = ['ATM CE Long Buildup', 'Price +'+cePxChgPct.toFixed(1)+'%', 'OI +'+ceOiChgPct.toFixed(1)+'%', 'Volume confirmed'];
+  } else if (peLongBuildup && !ceLongBuildup) {
+    sideToTrade = 'PE';
+    reasons = ['ATM PE Long Buildup', 'Price +'+pePxChgPct.toFixed(1)+'%', 'OI +'+peOiChgPct.toFixed(1)+'%', 'Volume confirmed'];
+  }
+
+  // Roll the baseline forward for next candle regardless of whether a
+  // signal fired this cycle.
+  ASE_OIB_BASELINE[ceKey] = { ltp: ce.ltp, vol: ce.vol, ts: Date.now() };
+  ASE_OIB_BASELINE[peKey] = { ltp: pe.ltp, vol: pe.vol, ts: Date.now() };
+  ASE_OIB_LAST_CANDLE_TIME = candleKey;
+
+  if (!sideToTrade) { aseSetOIB('ase-oib-verdict', 'NO SIGNAL', 'var(--dim)'); return; }
+
+  aseSetOIB('ase-oib-verdict', 'BUY ' + sideToTrade, sideToTrade==='CE' ? 'var(--g)' : 'var(--r)');
+
+  var dayKey = getIST().toLocaleDateString('en-CA');
+  var dedupeKey = dayKey + '_' + sideToTrade + '_' + atm; // one trade per strike per session
+  if (ASE_LAST_LOGGED_KEY['oi_buildup'] === dedupeKey) { console.log('[AutoSignalEngine] dedupe: OI Buildup already logged for '+dedupeKey+' — skipping.'); return; }
+
+  var chainLtp = sideToTrade === 'CE' ? ce.ltp : pe.ltp;
+  if (!chainLtp || chainLtp <= 0) { aseLog('OI Buildup signal found ('+sideToTrade+') but no chain price available — skipped.'); return; }
+
+  var target = Math.round(chainLtp * 1.30 / 5) * 5; // +30% premium — 1:1.5 R:R
+  var sl     = Math.round(chainLtp * 0.80 / 5) * 5; // -20% premium
+  var instr  = OC_STATE.index + ' ' + atm + sideToTrade + ' ' + getNiftyExpiry();
+  var lotQty = (OC_STATE.lotSize && OC_STATE.lotSize[OC_STATE.index]) || 65;
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'oi_buildup',
+    signalType: 'BUY ' + sideToTrade, reasons: reasons.filter(Boolean).join(' | ')
+  });
+
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY['oi_buildup'] = dedupeKey;
+    aseLog('✅ OI Buildup auto-logged BUY '+sideToTrade+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.5) — '+reasons.filter(Boolean).join(', '));
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('OI Buildup', 'oi_buildup', instr, chainLtp, target, sl, res.trade.reasons);
+  } else if (res && res.error) {
+    aseLog('⚠ OI Buildup signal found but could not log: ' + res.error);
   }
 }
 
@@ -22209,12 +22389,23 @@ function jarvisFOCallDing() {
   } catch(e) {}
 }
 
-window.jarvisNotifyFOCall = function(strategyLabel, strategyKey, instr, entry, target, sl) {
+window.jarvisNotifyFOCall = function(strategyLabel, strategyKey, instr, entry, target, sl, reason) {
   if (JARVIS_NOTIF_SETTINGS.mute[strategyKey]) return;
   if (JARVIS_NOTIF_SETTINGS.quietHoursOnly && !jarvisInMarketHours()) return;
   var title = '⚡ New F&O Call — ' + instr;
-  var body  = strategyLabel + ' · Entry ₹' + entry + ' · TGT ₹' + target + ' · SL ₹' + sl;
+  var body  = strategyLabel + ' · Entry ₹' + entry + ' · TGT ₹' + target + ' · SL ₹' + sl + (reason ? ('\n💡 ' + reason) : '');
   jarvisPushRaw('entry', title, body, '#00d4ff');
+
+  // Chart snapshot — small candlestick image with the entry marked,
+  // sent to Telegram right after the text alert (faster to eyeball
+  // "yes that's a real breakout" than reading numbers alone). Best-effort:
+  // silently skipped if the chart canvas has no data yet or Telegram
+  // isn't configured — never blocks or delays the text alert above.
+  try {
+    var spotAtEntry = (typeof OC_STATE !== 'undefined' && OC_STATE.spot) ? OC_STATE.spot
+                     : (typeof LD !== 'undefined' && LD.NIFTY50 && LD.NIFTY50.ltp) ? LD.NIFTY50.ltp : null;
+    if (spotAtEntry) jarvisSendChartSnapshot(spotAtEntry, '◀ ENTRY', '#00d4ff', title + '\n' + body);
+  } catch(e) {}
 };
 
 /* ─── Trade closed (target / SL / trailing-SL hit) ─── */
@@ -22233,7 +22424,7 @@ window.jarvisNotifyTradeClosed = function(t, exitPrice, reason) {
 
 /* ─── Settings (Telegram creds, mutes, quiet hours) — persisted ─── */
 var JARVIS_NOTIF_SETTINGS = (function(){
-  var def = { telegramBotToken:'', telegramChatId:'', mute:{}, quietHoursOnly:true, lastEodDate:'', lastExpiryReminderDate:'' };
+  var def = { telegramBotToken:'', telegramChatId:'', mute:{}, quietHoursOnly:true, lastEodDate:'', lastExpiryReminderDate:'', lastWeeklyRollup:'', lastMonthlyRollup:'' };
   try {
     var stored = JSON.parse(localStorage.getItem('jarvis_notif_settings'));
     if (stored) return Object.assign({}, def, stored, { mute: Object.assign({}, def.mute, stored.mute||{}) });
@@ -22355,6 +22546,66 @@ function jarvisTelegramSendDocument(blob, filename, caption) {
     .then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) console.warn('[Telegram] sendDocument failed', j); return !!j.ok; })
     .catch(function(e){ console.warn('[Telegram] sendDocument error', e); return false; });
 }
+
+/* ─── Chart snapshot in alerts — a small candlestick image with the
+   entry point marked, sent alongside the Telegram text alert. Reuses
+   the live Auto Signal Engine chart canvas (#ase-chart) rather than
+   rendering a second chart from scratch — captures whatever's already
+   drawn, overlays a dashed marker line at the index spot price the
+   trade fired at, using the same price->pixel scale the live overlay
+   line already uses (ASE_CHART_SCALE), so the marker lines up exactly
+   with the real candles. ─── */
+function jarvisCaptureChartSnapshot(spotPrice, label, color) {
+  try {
+    var srcCanvas = document.getElementById('ase-chart');
+    if (!srcCanvas || !srcCanvas.width) return null;
+    var out = document.createElement('canvas');
+    out.width = srcCanvas.width;
+    out.height = srcCanvas.height;
+    var ctx = out.getContext('2d');
+    ctx.fillStyle = '#0a1220';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(srcCanvas, 0, 0);
+
+    if (spotPrice != null && typeof ASE_CHART_SCALE !== 'undefined' && ASE_CHART_SCALE) {
+      var s = ASE_CHART_SCALE;
+      var clamped = Math.max(s.minV, Math.min(s.maxV, spotPrice));
+      var y = s.padTop + s.plotH - ((clamped - s.minV) / s.range) * s.plotH;
+      var col = color || '#00d4ff';
+
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([5,3]);
+      ctx.beginPath(); ctx.moveTo(s.padL, y); ctx.lineTo(s.W - s.padR, y); ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(s.W - s.padR, y, 3.5, 0, Math.PI*2); ctx.fill();
+
+      ctx.font = 'bold 11px monospace'; ctx.textAlign = 'right';
+      ctx.fillText(label + ' ' + spotPrice.toFixed(1), s.W - s.padR - 6, y - 6);
+    }
+    return out;
+  } catch(e) { console.warn('[Chart Snapshot]', e); return null; }
+}
+
+function jarvisTelegramSendPhoto(blob, caption) {
+  if (!JARVIS_NOTIF_SETTINGS.telegramBotToken || !JARVIS_NOTIF_SETTINGS.telegramChatId) return Promise.resolve(false);
+  var fd = new FormData();
+  fd.append('chat_id', JARVIS_NOTIF_SETTINGS.telegramChatId);
+  fd.append('caption', caption || '');
+  fd.append('photo', blob, 'chart.png');
+  return fetch('https://api.telegram.org/bot' + JARVIS_NOTIF_SETTINGS.telegramBotToken + '/sendPhoto', { method: 'POST', body: fd })
+    .then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) console.warn('[Telegram] sendPhoto failed', j); return !!j.ok; })
+    .catch(function(e){ console.warn('[Telegram] sendPhoto error', e); return false; });
+}
+
+function jarvisSendChartSnapshot(spotPrice, label, color, caption) {
+  var canvas = jarvisCaptureChartSnapshot(spotPrice, label, color);
+  if (!canvas) return;
+  canvas.toBlob(function(blob){
+    if (blob) jarvisTelegramSendPhoto(blob, caption);
+  }, 'image/png');
+}
+
 function jarvisTelegramTest() {
   var status = document.getElementById('tg-test-status');
   if (status) status.textContent = 'Sending test message…';
@@ -22362,6 +22613,7 @@ function jarvisTelegramTest() {
     if (status) { status.textContent = ok ? '✅ Test message sent — check Telegram' : '❌ Failed — check bot token / chat ID'; status.style.color = ok ? '#00ff88' : '#ff3d5a'; }
   });
 }
+
 
 /* ─── Settings UI wiring (Telegram fields, mute checkboxes, quiet hours) ─── */
 function jarvisNotifSettingsUIInit() {
@@ -22371,7 +22623,7 @@ function jarvisNotifSettingsUIInit() {
   if (tokenEl) { tokenEl.value = JARVIS_NOTIF_SETTINGS.telegramBotToken; tokenEl.onchange = function(){ JARVIS_NOTIF_SETTINGS.telegramBotToken = tokenEl.value.trim(); jarvisNotifSettingsSave(); }; }
   if (chatEl)  { chatEl.value  = JARVIS_NOTIF_SETTINGS.telegramChatId;  chatEl.onchange  = function(){ JARVIS_NOTIF_SETTINGS.telegramChatId  = chatEl.value.trim();  jarvisNotifSettingsSave(); }; }
   if (quietEl) { quietEl.checked = JARVIS_NOTIF_SETTINGS.quietHoursOnly; quietEl.onchange = function(){ JARVIS_NOTIF_SETTINGS.quietHoursOnly = quietEl.checked; jarvisNotifSettingsSave(); }; }
-  ['pcr_ema_vix','trendline','trendline_confirmed','quality_breakout','nifty_pro_v15','nifty_pro_v2'].forEach(function(key){
+  ['pcr_ema_vix','trendline','trendline_confirmed','quality_breakout','nifty_pro_v15','nifty_pro_v2','oi_buildup'].forEach(function(key){
     var cb = document.getElementById('mute-' + key);
     if (!cb) return;
     cb.checked = !!JARVIS_NOTIF_SETTINGS.mute[key];
@@ -22560,7 +22812,7 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
   y += rowH;
 
   doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
-  var stratLabels = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2' };
+  var stratLabels = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', oi_buildup:'OI Buildup' };
   all.slice(0, 22).forEach(function(t, ri){
     if (y > 275) { doc.addPage(); doc.setFillColor(BG); doc.rect(0,0,W,297,'F'); y = 18; }
     doc.setFillColor(ri % 2 === 0 ? PANEL : '#0f1928'); doc.rect(x, y, W-2*x, rowH, 'F');
@@ -22581,6 +22833,216 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
   });
 
   y += 8;
+  doc.setDrawColor(BORDER); doc.setLineWidth(0.3); doc.line(x, y, W-x, y);
+  y += 5;
+  doc.setTextColor(DIM); doc.setFontSize(6.5);
+  var disclaimer = 'All figures are from JARVIS\'s paper-trading Auto Signal Engine for educational tracking only. Not investment advice, not a broker contract note. F&O trading involves significant risk of capital loss.';
+  var lines = doc.splitTextToSize(disclaimer, W-2*x);
+  doc.text(lines, x, y);
+
+  return doc.output('blob');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WEEKLY / MONTHLY ROLLUP REPORTS
+   Same idea as the EOD summary, zoomed out — sent once on Friday
+   evening (week) and once on the last trading day of the month
+   (month), via Telegram: text summary + PDF with a day-by-day
+   trend table and a strategy breakdown, so the trajectory is
+   visible instead of just one noisy day at a time.
+═══════════════════════════════════════════════════════════ */
+var ROLLUP_STRAT_LABELS = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', oi_buildup:'OI Buildup', manual:'Manual' };
+
+function jarvisIsLastWeekdayOfMonth(d) {
+  var next = new Date(d);
+  next.setDate(d.getDate() + 1);
+  while (next.getMonth() === d.getMonth()) {
+    if (next.getDay() !== 0 && next.getDay() !== 6) return false; // a weekday remains later this month
+    next.setDate(next.getDate() + 1);
+  }
+  return true;
+}
+
+function jarvisAggregateTrades(startKey, endKey) {
+  var all = (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).filter(function(t){ return t.auto && t.dayKey >= startKey && t.dayKey <= endKey; });
+  var closed = all.filter(function(t){ return t.status !== 'OPEN'; });
+  var wins = closed.filter(function(t){ return (t.net||0) >= 0; });
+  var losses = closed.filter(function(t){ return (t.net||0) < 0; });
+  var net = closed.reduce(function(a,t){ return a + (t.net||0); }, 0);
+
+  var byDay = {};
+  closed.forEach(function(t){
+    byDay[t.dayKey] = byDay[t.dayKey] || { net: 0, count: 0, wins: 0 };
+    byDay[t.dayKey].net += (t.net||0);
+    byDay[t.dayKey].count++;
+    if ((t.net||0) >= 0) byDay[t.dayKey].wins++;
+  });
+
+  var byStrat = {};
+  closed.forEach(function(t){
+    var k = t.strategy || 'manual';
+    byStrat[k] = byStrat[k] || { net: 0, count: 0, wins: 0 };
+    byStrat[k].net += (t.net||0);
+    byStrat[k].count++;
+    if ((t.net||0) >= 0) byStrat[k].wins++;
+  });
+
+  return { all: all, closed: closed, wins: wins, losses: losses, net: net, byDay: byDay, byStrat: byStrat };
+}
+
+function jarvisCheckWeeklyRollup() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) return;
+  var ist = (typeof getIST === 'function') ? getIST() : new Date();
+  if (ist.getDay() !== 5) return; // Friday only
+  var mins = ist.getHours()*60 + ist.getMinutes();
+  if (mins < (15*60+35)) return; // just after the EOD summary fires
+  var weekKey = 'W' + ist.toLocaleDateString('en-CA'); // Friday's date uniquely identifies the week
+  if (JARVIS_NOTIF_SETTINGS.lastWeeklyRollup === weekKey) return;
+  JARVIS_NOTIF_SETTINGS.lastWeeklyRollup = weekKey;
+  jarvisNotifSettingsSave();
+
+  var monday = new Date(ist);
+  monday.setDate(ist.getDate() - 4); // Mon..Fri of this week
+  var startKey = monday.toLocaleDateString('en-CA');
+  var endKey = ist.toLocaleDateString('en-CA');
+  jarvisSendRollupSummary('week', startKey, endKey, 'Weekly');
+}
+
+function jarvisCheckMonthlyRollup() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) return;
+  var ist = (typeof getIST === 'function') ? getIST() : new Date();
+  if (ist.getDay() === 0 || ist.getDay() === 6) return;
+  if (!jarvisIsLastWeekdayOfMonth(ist)) return;
+  var mins = ist.getHours()*60 + ist.getMinutes();
+  if (mins < (15*60+40)) return; // after weekly rollup's window too, avoids both firing in the wrong order
+  var monthKey = 'M' + ist.getFullYear() + '-' + String(ist.getMonth()+1).padStart(2,'0');
+  if (JARVIS_NOTIF_SETTINGS.lastMonthlyRollup === monthKey) return;
+  JARVIS_NOTIF_SETTINGS.lastMonthlyRollup = monthKey;
+  jarvisNotifSettingsSave();
+
+  var firstOfMonth = new Date(ist.getFullYear(), ist.getMonth(), 1);
+  var startKey = firstOfMonth.toLocaleDateString('en-CA');
+  var endKey = ist.toLocaleDateString('en-CA');
+  jarvisSendRollupSummary('month', startKey, endKey, ist.toLocaleDateString('en-IN', { month:'long', year:'numeric' }));
+}
+setInterval(jarvisCheckWeeklyRollup, 5*60*1000);
+setInterval(jarvisCheckMonthlyRollup, 5*60*1000);
+setTimeout(jarvisCheckWeeklyRollup, 15000);
+setTimeout(jarvisCheckMonthlyRollup, 20000);
+
+function jarvisSendRollupSummary(periodType, startKey, endKey, label) {
+  var agg = jarvisAggregateTrades(startKey, endKey);
+  if (!agg.closed.length) return; // nothing to report — skip silently rather than sending an empty report
+
+  var stratRows = Object.keys(agg.byStrat).map(function(k){
+    var s = agg.byStrat[k];
+    return { key: k, label: ROLLUP_STRAT_LABELS[k]||k, trades: s.count, winRate: s.count ? (s.wins/s.count*100) : 0, net: s.net };
+  }).sort(function(a,b){ return b.net - a.net; });
+  var best = stratRows[0];
+  var worst = stratRows[stratRows.length-1];
+
+  var winRate = agg.closed.length ? (agg.wins.length/agg.closed.length*100) : 0;
+  var title = (periodType==='week' ? '📅 Weekly' : '🗓️ Monthly') + ' Rollup — ' + label;
+  var body = agg.closed.length + ' trades · ' + winRate.toFixed(0) + '% win rate · net ' + (agg.net>=0?'+':'') + '₹' + Math.round(agg.net).toLocaleString('en-IN') +
+    (best ? ('\n🏆 Best: ' + best.label + ' (' + (best.net>=0?'+':'') + '₹' + Math.round(best.net).toLocaleString('en-IN') + ')') : '') +
+    (worst && worst.key !== (best&&best.key) ? ('\n📉 Worst: ' + worst.label + ' (' + (worst.net>=0?'+':'') + '₹' + Math.round(worst.net).toLocaleString('en-IN') + ')') : '');
+
+  jarvisPushRaw('rollup', title, body, agg.net>=0 ? '#00ff88' : '#ff3d5a', { telegram: false });
+
+  try {
+    var blob = jarvisBuildRollupPdfBlob(agg, stratRows, periodType, startKey, endKey, label);
+    var fname = 'JARVIS_' + (periodType==='week'?'Weekly':'Monthly') + '_' + endKey + '.pdf';
+    jarvisTelegramSendDocument(blob, fname, title + '\n' + body);
+  } catch(e) { console.warn('[Rollup PDF]', e); }
+}
+
+function jarvisBuildRollupPdfBlob(agg, stratRows, periodType, startKey, endKey, label) {
+  if (!window.jspdf) { console.warn('[Rollup PDF] jsPDF not loaded'); return null; }
+  var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+  var W = 210, x = 15, y = 18;
+  var BG='#030712', PANEL='#0d1424', BORDER='#1a2840', CYAN='#00d4ff', GREEN='#00ff88', RED='#ff3d5a', AMBER='#ffcc00', TXT='#c8d8f0', DIM='#7a8db0', PURPLE='#a064ff';
+
+  function newPage() { doc.addPage(); doc.setFillColor(BG); doc.rect(0,0,W,297,'F'); y = 18; }
+
+  doc.setFillColor(BG); doc.rect(0, 0, W, 297, 'F');
+  doc.setDrawColor(CYAN); doc.setLineWidth(0.6); doc.line(x, y, W-x, y);
+
+  doc.setTextColor(CYAN); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('JARVIS', x, y+9);
+  doc.setTextColor(TXT); doc.setFontSize(11);
+  doc.text((periodType==='week'?'WEEKLY':'MONTHLY') + ' F&O ROLLUP', W-x, y+5, { align: 'right' });
+  doc.setTextColor(DIM); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text(label + '  (' + startKey + ' to ' + endKey + ')', W-x, y+10, { align: 'right' });
+
+  y += 20;
+  var winRate = agg.closed.length ? (agg.wins.length/agg.closed.length*100) : 0;
+  var stats = [['TRADES', String(agg.closed.length)], ['WINS', String(agg.wins.length)], ['LOSSES', String(agg.losses.length)], ['WIN RATE', winRate.toFixed(0)+'%'], ['NET P&L', (agg.net>=0?'+':'')+'₹'+Math.round(agg.net).toLocaleString('en-IN')]];
+  var cw = (W - 2*x) / stats.length;
+  stats.forEach(function(s, i){
+    var cx = x + i*cw;
+    doc.setFillColor(PANEL); doc.setDrawColor(BORDER); doc.rect(cx, y, cw-2, 16, 'FD');
+    doc.setTextColor(DIM); doc.setFontSize(6.5); doc.text(s[0], cx+3, y+5);
+    var color = i===4 ? (agg.net>=0?GREEN:RED) : (i===1?GREEN:i===2?RED:i===3?AMBER:CYAN);
+    doc.setTextColor(color); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text(s[1], cx+3, y+12);
+    doc.setFont('helvetica','normal');
+  });
+
+  // ── Day-by-day trend — the actual trajectory, not just one snapshot ──
+  y += 24;
+  doc.setTextColor(PURPLE); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+  doc.text('DAY-BY-DAY TREND', x, y);
+  y += 4;
+  var dayKeys = Object.keys(agg.byDay).sort();
+  var dHeaders = ['DATE', 'TRADES', 'WIN RATE', 'NET P&L'];
+  var dColW = [50, 35, 35, 50];
+  doc.setFillColor('#111b30'); doc.rect(x, y, W-2*x, 7, 'F');
+  doc.setTextColor(CYAN); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  var cx2 = x;
+  dHeaders.forEach(function(h,i){ doc.text(h, cx2+1.5, y+4.8); cx2 += dColW[i]; });
+  y += 7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
+  dayKeys.forEach(function(dk, ri){
+    if (y > 275) newPage();
+    var d = agg.byDay[dk];
+    var dWinRate = d.count ? (d.wins/d.count*100) : 0;
+    doc.setFillColor(ri%2===0 ? PANEL : '#0f1928'); doc.rect(x, y, W-2*x, 7, 'F');
+    doc.setTextColor(TXT); cx2 = x;
+    doc.text(dk, cx2+1.5, y+4.8); cx2 += dColW[0];
+    doc.text(String(d.count), cx2+1.5, y+4.8); cx2 += dColW[1];
+    doc.text(dWinRate.toFixed(0)+'%', cx2+1.5, y+4.8); cx2 += dColW[2];
+    doc.setTextColor(d.net>=0?GREEN:RED);
+    doc.text((d.net>=0?'+':'')+'₹'+Math.round(d.net).toLocaleString('en-IN'), cx2+1.5, y+4.8);
+    y += 7;
+  });
+
+  // ── Strategy breakdown ──
+  y += 10;
+  if (y > 250) newPage();
+  doc.setTextColor(PURPLE); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+  doc.text('STRATEGY BREAKDOWN', x, y);
+  y += 4;
+  var sHeaders = ['STRATEGY', 'TRADES', 'WIN RATE', 'NET P&L'];
+  doc.setFillColor('#111b30'); doc.rect(x, y, W-2*x, 7, 'F');
+  doc.setTextColor(CYAN); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  cx2 = x;
+  sHeaders.forEach(function(h,i){ doc.text(h, cx2+1.5, y+4.8); cx2 += dColW[i]; });
+  y += 7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
+  stratRows.forEach(function(s, ri){
+    if (y > 275) newPage();
+    doc.setFillColor(ri%2===0 ? PANEL : '#0f1928'); doc.rect(x, y, W-2*x, 7, 'F');
+    doc.setTextColor(TXT); cx2 = x;
+    doc.text(s.label, cx2+1.5, y+4.8); cx2 += dColW[0];
+    doc.text(String(s.trades), cx2+1.5, y+4.8); cx2 += dColW[1];
+    doc.text(s.winRate.toFixed(0)+'%', cx2+1.5, y+4.8); cx2 += dColW[2];
+    doc.setTextColor(s.net>=0?GREEN:RED);
+    doc.text((s.net>=0?'+':'')+'₹'+Math.round(s.net).toLocaleString('en-IN'), cx2+1.5, y+4.8);
+    y += 7;
+  });
+
+  y += 8;
+  if (y > 280) newPage();
   doc.setDrawColor(BORDER); doc.setLineWidth(0.3); doc.line(x, y, W-x, y);
   y += 5;
   doc.setTextColor(DIM); doc.setFontSize(6.5);
