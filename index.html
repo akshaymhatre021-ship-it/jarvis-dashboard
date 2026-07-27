@@ -19570,7 +19570,13 @@ async function aseEvaluateTrendline() {
 
   var prevClose = candles[candles.length - 2].close;
   var liveClose = candles[candles.length - 1].close;
-  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose);
+  // Was .slice(0,-2), which dropped prevClose out of the trendline-fitting
+  // history too — the trendline ended up one candle staler than what it
+  // was being checked against. Backtest (the validated reference) uses
+  // .slice(0,-1), fitting the line through prevClose itself. Aligned here
+  // to match — this is what was causing live to miss signals the backtest
+  // confirmed were real on the same recorded data.
+  var breakout = checkTrendlineBreakout(candles.slice(0, -1), prevClose, liveClose);
 
   if (!breakout) {
     ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
@@ -19669,7 +19675,9 @@ async function aseEvaluateTrendlineConfirmed() {
 
   var prevClose = candles[candles.length - 2].close;
   var liveClose = candles[candles.length - 1].close;
-  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
+  // Same fix as Trendline Breakout — was .slice(0,-2), one candle staler
+  // than backtest's validated .slice(0,-1).
+  var breakout = checkTrendlineBreakout(candles.slice(0, -1), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
 
   if (!breakout) {
     ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
@@ -19799,7 +19807,11 @@ async function aseEvaluateQualityBreakout() {
   var prevClose = candles[candles.length - 2].close;
   var liveClose = candles[candles.length - 1].close;
   var breakoutCandle = candles[candles.length - 1];
-  var breakout = checkTrendlineBreakout(candles.slice(0, -2), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
+  // Same fix as the other two trendline strategies — was .slice(0,-2),
+  // one candle staler than backtest's validated .slice(0,-1). This is
+  // the specific fix for the 2026-07-27 11:15 case that fired in
+  // backtest on real recorded data but didn't fire live.
+  var breakout = checkTrendlineBreakout(candles.slice(0, -1), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
 
   if (!breakout) {
     ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
