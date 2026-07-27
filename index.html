@@ -19163,9 +19163,12 @@ var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendlin
 // state and cause it to double-fire on the next cycle.
 var ASE_LAST_LOGGED_KEY = {};
 var ASE_LOG = []; // recent engine decisions, newest first, for the on-screen log
+try { ASE_LOG = JSON.parse(localStorage.getItem('jarvis_ase_log') || '[]') || []; } catch(e) { ASE_LOG = []; }
 
 function aseLoadState() {
   try { ASE_ON = localStorage.getItem('jarvis_ase_on') === '1'; } catch(e) {}
+  var logEl = document.getElementById('ase-log');
+  if (logEl && ASE_LOG.length) logEl.innerHTML = ASE_LOG.map(function(l){ return '<div>'+l+'</div>'; }).join('');
   var storedList = null;
   try { storedList = JSON.parse(localStorage.getItem('jarvis_ase_strategies') || 'null'); } catch(e) { storedList = null; }
   if (Array.isArray(storedList) && storedList.length) {
@@ -19309,6 +19312,10 @@ function aseLog(msg) {
   if (ASE_LOG.length > 30) ASE_LOG.pop();
   var el = document.getElementById('ase-log');
   if (el) el.innerHTML = ASE_LOG.map(function(l){ return '<div>'+l+'</div>'; }).join('');
+  // Persist so the log survives a closed laptop/browser restart — previously
+  // this was in-memory only, so anything that happened while you weren't
+  // watching was unrecoverable the moment the tab closed.
+  try { localStorage.setItem('jarvis_ase_log', JSON.stringify(ASE_LOG)); } catch(e) {}
 }
 
 // VIX spike tracking for the PE "sudden VIX spike >10% in 15min" rule
