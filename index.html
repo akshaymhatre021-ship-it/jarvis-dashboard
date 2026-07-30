@@ -3153,6 +3153,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="quality_breakout">Quality Breakout (ADX + Follow-Through)</option>
             <option value="nifty_pro_v15">Nifty Pro V1.5 (EMA+VWAP+RSI+HTF)</option>
             <option value="nifty_pro_v2">✨ Nifty Pro V2 (+MACD +VOL +ATR)</option>
+            <option value="orb_vwap">🆕 ORB + VWAP (Opening Range Breakout)</option>
             <option value="oi_buildup" disabled>🆕 OI Buildup — needs a few days of live OI/volume data first</option>
           </select>
           <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-top:4px">OI Buildup can't be backtested yet — it needs real Open Interest + volume history, which JARVIS only started recording from today. Check back once you've had several trading days with the option chain showing 🟢 LIVE.</div>
@@ -3274,6 +3275,7 @@ setTimeout(nd2SyncAll, 2000);
           <option value="quality_breakout">Quality Breakout</option>
           <option value="nifty_pro_v15">Nifty Pro V1.5</option>
           <option value="nifty_pro_v2">Nifty Pro V2</option>
+          <option value="orb_vwap">ORB + VWAP</option>
           <option value="oi_buildup">OI Buildup</option>
           <option value="manual">Manual</option>
         </select>
@@ -3368,6 +3370,7 @@ setTimeout(nd2SyncAll, 2000);
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-quality_breakout" style="accent-color:var(--r);width:12px;height:12px">Quality Breakout</label>
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-nifty_pro_v15" style="accent-color:var(--r);width:12px;height:12px">Nifty Pro V1.5</label>
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-nifty_pro_v2" style="accent-color:var(--r);width:12px;height:12px">Nifty Pro V2</label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-orb_vwap" style="accent-color:var(--r);width:12px;height:12px">ORB + VWAP</label>
             <label style="display:flex;align-items:center;gap:6px;font-family:Share Tech Mono;font-size:9px;color:var(--txt);cursor:pointer"><input type="checkbox" id="mute-oi_buildup" style="accent-color:var(--r);width:12px;height:12px">OI Buildup</label>
           </div>
 
@@ -3403,6 +3406,9 @@ setTimeout(nd2SyncAll, 2000);
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#00ff88;cursor:pointer" onmouseover="this.style.background='rgba(0,255,136,.07)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-nifty_pro_v2" onchange="aseToggleStrategy('nifty_pro_v2', this.checked)" style="accent-color:#00ff88;width:14px;height:14px;flex-shrink:0"> ✨ Nifty Pro V2 (+MACD +VOL +ATR)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#ff9f43;cursor:pointer" onmouseover="this.style.background='rgba(255,159,67,.07)'" onmouseout="this.style.background='transparent'">
+            <input type="checkbox" id="ase-strat-chk-orb_vwap" onchange="aseToggleStrategy('orb_vwap', this.checked)" style="accent-color:#ff9f43;width:14px;height:14px;flex-shrink:0"> 🆕 ORB + VWAP (Opening Range Breakout)
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#ffcc00;cursor:pointer" onmouseover="this.style.background='rgba(255,204,0,.07)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-oi_buildup" onchange="aseToggleStrategy('oi_buildup', this.checked)" style="accent-color:#ffcc00;width:14px;height:14px;flex-shrink:0"> 🆕 OI Buildup (Long/Short, v1)
@@ -3648,6 +3654,36 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:var(--dim)">SL/TARGET: ATR(14)-based (1.2×/2.4×ATR) instead of a fixed 5-bar window — scales with real-time volatility · R:R kept at 1:2 · ONE trade per day · only between 9:30-11:30 AM.</div>
       </div>
 
+      <!-- Live condition readout: ORB + VWAP strategy (new) -->
+      <div id="ase-readout-orb" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">OPENING RANGE</div>
+          <div id="ase-orb-range" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VS VWAP</div>
+          <div id="ase-orb-vwap" style="font-family:Orbitron;font-size:12px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">RSI(14)</div>
+          <div id="ase-orb-rsi" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
+        </div>
+        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">TRADED TODAY?</div>
+          <div id="ase-orb-tradedtoday" style="font-family:Orbitron;font-size:12px;color:var(--txt)">NO</div>
+        </div>
+        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
+          <div id="ase-orb-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
+        </div>
+      </div>
+      <div id="ase-rules-orb" style="display:none;background:rgba(255,159,67,.05);border:1px solid rgba(255,159,67,.22);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
+        <div style="color:#ff9f43;margin-bottom:4px">🆕 New strategy — classic Opening Range Breakout, confirmed by VWAP + RSI + volume so it only fires on genuine breakouts, not the first noisy poke out of the range</div>
+        <div style="color:#00d4ff;margin-bottom:4px">BUY CE: 5-min close breaks above the first 15 minutes' high (09:15-09:30 range) · price&gt;VWAP · RSI&gt;55 · candle volume &gt;1.3× the trailing 10-bar average</div>
+        <div style="color:var(--r);margin-bottom:4px">BUY PE: mirrored bearish break of the opening range low · price&lt;VWAP · RSI&lt;45 · volume confirmed</div>
+        <div style="color:var(--dim)">SL: opposite side of the opening range · TARGET: 1.5× that risk · ONE trade per day · only between 9:30 AM-2:30 PM (avoids trading the still-forming range and the volatile last 45 min into close).</div>
+      </div>
+
       <!-- Live trendline chart -->
       <div style="margin-top:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -3773,6 +3809,7 @@ setTimeout(nd2SyncAll, 2000);
             <option value="quality_breakout">Quality Breakout (Regime-Filtered)</option>
             <option value="nifty_pro_v15">Nifty Pro V1.5</option>
             <option value="nifty_pro_v2">Nifty Pro V2</option>
+            <option value="orb_vwap">ORB + VWAP</option>
           </select>
         </div>
         <div>
@@ -6044,6 +6081,85 @@ function npAlignHTFEma(candles) {
     alignedSeries.push(lastClosedEma);
   }
   return alignedSeries;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ORB + VWAP — strategy #7 (Opening Range Breakout)
+//  Classic ORB: the first 15 minutes (three 5-min bars, 09:15-09:30)
+//  sets the day's "opening range". A real breakout of that range,
+//  confirmed by VWAP position + RSI momentum + a volume spike above
+//  the trailing average, is the entry — this filters out the common
+//  ORB failure mode of a low-volume poke outside the range that
+//  immediately reverses. One trade per day, SL at the opposite side
+//  of the opening range, target 1.5x that risk. Shares calcSessionVWAP
+//  and calcRSI with the Nifty Pro strategies above rather than
+//  reimplementing them.
+// ══════════════════════════════════════════════════════════════════
+
+// Builds, for every bar, the day's opening range as of that bar — null
+// while the range is still forming (first 3 bars of the day), frozen to
+// {high, low} once the 3rd bar of the day closes. Mirrors npAlignHTFEma's
+// "bucket by day" approach but resets per calendar day, not per HTF bar.
+function orbBuildDailyRanges(candles, dayKeys) {
+  var ranges = {};
+  var out = [];
+  for (var i = 0; i < candles.length; i++) {
+    var dk = dayKeys[i];
+    if (!ranges[dk]) ranges[dk] = { high: -Infinity, low: Infinity, bars: 0, frozen: null };
+    var r = ranges[dk];
+    if (r.bars < 3) {
+      r.high = Math.max(r.high, candles[i].high);
+      r.low  = Math.min(r.low, candles[i].low);
+      r.bars++;
+      if (r.bars === 3) r.frozen = { high: r.high, low: r.low };
+    }
+    out.push(r.frozen);
+  }
+  return out;
+}
+
+// Trade window: 9:30 AM (range must be complete) through 2:30 PM — avoids
+// both the still-forming range and the volatile, theta-heavy last 45
+// minutes into close.
+function orbInTradeWindow(timeStr) {
+  var m = String(timeStr).match(/(\d{1,2}):(\d{2})\s*$/);
+  if (!m) return false;
+  var totalMin = parseInt(m[1],10) * 60 + parseInt(m[2],10);
+  return totalMin >= (9*60+30) && totalMin <= (14*60+30);
+}
+
+// Computes the ORB + VWAP signal for bar i. orSeries/vwapSeries are
+// precomputed full-length series (see orbBuildDailyRanges / calcSessionVWAP).
+// Returns { type:'CE'|'PE', sl:<index level>, target:<index level>, risk } or null.
+function orbComputeSignal(candles, i, orSeries, vwapSeries, timeStrings) {
+  if (i < 14) return null; // need RSI(14) history
+  var orRange = orSeries[i];
+  if (!orRange) return null; // opening range not yet formed for this day
+  if (!orbInTradeWindow(timeStrings[i] || '')) return null;
+
+  var c = candles[i], prev = candles[i-1];
+  var closesArr = candles.slice(0, i+1).map(function(x){ return x.close; });
+  var rsi14 = calcRSI(closesArr, 14);
+  var vwapNow = vwapSeries[i];
+
+  var volLookback = candles.slice(Math.max(0, i-10), i);
+  var avgVol = volLookback.length ? volLookback.reduce(function(s,x){ return s + (x.vol||0); }, 0) / volLookback.length : 0;
+  var volConfirm = avgVol > 0 ? (c.vol || 0) > avgVol * 1.3 : true; // if no volume data at all, don't block on it
+
+  var longSignal  = c.close > orRange.high && prev.close <= orRange.high && c.close > vwapNow && rsi14 > 55 && volConfirm;
+  var shortSignal = c.close < orRange.low  && prev.close >= orRange.low  && c.close < vwapNow && rsi14 < 45 && volConfirm;
+
+  if (longSignal) {
+    var risk = c.close - orRange.low;
+    if (risk <= 0) return null;
+    return { type: 'CE', sl: orRange.low, target: c.close + risk * 1.5, risk: risk };
+  }
+  if (shortSignal) {
+    var risk2 = orRange.high - c.close;
+    if (risk2 <= 0) return null;
+    return { type: 'PE', sl: orRange.high, target: c.close - risk2 * 1.5, risk: risk2 };
+  }
+  return null;
 }
 
 // ── Live trendline candlestick chart ──
@@ -15999,6 +16115,7 @@ function btRunStrategy(data, strategy, signalType, capital, posPct) {
   if (data.length < 15) return [];
   if (strategy === 'nifty_pro_v15') return btRunNiftyProV15(data, signalType, capital, posPct);
   if (strategy === 'nifty_pro_v2') return btRunNiftyProV2(data, signalType, capital, posPct);
+  if (strategy === 'orb_vwap') return btRunORB(data, signalType, capital, posPct);
   var closes = data.map(function(d){return d.close;});
   var trades = [];
   var inTrade = false;
@@ -16270,6 +16387,80 @@ function btRunNiftyProV2(data, signalType, capital, posPct) {
       if (pnlPct >= target) exitReason = 'TARGET HIT';
       else if (pnlPct <= sl) exitReason = 'STOP LOSS HIT';
       else if (i - entryIdx >= 30) exitReason = 'TIME EXIT';
+      if (exitReason) {
+        var gross = (curPremium - entryPremium) * lotQty * lotsHeld;
+        var net   = gross - 40 * lotsHeld;
+        trades.push({
+          num: trades.length+1, entryDate: entryDate, exitDate: data[i].date,
+          optType: optType, strike: strike, lots: lotsHeld, lotSize: lotQty,
+          entry: entryPremium, exit: curPremium,
+          indexEntry: entry, indexExit: closes[i],
+          posSize: entryPremium*lotQty*lotsHeld, gross: gross, net: net,
+          pnlPct: (pnlPct*100).toFixed(2), result: exitReason,
+          dataSource: (entryIsReal && exitLookup.real) ? 'REAL' : (entryIsReal || exitLookup.real) ? 'PARTIAL' : 'EST'
+        });
+        inTrade = false;
+      }
+    }
+  }
+  return trades;
+}
+
+// ── ORB + VWAP backtest runner ──
+// Same whole-series precompute pattern as the Nifty Pro runners above
+// (needs the day's opening range + session VWAP precomputed, not just a
+// stateless per-bar check) and calls the exact same orbComputeSignal()
+// the live evaluator uses — so backtest and live can never silently drift
+// apart on the entry math itself.
+function btRunORB(data, signalType, capital, posPct) {
+  var closes = data.map(function(d){ return d.close; });
+  var dayKeys = data.map(function(d){
+    var s = String(d.date);
+    var m = s.match(/^(.*)\s+\d{1,2}:\d{2}\s*$/);
+    return m ? m[1] : s;
+  });
+  var timeStrings = data.map(function(d){ var m = String(d.date).match(/(\d{1,2}:\d{2})\s*$/); return m ? m[1] : ''; });
+  var vwapSeries = calcSessionVWAP(data, dayKeys);
+  var orSeries = orbBuildDailyRanges(data, dayKeys);
+
+  var trades = [];
+  var inTrade = false;
+  var entry = 0, entryDate = '', entryIdx = 0, optType = null, entryPremium = 0, strike = 0, sl = 0, target = 0, entryIsReal = false;
+  var lotQty = 65, lotsHeld = 1;
+  var tradedOnDay = {};
+  var wantCE = (signalType==='all'||signalType==='buy'||signalType==='call');
+  var wantPE = (signalType==='all'||signalType==='sell'||signalType==='put');
+
+  for (var i = 14; i < data.length - 1; i++) {
+    if (!inTrade) {
+      var dk = dayKeys[i];
+      if (tradedOnDay[dk]) continue; // one trade per day, matching the live strategy
+
+      var sig = orbComputeSignal(data, i, orSeries, vwapSeries, timeStrings);
+      if (!sig) continue;
+      if ((sig.type === 'CE' && !wantCE) || (sig.type === 'PE' && !wantPE)) continue;
+
+      inTrade = true; entry = closes[i]; entryDate = data[i].date; entryIdx = i;
+      optType = sig.type;
+      strike = Math.round(entry/50)*50;
+      var entryLookup = btLookupOrEstimatePremium(dk, timeStrings[i], strike, optType, entry, BT_DTE_DAYS);
+      entryPremium = entryLookup.price;
+      entryIsReal = entryLookup.real;
+      lotsHeld = 1; // fixed 1 lot per trade, matching live trading
+      var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / entry * 8));
+      sl     = -riskPct;
+      target = riskPct * 1.5; // R:R 1:1.5, matches the live strategy
+      tradedOnDay[dk] = true;
+    } else {
+      var daysElapsed = (i - entryIdx) * (5/60/24);
+      var exitLookup = btLookupOrEstimatePremium(dayKeys[i], timeStrings[i], strike, optType, closes[i], BT_DTE_DAYS - daysElapsed);
+      var curPremium = exitLookup.price;
+      var pnlPct = (curPremium - entryPremium) / entryPremium;
+      var exitReason = '';
+      if (pnlPct >= target) exitReason = 'TARGET HIT';
+      else if (pnlPct <= sl) exitReason = 'STOP LOSS HIT';
+      else if (i - entryIdx >= 24) exitReason = 'TIME EXIT';
+      else if (!orbInTradeWindow(timeStrings[i])) exitReason = 'TIME EXIT'; // flatten if the session window rolls past 2:30 PM while still open
       if (exitReason) {
         var gross = (curPremium - entryPremium) * lotQty * lotsHeld;
         var net   = gross - 40 * lotsHeld;
@@ -16924,6 +17115,7 @@ function ptStrategyLabel(key) {
   var labels = {
     pcr_ema_vix: 'PCR+EMA21+VIX', trendline: 'Trendline Breakout', trendline_confirmed: 'Trendline+Confirm',
     quality_breakout: 'Quality Breakout', nifty_pro_v15: 'Nifty Pro V1.5', nifty_pro_v2: 'Nifty Pro V2',
+    orb_vwap: 'ORB + VWAP',
     oi_buildup: 'OI Buildup', pipeline_test: 'Pipeline Test (removed)', manual: 'Manual', auto: 'Auto (unspecified)'
   };
   return labels[key] || key || 'Manual';
@@ -19156,7 +19348,7 @@ var ASE_ON = false;
 var ASE_STRATEGY = 'pcr_ema_vix'; // primary/display strategy — ASE_STRATEGIES[0]; drives chart overlay + fallback labeling
 var ASE_STRATEGIES = ['pcr_ema_vix']; // multi-select: every strategy in this list is evaluated independently, every cycle
 var ASE_VALID_STRATEGIES = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'nifty_pro_v2', 'oi_buildup'];
-var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)' };
+var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)', orb_vwap:'ORB + VWAP (Opening Range Breakout)' };
 // De-dupe: avoid re-logging same signal repeatedly. Keyed per-strategy (not a
 // single shared value) so that with 2-3 strategies active at once, one
 // strategy logging a trade can't clear/overwrite another strategy's de-dupe
@@ -19236,7 +19428,8 @@ function aseApplyStrategyUI() {
     trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' },
     quality_breakout:     { readout: 'ase-readout-quality',    rules: 'ase-rules-quality' },
     nifty_pro_v15:        { readout: 'ase-readout-niftypro',   rules: 'ase-rules-niftypro' },
-    nifty_pro_v2:         { readout: 'ase-readout-niftypro2',  rules: 'ase-rules-niftypro2' }
+    nifty_pro_v2:         { readout: 'ase-readout-niftypro2',  rules: 'ase-rules-niftypro2' },
+    orb_vwap:             { readout: 'ase-readout-orb',        rules: 'ase-rules-orb' }
   };
   Object.keys(panels).forEach(function(key){
     var isActive = ASE_STRATEGIES.indexOf(key) !== -1;
@@ -19402,6 +19595,7 @@ function aseEvaluate() {
         else if (s === 'quality_breakout') { await aseEvaluateQualityBreakout(); }
         else if (s === 'nifty_pro_v15') { await aseEvaluateNiftyProV15(); }
         else if (s === 'nifty_pro_v2') { await aseEvaluateNiftyProV2(); }
+        else if (s === 'orb_vwap') { await aseEvaluateORB(); }
         else if (s === 'oi_buildup') { await aseEvaluateOIBuildup(); }
         else { aseEvaluatePcrEmaVix(); }
       } catch(e) { console.warn('[AutoSignalEngine ' + s + ']', e); }
@@ -20269,6 +20463,115 @@ async function aseEvaluateNiftyProV2() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+//  ORB + VWAP — strategy #7 live evaluator
+//  Calls the exact same orbComputeSignal() the backtest runner uses (see
+//  block comment near that function for the full design), so live and
+//  backtest can't quietly diverge on the entry math the way a from-
+//  scratch reimplementation could.
+// ══════════════════════════════════════════════════════════════════
+var ASE_ORB_LAST_CANDLE_TIME = null;
+
+function aseOrbTradedToday() {
+  var todayKey = getIST().toLocaleDateString('en-CA');
+  return (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).some(function(t){
+    return t.dayKey === todayKey && t.reasons && t.reasons.indexOf('ORBVWAP') !== -1;
+  });
+}
+
+async function aseEvaluateORB() {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  if (!ni || !ni.ltp) { ptSet2('ase-orb-verdict', 'WAITING DATA', 'var(--w)'); return; }
+
+  if (!ASE_ON) { ptSet2('ase-orb-verdict', 'OFF', 'var(--dim)'); return; }
+
+  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
+    ptSet2('ase-orb-verdict', 'NEED BROKER LOGIN', 'var(--w)');
+    aseLog('ORB + VWAP needs Angel One login for 5-min candle history — connect via SETUP.');
+    return;
+  }
+
+  var candles = ASE_LAST_CANDLES;
+  if (!candles || candles.length < 20) {
+    ptSet2('ase-orb-verdict', 'BUILDING CANDLES', 'var(--w)');
+    return;
+  }
+
+  var latestCandleTime = candles[candles.length - 1].time;
+  var tradedToday = aseOrbTradedToday();
+  ptSet2('ase-orb-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
+
+  if (ASE_ORB_LAST_CANDLE_TIME === latestCandleTime) {
+    ptSet2('ase-orb-verdict', 'NO NEW CANDLE', 'var(--dim)');
+    return;
+  }
+
+  var dayKeys = candles.map(function(c){ return String(c.time).slice(0,10); });
+  var timeStrings = candles.map(function(c){ return String(c.time).slice(11,16); });
+  var vwapSeries = calcSessionVWAP(candles, dayKeys);
+  var orSeries = orbBuildDailyRanges(candles, dayKeys);
+
+  var i = candles.length - 1;
+  var orNow = orSeries[i];
+  var rsiNow = i >= 14 ? calcRSI(candles.slice(0, i+1).map(function(c){ return c.close; }), 14) : null;
+  ptSet2('ase-orb-range', orNow ? ('₹'+fN(orNow.low,0)+' - ₹'+fN(orNow.high,0)) : 'FORMING', orNow ? 'var(--txt)' : 'var(--w)');
+  ptSet2('ase-orb-vwap', candles[i].close > vwapSeries[i] ? 'ABOVE' : 'BELOW', candles[i].close > vwapSeries[i] ? 'var(--g)' : 'var(--r)');
+  ptSet2('ase-orb-rsi', rsiNow != null ? rsiNow.toFixed(1) : '—');
+
+  if (tradedToday) {
+    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-orb-verdict', 'ALREADY TRADED TODAY', 'var(--w)');
+    return;
+  }
+  if (!orNow) {
+    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-orb-verdict', 'FORMING OPENING RANGE', 'var(--w)');
+    return;
+  }
+
+  var sig = orbComputeSignal(candles, i, orSeries, vwapSeries, timeStrings);
+  if (!sig) {
+    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
+    ptSet2('ase-orb-verdict', 'NO SIGNAL', 'var(--dim)');
+    return;
+  }
+
+  ptSet2('ase-orb-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
+
+  var dedupeKey = 'ORB_' + latestCandleTime + '_' + sig.type;
+  if (ASE_LAST_LOGGED_KEY['orb_vwap'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact ORB signal ("+dedupeKey+") — skipping."); return; }
+
+  var strike = getATMStrike(ni.ltp, 50);
+  var chainLtp = getChainPriceStrict('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
+  if (!chainLtp || chainLtp <= 0) {
+    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
+    aseLog('ORB + VWAP signal found ('+sig.type+') but no chain price available — skipped.');
+    return;
+  }
+
+  var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / ni.ltp * 8));
+  var rewardPct = riskPct * 1.5; // R:R 1:1.5, matches the backtest runner
+  var sl     = Math.round(chainLtp * (1 - riskPct) / 5) * 5;
+  var target = Math.round(chainLtp * (1 + rewardPct) / 5) * 5;
+  var instr  = 'NIFTY ' + strike + sig.type + ' ' + getNiftyExpiry();
+  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
+
+  var res = ptAddAutoTrade({
+    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'orb_vwap',
+    signalType: 'BUY ' + sig.type,
+    reasons: 'ORBVWAP · Opening-range break + VWAP + RSI + volume aligned · R:R 1:1.5 · index SL @ ' + fN(sig.sl,1)
+  });
+
+  ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
+  if (res && res.trade) {
+    ASE_LAST_LOGGED_KEY['orb_vwap'] = dedupeKey;
+    aseLog('✅ ORB + VWAP auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.5) — one trade/day used');
+    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('ORB + VWAP', 'orb_vwap', instr, chainLtp, target, sl, res.trade.reasons);
+  } else if (res && res.error) {
+    aseLog('⚠ ORB + VWAP signal found but could not log: ' + res.error);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  OI BUILDUP STRATEGY — v1
 //  BUY CE when ATM Call shows Long Buildup (price + OI both rising
 //  strongly, confirmed by rising volume); BUY PE on the same pattern
@@ -20334,11 +20637,17 @@ async function aseEvaluateOIBuildup() {
     return;
   }
 
-  var OI_THRESHOLD = 15; // % OI change required
-  var PX_THRESHOLD = 15; // % price change required
+  // v1.1: 15%/15% in a single 5-min candle was almost never achievable
+  // under normal intraday volatility (that combination realistically only
+  // happens on violent spot moves or right near expiry), which is why this
+  // strategy went silent for days at a time. Loosened to thresholds that
+  // are still a genuine "fresh buildup" signal but achievable within a
+  // real 5-min bar. Tune further from here based on how it performs live.
+  var OI_THRESHOLD = 6;  // % OI change required (was 15)
+  var PX_THRESHOLD = 8;  // % price change required (was 15)
 
-  var ceVolConfirm = ce.vol > (ceBase.vol||0) && ce.vol > 10000;
-  var peVolConfirm = pe.vol > (peBase.vol||0) && pe.vol > 10000;
+  var ceVolConfirm = ce.vol > (ceBase.vol||0) && ce.vol > 4000;
+  var peVolConfirm = pe.vol > (peBase.vol||0) && pe.vol > 4000;
 
   var ceLongBuildup = cePxChgPct > PX_THRESHOLD && ceOiChgPct > OI_THRESHOLD && ceVolConfirm;
   var peLongBuildup = pePxChgPct > PX_THRESHOLD && peOiChgPct > OI_THRESHOLD && peVolConfirm;
@@ -22895,7 +23204,7 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
   y += rowH;
 
   doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
-  var stratLabels = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', oi_buildup:'OI Buildup' };
+  var stratLabels = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', orb_vwap:'ORB+VWAP', oi_buildup:'OI Buildup' };
   all.slice(0, 22).forEach(function(t, ri){
     if (y > 275) { doc.addPage(); doc.setFillColor(BG); doc.rect(0,0,W,297,'F'); y = 18; }
     doc.setFillColor(ri % 2 === 0 ? PANEL : '#0f1928'); doc.rect(x, y, W-2*x, rowH, 'F');
@@ -22934,7 +23243,7 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
    trend table and a strategy breakdown, so the trajectory is
    visible instead of just one noisy day at a time.
 ═══════════════════════════════════════════════════════════ */
-var ROLLUP_STRAT_LABELS = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', oi_buildup:'OI Buildup', manual:'Manual' };
+var ROLLUP_STRAT_LABELS = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', orb_vwap:'ORB+VWAP', oi_buildup:'OI Buildup', manual:'Manual' };
 
 function jarvisIsLastWeekdayOfMonth(d) {
   var next = new Date(d);
