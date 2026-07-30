@@ -19533,6 +19533,31 @@ function aseEvaluatePcrEmaVix() {
 // converted to a premium SL the same way the other strategy does.
 var ASE_TL_LAST_CANDLE_TIME = null; // only evaluate once per new closed candle
 
+// ── Catch-up helper (shared by all trendline-based strategies) ──
+// Previously each strategy only ever looked at candles[candles.length-1] —
+// the single newest candle. If Angel One's rate limit briefly blocked a
+// fetch right when a candle closed (a real, observed issue — see the
+// missed 10:00am signal), the next successful fetch would jump straight
+// to whatever candle came after, and the strategy would silently never
+// evaluate the one it missed. This returns every candle closed since the
+// last successful check instead of just the latest, so a brief outage
+// gets caught up on rather than silently skipped. Capped to the last 3
+// candles (~15 min) — options move fast, so entering on a much older
+// candle's signal at today's current premium would be too stale to trust.
+function aseCandlesToCheck(candles, lastCheckedTime) {
+  if (!candles || candles.length < 2) return [];
+  if (!lastCheckedTime) return [candles.length - 1]; // first run ever
+  var lastIdx = -1;
+  for (var i = 0; i < candles.length; i++) {
+    if (candles[i].time === lastCheckedTime) { lastIdx = i; break; }
+  }
+  if (lastIdx === -1 || lastIdx >= candles.length - 1) return [candles.length - 1]; // not found, or already current
+  var out = [];
+  for (var j = lastIdx + 1; j < candles.length; j++) out.push(j);
+  if (out.length > 3) out = out.slice(out.length - 3);
+  return out;
+}
+
 async function aseEvaluateTrendline() {
   var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
   if (!ni || !ni.ltp) { ptSet2('ase-tl-verdict', 'WAITING DATA', 'var(--w)'); return; }
@@ -19568,26 +19593,32 @@ async function aseEvaluateTrendline() {
     return;
   }
 
-  var prevClose = candles[candles.length - 2].close;
-  var liveClose = candles[candles.length - 1].close;
-  // Was .slice(0,-2), which dropped prevClose out of the trendline-fitting
-  // history too — the trendline ended up one candle staler than what it
-  // was being checked against. Backtest (the validated reference) uses
-  // .slice(0,-1), fitting the line through prevClose itself. Aligned here
-  // to match — this is what was causing live to miss signals the backtest
-  // confirmed were real on the same recorded data.
-  var breakout = checkTrendlineBreakout(candles.slice(0, -1), prevClose, liveClose);
+  // Check every candle closed since the last successful check, not just
+  // the newest — catches up on a candle Angel One's rate limit may have
+  // blocked us from seeing in real time. Stops at the first qualifying
+  // candle found (oldest first) to avoid stacking multiple backdated
+  // trades from one outage.
+  var toCheck = aseCandlesToCheck(candles, ASE_TL_LAST_CANDLE_TIME);
+  var breakout = null, breakoutIdx = candles.length - 1;
+  for (var ci = 0; ci < toCheck.length; ci++) {
+    var idx = toCheck[ci];
+    var b = checkTrendlineBreakout(candles.slice(0, idx), candles[idx-1].close, candles[idx].close);
+    if (b) { breakout = b; breakoutIdx = idx; break; }
+  }
 
   if (!breakout) {
     ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-tl-verdict', 'NO BREAKOUT', 'var(--dim)');
     return;
   }
+  if (breakoutIdx !== candles.length - 1) {
+    aseLog('📼 Catch-up: found a real Trendline breakout on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
+  }
 
   ptSet2('ase-tl-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
-  var dedupeKey = latestCandleTime + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY['trendline'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
+  var dedupeKey = candles[breakoutIdx].time + '_' + breakout.type;
+  if (ASE_LAST_LOGGED_KEY['trendline'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); ASE_TL_LAST_CANDLE_TIME = latestCandleTime; return; }
 
   var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
@@ -19673,11 +19704,16 @@ async function aseEvaluateTrendlineConfirmed() {
     return;
   }
 
-  var prevClose = candles[candles.length - 2].close;
-  var liveClose = candles[candles.length - 1].close;
-  // Same fix as Trendline Breakout — was .slice(0,-2), one candle staler
-  // than backtest's validated .slice(0,-1).
-  var breakout = checkTrendlineBreakout(candles.slice(0, -1), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
+  // Check every candle closed since the last successful check, not just
+  // the newest — catches up on a candle Angel One's rate limit may have
+  // blocked us from seeing in real time.
+  var toCheck = aseCandlesToCheck(candles, ASE_CF_LAST_CANDLE_TIME);
+  var breakout = null, breakoutIdx = candles.length - 1;
+  for (var ci = 0; ci < toCheck.length; ci++) {
+    var idx = toCheck[ci];
+    var b = checkTrendlineBreakout(candles.slice(0, idx), candles[idx-1].close, candles[idx].close, BT_CONFIRMED_MIN_STRENGTH_ATR);
+    if (b) { breakout = b; breakoutIdx = idx; break; }
+  }
 
   if (!breakout) {
     ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
@@ -19685,6 +19721,9 @@ async function aseEvaluateTrendlineConfirmed() {
     ptSet2('ase-cf-confirm', '—', 'var(--dim)');
     ptSet2('ase-cf-verdict', 'NO BREAKOUT', 'var(--dim)');
     return;
+  }
+  if (breakoutIdx !== candles.length - 1) {
+    aseLog('📼 Catch-up: found a real Trendline+Confirm breakout on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
   }
 
   ptSet2('ase-cf-breakout', breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
@@ -19704,8 +19743,8 @@ async function aseEvaluateTrendlineConfirmed() {
 
   ptSet2('ase-cf-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
-  var dedupeKey = 'CF_' + latestCandleTime + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY['trendline_confirmed'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
+  var dedupeKey = 'CF_' + candles[breakoutIdx].time + '_' + breakout.type;
+  if (ASE_LAST_LOGGED_KEY['trendline_confirmed'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); ASE_CF_LAST_CANDLE_TIME = latestCandleTime; return; }
 
   var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
@@ -19804,14 +19843,16 @@ async function aseEvaluateQualityBreakout() {
     return;
   }
 
-  var prevClose = candles[candles.length - 2].close;
-  var liveClose = candles[candles.length - 1].close;
-  var breakoutCandle = candles[candles.length - 1];
-  // Same fix as the other two trendline strategies — was .slice(0,-2),
-  // one candle staler than backtest's validated .slice(0,-1). This is
-  // the specific fix for the 2026-07-27 11:15 case that fired in
-  // backtest on real recorded data but didn't fire live.
-  var breakout = checkTrendlineBreakout(candles.slice(0, -1), prevClose, liveClose, BT_CONFIRMED_MIN_STRENGTH_ATR);
+  // Check every candle closed since the last successful check, not just
+  // the newest — catches up on a candle Angel One's rate limit may have
+  // blocked us from seeing in real time.
+  var toCheck = aseCandlesToCheck(candles, ASE_QB_LAST_CANDLE_TIME);
+  var breakout = null, breakoutIdx = candles.length - 1;
+  for (var ci = 0; ci < toCheck.length; ci++) {
+    var idx = toCheck[ci];
+    var b = checkTrendlineBreakout(candles.slice(0, idx), candles[idx-1].close, candles[idx].close, BT_CONFIRMED_MIN_STRENGTH_ATR);
+    if (b) { breakout = b; breakoutIdx = idx; break; }
+  }
 
   if (!breakout) {
     ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
@@ -19820,6 +19861,18 @@ async function aseEvaluateQualityBreakout() {
     ptSet2('ase-qb-verdict', 'NO BREAKOUT', 'var(--dim)');
     return;
   }
+
+  // If we're catching up on an earlier candle, recompute ADX/regime as of
+  // THAT candle's timing (matching backtest's history-up-to-that-point
+  // convention) rather than trusting the display value for "now".
+  if (breakoutIdx !== candles.length - 1) {
+    aseLog('📼 Catch-up: found a real Quality Breakout setup on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
+    adxRes = calcADX(candles.slice(0, breakoutIdx), 14);
+    trending = adxRes && adxRes.adx > QB_ADX_TREND_THRESHOLD;
+    ptSet2('ase-qb-adx', adxRes ? adxRes.adx.toFixed(1) : '—');
+    ptSet2('ase-qb-regime', trending ? 'TRENDING' : 'CHOPPY', trending ? 'var(--g)' : 'var(--w)');
+  }
+  var breakoutCandle = candles[breakoutIdx];
   ptSet2('ase-qb-breakout', breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
   var followThrough = hasRealFollowThrough(breakoutCandle, breakout.type);
@@ -19840,8 +19893,8 @@ async function aseEvaluateQualityBreakout() {
 
   ptSet2('ase-qb-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
-  var dedupeKey = 'QB_' + latestCandleTime + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY['quality_breakout'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
+  var dedupeKey = 'QB_' + candles[breakoutIdx].time + '_' + breakout.type;
+  if (ASE_LAST_LOGGED_KEY['quality_breakout'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); ASE_QB_LAST_CANDLE_TIME = latestCandleTime; return; }
 
   var strike = getATMStrike(ni.ltp, 50);
   var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
@@ -19851,7 +19904,7 @@ async function aseEvaluateQualityBreakout() {
     return;
   }
 
-  var tlForATR = calcTrendlines(candles.slice(0, -2));
+  var tlForATR = calcTrendlines(candles.slice(0, Math.max(breakoutIdx - 1, 1)));
   var atrBuffer = (tlForATR && tlForATR.atr) ? tlForATR.atr * 0.5 : 5;
   var riskIdxPts = Math.abs(ni.ltp - breakout.slLevel) + atrBuffer;
   var riskPct = Math.min(0.35, Math.max(0.10, riskIdxPts / ni.ltp * 8));
