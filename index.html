@@ -6144,10 +6144,37 @@ function orbComputeSignal(candles, i, orSeries, vwapSeries, timeStrings) {
 
   var volLookback = candles.slice(Math.max(0, i-10), i);
   var avgVol = volLookback.length ? volLookback.reduce(function(s,x){ return s + (x.vol||0); }, 0) / volLookback.length : 0;
-  var volConfirm = avgVol > 0 ? (c.vol || 0) > avgVol * 1.3 : true; // if no volume data at all, don't block on it
+  var volConfirm = avgVol > 0 ? (c.vol || 0) > avgVol * 1.15 : true; // if no volume data at all, don't block on it
 
-  var longSignal  = c.close > orRange.high && prev.close <= orRange.high && c.close > vwapNow && rsi14 > 55 && volConfirm;
-  var shortSignal = c.close < orRange.low  && prev.close >= orRange.low  && c.close < vwapNow && rsi14 < 45 && volConfirm;
+  // v1.1: requiring the breakout, VWAP alignment, RSI, AND volume spike to
+  // all land on the literal single candle that first crosses the range
+  // edge was almost never satisfiable — RSI catching up past 55 and a
+  // volume spike rarely happen on that exact same bar as the price cross.
+  // tradedOnDay already guarantees one trade/day, so it's safe to instead
+  // fire on the first bar after the range where everything genuinely
+  // aligns, rather than demanding it all happen simultaneously on bar 1.
+  // Thresholds nudged from 55/45 to 53/47 for the same reason OI Buildup's
+  // were loosened — the original was tuned tighter than real 5-min noise.
+  // Bound to FRESH breakouts only: if price has already been closing above/
+  // below the range for a long stretch, this isn't "breaking out" anymore,
+  // it's just drifted there — without this, removing the exact-bar
+  // requirement above made it fire on almost every single day (any random
+  // noise-driven RSI/volume blip once price wandered past the range),
+  // which isn't a real breakout signal anymore. Cap the lag window to ~30
+  // minutes (6 bars) of the range being broken.
+  var FRESH_BREAKOUT_MAX_AGE = 6;
+  function breakoutAge(aboveOrBelow) {
+    var age = 0;
+    for (var k = i-1; k >= 0 && orSeries[k] === orRange; k--) {
+      var stillBroken = aboveOrBelow === 'above' ? candles[k].close > orRange.high : candles[k].close < orRange.low;
+      if (!stillBroken) break;
+      age++;
+    }
+    return age;
+  }
+
+  var longSignal  = c.close > orRange.high && c.close > vwapNow && rsi14 > 53 && volConfirm && breakoutAge('above') <= FRESH_BREAKOUT_MAX_AGE;
+  var shortSignal = c.close < orRange.low  && c.close < vwapNow && rsi14 < 47 && volConfirm && breakoutAge('below') <= FRESH_BREAKOUT_MAX_AGE;
 
   if (longSignal) {
     var risk = c.close - orRange.low;
@@ -15946,7 +15973,7 @@ function runBacktest() {
 
     var periodLabels = {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'};
     var pl = document.getElementById('bt-period-label');
-    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') ? ' · synthetic data (no broker connection)' : '');
+    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') ? ' · synthetic data (no broker connection)' : '');
     if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy) + dataSourceTag;
 
     // The trade log title used to always say "SIMULATED" regardless of
@@ -15975,7 +16002,7 @@ function runBacktest() {
   // data — it needs Angel One's actual 5-min candles to mean anything
   // (comparing against a live TradingView chart). Every other strategy
   // here still runs on synthetic daily data, same as before.
-  if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') && ticker === 'NIFTY') {
+  if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') && ticker === 'NIFTY') {
     var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
     var connected = typeof creds !== 'undefined' && creds.jwt && creds.connected;
     if (!tm || !connected) {
@@ -16016,8 +16043,8 @@ function runBacktest() {
   }
 
   setTimeout(function(){
-    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
-    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
+    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
+    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
   }, 2800);
 }
 
@@ -19365,7 +19392,7 @@ async function ptCloudLoad() {
 var ASE_ON = false;
 var ASE_STRATEGY = 'pcr_ema_vix'; // primary/display strategy — ASE_STRATEGIES[0]; drives chart overlay + fallback labeling
 var ASE_STRATEGIES = ['pcr_ema_vix']; // multi-select: every strategy in this list is evaluated independently, every cycle
-var ASE_VALID_STRATEGIES = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'nifty_pro_v2', 'oi_buildup'];
+var ASE_VALID_STRATEGIES = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'nifty_pro_v2', 'orb_vwap', 'oi_buildup'];
 var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)', orb_vwap:'ORB + VWAP (Opening Range Breakout)' };
 // De-dupe: avoid re-logging same signal repeatedly. Keyed per-strategy (not a
 // single shared value) so that with 2-3 strategies active at once, one
@@ -23033,7 +23060,7 @@ function jarvisNotifSettingsUIInit() {
   if (tokenEl) { tokenEl.value = JARVIS_NOTIF_SETTINGS.telegramBotToken; tokenEl.onchange = function(){ JARVIS_NOTIF_SETTINGS.telegramBotToken = tokenEl.value.trim(); jarvisNotifSettingsSave(); }; }
   if (chatEl)  { chatEl.value  = JARVIS_NOTIF_SETTINGS.telegramChatId;  chatEl.onchange  = function(){ JARVIS_NOTIF_SETTINGS.telegramChatId  = chatEl.value.trim();  jarvisNotifSettingsSave(); }; }
   if (quietEl) { quietEl.checked = JARVIS_NOTIF_SETTINGS.quietHoursOnly; quietEl.onchange = function(){ JARVIS_NOTIF_SETTINGS.quietHoursOnly = quietEl.checked; jarvisNotifSettingsSave(); }; }
-  ['pcr_ema_vix','trendline','trendline_confirmed','quality_breakout','nifty_pro_v15','nifty_pro_v2','oi_buildup'].forEach(function(key){
+  ['pcr_ema_vix','trendline','trendline_confirmed','quality_breakout','nifty_pro_v15','nifty_pro_v2','orb_vwap','oi_buildup'].forEach(function(key){
     var cb = document.getElementById('mute-' + key);
     if (!cb) return;
     cb.checked = !!JARVIS_NOTIF_SETTINGS.mute[key];
