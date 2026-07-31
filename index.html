@@ -10596,12 +10596,14 @@ function parseNSEChain(nseData, spot, atm, step, T, r, baseIV, skewFactor) {
 
     // Real NSE fields
     var ceLtp   = ce.lastPrice    || 0;
+    var ceLtpIsReal = ceLtp > 0;
     var ceOI    = ce.openInterest || 0;
     var ceChgOI = ce.changeinOpenInterest || (prevCe.oi ? ceOI-prevCe.oi : 0);
     var ceVol   = ce.totalTradedVolume || 0;
     var ceIVraw = ce.impliedVolatility || 0; // NSE gives IV as percentage e.g. 14.5
 
     var peLtp   = pe.lastPrice    || 0;
+    var peLtpIsReal = peLtp > 0;
     var peOI    = pe.openInterest || 0;
     var peChgOI = pe.changeinOpenInterest || (prevPe.oi ? peOI-prevPe.oi : 0);
     var peVol   = pe.totalTradedVolume || 0;
@@ -10623,9 +10625,12 @@ function parseNSEChain(nseData, spot, atm, step, T, r, baseIV, skewFactor) {
     ceLtp = Math.max(ceLtp, 0.05);
     peLtp = Math.max(peLtp, 0.05);
 
-    // Small live tick (±0.2%) to show movement between refreshes
-    ceLtp = Math.max(Math.round((ceLtp*(1+(Math.random()-0.5)*0.002))*20)/20, 0.05);
-    peLtp = Math.max(Math.round((peLtp*(1+(Math.random()-0.5)*0.002))*20)/20, 0.05);
+    // NOTE: previously this multiplied ceLtp/peLtp by a random ±0.2% jitter
+    // "to show movement between refreshes" — but that ran on the REAL NSE
+    // lastPrice too, meaning genuine market prices were being randomly
+    // corrupted purely for a cosmetic flicker effect. Removed: ceLtp/peLtp
+    // now display exactly what NSE (or, if missing, the calibrated BS
+    // estimate) actually returned, with no artificial noise layered on top.
 
     // Greeks from IV
     var ceBSf = bsPrice(spot,K,Tval,r,ceIV,'ce');
@@ -10637,9 +10642,9 @@ function parseNSEChain(nseData, spot, atm, step, T, r, baseIV, skewFactor) {
 
     OC_STATE.data[K] = {
       ce:{ltp:ceLtp,prevLtp:prevCe.ltp||ceLtp,oi:ceOI,vol:ceVol,chgOi:ceChgOI,
-          iv:ceIV*100,delta:ceBSf.delta,gamma:ceBSf.gamma,theta:ceBSf.theta,vega:ceBSf.vega},
+          iv:ceIV*100,delta:ceBSf.delta,gamma:ceBSf.gamma,theta:ceBSf.theta,vega:ceBSf.vega,real:ceLtpIsReal},
       pe:{ltp:peLtp,prevLtp:prevPe.ltp||peLtp,oi:peOI,vol:peVol,chgOi:peChgOI,
-          iv:peIV*100,delta:peBSf.delta,gamma:peBSf.gamma,theta:peBSf.theta,vega:peBSf.vega}
+          iv:peIV*100,delta:peBSf.delta,gamma:peBSf.gamma,theta:peBSf.theta,vega:peBSf.vega,real:peLtpIsReal}
     };
   });
 
@@ -10921,9 +10926,9 @@ async function buildChainFromAngel(idx, spot, atm, step, numS, T, r, baseIV, ske
 
     OC_STATE.data[K]={
       ce:{ltp:ceLtp,prevLtp:prevCe.ltp||ceLtp,oi:ceOI,vol:ceVol,chgOi:ceChgOI,
-          iv:ceIVf*100,delta:ceBSfinal.delta,gamma:ceBSfinal.gamma,theta:ceBSfinal.theta,vega:ceBSfinal.vega},
+          iv:ceIVf*100,delta:ceBSfinal.delta,gamma:ceBSfinal.gamma,theta:ceBSfinal.theta,vega:ceBSfinal.vega,real:!!ceQ},
       pe:{ltp:peLtp,prevLtp:prevPe.ltp||peLtp,oi:peOI,vol:peVol,chgOi:peChgOI,
-          iv:peIVf*100,delta:peBSfinal.delta,gamma:peBSfinal.gamma,theta:peBSfinal.theta,vega:peBSfinal.vega}
+          iv:peIVf*100,delta:peBSfinal.delta,gamma:peBSfinal.gamma,theta:peBSfinal.theta,vega:peBSfinal.vega,real:!!peQ}
     };
   });
 
@@ -11076,12 +11081,18 @@ async function _buildChainDataInner() {
     var prevCe = prev.ce || {};
     var prevPe = prev.pe || {};
 
-    var ceOI  = prevCe.oi  ? Math.round(prevCe.oi  + (Math.random()-0.49)*2500) : seedOI(K, atm, step, 'ce');
-    var peOI  = prevPe.oi  ? Math.round(prevPe.oi  + (Math.random()-0.49)*2500) : seedOI(K, atm, step, 'pe');
-    var ceVol = prevCe.vol ? Math.round(prevCe.vol + Math.random()*800)          : seedVol(K, atm, step,'ce');
-    var peVol = prevPe.vol ? Math.round(prevPe.vol + Math.random()*800)          : seedVol(K, atm, step,'pe');
-    var ceChgOI = prevCe.oi ? ceOI - prevCe.oi : Math.round((Math.random()-0.4)*5000);
-    var peChgOI = prevPe.oi ? peOI - prevPe.oi : Math.round((Math.random()-0.4)*5000);
+    // NOTE: previously OI/volume randomly "walked" every cycle here
+    // (prevOi + random noise) even with zero real data behind it, which
+    // fabricated fake buildup/unwind movement on the chain. Holding the
+    // last known real value steady (only estimating fresh via seedOI/
+    // seedVol when there's no prior real value at all) is more honest
+    // than inventing motion.
+    var ceOI  = prevCe.oi  || seedOI(K, atm, step, 'ce');
+    var peOI  = prevPe.oi  || seedOI(K, atm, step, 'pe');
+    var ceVol = prevCe.vol || seedVol(K, atm, step,'ce');
+    var peVol = prevPe.vol || seedVol(K, atm, step,'pe');
+    var ceChgOI = 0;
+    var peChgOI = 0;
 
     totalCeOI += ceOI; totalPeOI += peOI;
     if (ceOI > maxCeOI) { maxCeOI = ceOI; maxCeStrike = K; }
@@ -11096,10 +11107,10 @@ async function _buildChainDataInner() {
     OC_STATE.data[K] = {
       ce: { ltp: ceLtp, prevLtp: prevCe.ltp||ceLtp, oi: ceOI, vol: ceVol, chgOi: ceChgOI,
             iv: ceIVfinal*100, delta: ceBSfinal.delta, gamma: ceBSfinal.gamma,
-            theta: ceBSfinal.theta, vega: ceBSfinal.vega },
+            theta: ceBSfinal.theta, vega: ceBSfinal.vega, real: false },
       pe: { ltp: peLtp, prevLtp: prevPe.ltp||peLtp, oi: peOI, vol: peVol, chgOi: peChgOI,
             iv: peIVfinal*100, delta: peBSfinal.delta, gamma: peBSfinal.gamma,
-            theta: peBSfinal.theta, vega: peBSfinal.vega }
+            theta: peBSfinal.theta, vega: peBSfinal.vega, real: false }
     };
   });
 
@@ -11199,6 +11210,13 @@ function renderOptionChain() {
     var ceOIStyle = K===OC_STATE.maxCeStrike ? 'color:var(--g);font-weight:700' : 'color:var(--a)';
     var peOIStyle = K===OC_STATE.maxPeStrike ? 'color:var(--r);font-weight:700' : 'color:var(--a)';
 
+    // Per-cell real vs estimated marker: a dimmed "~" prefix on any price
+    // that was filled by the BS model rather than a genuine market quote,
+    // so accuracy is visible strike-by-strike, not just as one chain-wide
+    // banner that can hide a majority-synthetic snapshot behind a "REAL" tag.
+    var ceEstMark = ce.real === false ? '<span style="color:var(--dim)" title="Estimated (BS model) — no live quote for this strike this cycle">~</span>' : '';
+    var peEstMark = pe.real === false ? '<span style="color:var(--dim)" title="Estimated (BS model) — no live quote for this strike this cycle">~</span>' : '';
+
     html +=
       '<tr class="'+rowCls+'">' +
       // CE side
@@ -11207,7 +11225,7 @@ function renderOptionChain() {
       '<td class="'+ceRowCls+'" style="color:var(--dim)">'+fmtOI(ce.vol)+'</td>'+
       '<td class="'+ceRowCls+'" style="color:#ab47bc">'+ce.iv.toFixed(1)+'%</td>'+
       '<td class="'+ceRowCls+'" style="color:var(--w)">'+ce.delta.toFixed(3)+'</td>'+
-      '<td class="'+ceRowCls+'"><span class="oc-ltp '+ceCls+'">₹'+ce.ltp.toFixed(1)+'</span></td>'+
+      '<td class="'+ceRowCls+'"><span class="oc-ltp '+ceCls+'">'+ceEstMark+'₹'+ce.ltp.toFixed(1)+'</span></td>'+
       '<td class="'+ceRowCls+'"><span class="oc-chg '+ceCls+'">'+(ceLtp_chg>=0?'+':'')+ceLtp_chg.toFixed(1)+'</span></td>'+
       // Strike
       '<td class="strike-cell'+(isATM?' atm-strike':'')+'" style="min-width:80px">'+
@@ -11216,7 +11234,7 @@ function renderOptionChain() {
       '</td>'+
       // PE side
       '<td class="'+peRowCls+'"><span class="oc-chg '+peCls+'">'+(peLtp_chg>=0?'+':'')+peLtp_chg.toFixed(1)+'</span></td>'+
-      '<td class="'+peRowCls+'"><span class="oc-ltp '+peCls+'">₹'+pe.ltp.toFixed(1)+'</span></td>'+
+      '<td class="'+peRowCls+'"><span class="oc-ltp '+peCls+'">'+peEstMark+'₹'+pe.ltp.toFixed(1)+'</span></td>'+
       '<td class="'+peRowCls+'" style="color:var(--w)">'+pe.delta.toFixed(3)+'</td>'+
       '<td class="'+peRowCls+'" style="color:#ab47bc">'+pe.iv.toFixed(1)+'%</td>'+
       '<td class="'+peRowCls+'" style="color:var(--dim)">'+fmtOI(pe.vol)+'</td>'+
