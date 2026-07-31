@@ -874,6 +874,59 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   input, select{font-size:inherit !important;}
 }
 
+/* ══ IPO WATCH tab (ipo- prefixed to avoid colliding with existing .pill etc.) ══ */
+@keyframes ipoTicker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes ipoFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.ipo-ticker-outer{border:1px solid var(--border);border-radius:8px;background:var(--ov3);overflow:hidden;white-space:nowrap;margin-bottom:14px;}
+.ipo-ticker-inner{display:inline-flex;animation:ipoTicker 40s linear infinite;padding:9px 0;}
+.ipo-ticker-inner:hover{animation-play-state:paused;}
+.ipo-tick-item{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);padding:0 22px;border-right:1px solid var(--border);display:inline-flex;align-items:center;gap:7px;letter-spacing:.5px;}
+.ipo-tick-item b{color:var(--txt);font-weight:600;}
+.ipo-tick-item.open b{color:var(--g);}
+.ipo-tick-item.soon b{color:var(--w);}
+.ipo-disclaimer{padding:10px 14px;background:rgba(255,61,90,.05);border:1px solid rgba(255,61,90,.22);border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--dim);line-height:1.6;display:flex;gap:9px;align-items:flex-start;margin-bottom:14px;}
+.ipo-disclaimer .ic{color:var(--r);flex-shrink:0;}
+.ipo-disclaimer b{color:var(--txt);}
+.ipo-tabbar{display:flex;gap:8px;margin-bottom:14px;}
+.ipo-tabbtn{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1.5px;padding:9px 18px;border-radius:6px;border:1px solid var(--border);background:var(--panel,#0d1424);color:var(--dim);cursor:pointer;transition:.15s;}
+.ipo-tabbtn:hover{color:var(--txt);border-color:rgba(0,212,255,.3);}
+.ipo-tabbtn.active{background:rgba(0,212,255,.08);border-color:var(--a,#00d4ff);color:var(--a,#00d4ff);}
+.ipo-tabbtn .cnt{opacity:.6;margin-left:5px;}
+.ipo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.ipo-card{background:var(--panel,#0d1424);border:1px solid var(--border);border-radius:10px;padding:16px;animation:ipoFadeUp .35s ease both;transition:.15s;}
+.ipo-card:hover{border-color:rgba(0,212,255,.25);transform:translateY(-1px);}
+.ipo-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}
+.ipo-co-name{font-family:'Orbitron',sans-serif;font-weight:700;font-size:14px;color:var(--txt);letter-spacing:.5px;}
+.ipo-co-sector{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--a,#00d4ff);margin-top:3px;letter-spacing:1px;}
+.ipo-pill{font-family:'Share Tech Mono',monospace;font-size:8.5px;letter-spacing:1px;padding:4px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.ipo-pill.open{color:var(--g);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);}
+.ipo-pill.soon{color:var(--w);background:rgba(255,204,0,.08);border:1px solid rgba(255,204,0,.3);}
+.ipo-pill.tba{color:var(--dim);background:var(--ov3);border:1px solid var(--border);}
+.ipo-desc{font-size:12.5px;color:var(--txt);line-height:1.5;margin:9px 0 12px;opacity:.9;}
+.ipo-meta-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.ipo-meta{background:var(--ov3);border-radius:6px;padding:7px 9px;}
+.ipo-meta .l{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:1px;margin-bottom:2px;}
+.ipo-meta .v{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--txt);}
+.ipo-gmp{display:flex;justify-content:space-between;align-items:center;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.18);border-radius:6px;padding:7px 9px;margin-bottom:10px;}
+.ipo-gmp.neg{background:rgba(255,61,90,.05);border-color:rgba(255,61,90,.18);}
+.ipo-gmp.unknown{background:var(--ov3);border-color:var(--border);}
+.ipo-gmp .l{font-family:'Share Tech Mono',monospace;font-size:8.5px;color:var(--dim);letter-spacing:1px;}
+.ipo-gmp .v{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;}
+.ipo-gmp .v.pos{color:var(--g);}
+.ipo-gmp .v.neg{color:var(--r);}
+.ipo-gmp .v.unk{color:var(--dim);font-size:10px;font-weight:400;}
+.ipo-gmp .pct{font-size:9px;opacity:.75;margin-left:5px;}
+.ipo-details{border-top:1px solid var(--border);padding-top:9px;margin-top:2px;}
+.ipo-details summary{font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--a,#00d4ff);cursor:pointer;letter-spacing:1px;list-style:none;display:flex;align-items:center;gap:5px;}
+.ipo-details summary::-webkit-details-marker{display:none;}
+.ipo-details summary::before{content:'▸';transition:.15s;}
+.ipo-details[open] summary::before{transform:rotate(90deg);}
+.ipo-check-list{margin-top:8px;padding-left:2px;}
+.ipo-check-list div{font-size:11.5px;color:var(--dim);padding:3px 0 3px 14px;position:relative;line-height:1.4;}
+.ipo-check-list div::before{content:'—';position:absolute;left:0;color:var(--border);}
+.ipo-foot{margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--dim);text-align:center;letter-spacing:.5px;}
+@media(max-width:640px){.ipo-grid{grid-template-columns:1fr}}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -1098,6 +1151,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <button class="nav-tab" onclick="showPage('stockadv',this)" style="border-color:rgba(0,255,136,.3);color:var(--g);">📈 STOCK ADVANCE</button>
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
+  <button class="nav-tab" onclick="showPage('ipo',this)" style="border-color:rgba(255,204,0,.3);color:#ffcc00;">🚀 IPO WATCH</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
 
   <!-- ══ GLOBAL NOTIFICATION BELL — accessible from any tab ══ -->
@@ -8586,6 +8640,7 @@ function showPage(id,btn){
         // Redraw pie chart on tab switch in case canvas was zero-width on first load
         try{ if(window._faLastBuckets && window._faLastInv){ faDrawPie(window._faLastBuckets, window._faLastInv); } }catch(e){}
       }
+      if(id==='ipo'){ try{ ipoInit(); }catch(e){} }
     }catch(e){console.error('showPage error:',id,e);}
   },80);
 }
@@ -20221,28 +20276,40 @@ async function aseEvaluateNiftyProV15() {
   var vwapSeries = calcSessionVWAP(candles, dayKeys);
   var htf50Series = npAlignHTFEma(candles);
 
-  var i = candles.length - 1;
-  var closesArr = candles.slice(0, i+1).map(function(c){ return c.close; });
+  // Live readout always reflects the latest bar, regardless of catch-up scanning below.
+  var latestI = candles.length - 1;
+  var closesArr = candles.slice(0, latestI+1).map(function(c){ return c.close; });
   var ema20 = btEMA(closesArr.slice(-20), 20);
   var ema50 = btEMA(closesArr.slice(-50), 50);
   var rsi14 = calcRSI(closesArr, 14);
   ptSet2('ase-np-emacross', ema20 > ema50 ? 'EMA20 > EMA50' : 'EMA20 < EMA50', ema20 > ema50 ? 'var(--g)' : 'var(--r)');
-  ptSet2('ase-np-vwap', candles[i].close > vwapSeries[i] ? 'ABOVE' : 'BELOW', candles[i].close > vwapSeries[i] ? 'var(--g)' : 'var(--r)');
+  ptSet2('ase-np-vwap', candles[latestI].close > vwapSeries[latestI] ? 'ABOVE' : 'BELOW', candles[latestI].close > vwapSeries[latestI] ? 'var(--g)' : 'var(--r)');
   ptSet2('ase-np-rsi', rsi14.toFixed(1));
-  ptSet2('ase-np-htf', htf50Series[i] != null ? fN(htf50Series[i],1) : 'NOT ENOUGH 15m HISTORY YET', htf50Series[i] != null ? 'var(--txt)' : 'var(--w)');
+  ptSet2('ase-np-htf', htf50Series[latestI] != null ? fN(htf50Series[latestI],1) : 'NOT ENOUGH 15m HISTORY YET', htf50Series[latestI] != null ? 'var(--txt)' : 'var(--w)');
 
   if (tradedToday) {
     ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np-verdict', 'ALREADY TRADED TODAY', 'var(--w)');
     return;
   }
-  if (htf50Series[i] == null) {
+  if (htf50Series[latestI] == null) {
     ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np-verdict', 'BUILDING 15m HISTORY', 'var(--w)');
     return;
   }
 
-  var sig = npComputeSignal(candles, timeStrings, vwapSeries, htf50Series, i);
+  // Catch-up scan: check every bar missed since the last poll (same pattern
+  // Quality Breakout/ORB use), not just the single newest one. Without
+  // this, a delayed/dropped poll cycle around the exact qualifying candle
+  // meant that candle was gone forever for live purposes.
+  var toCheck = aseCandlesToCheck(candles, ASE_NP_LAST_CANDLE_TIME);
+  var sig = null, i = latestI;
+  for (var ci = 0; ci < toCheck.length; ci++) {
+    var idx = toCheck[ci];
+    if (htf50Series[idx] == null) continue; // HTF warm-up hadn't completed yet at that bar
+    var s = npComputeSignal(candles, timeStrings, vwapSeries, htf50Series, idx);
+    if (s) { sig = s; i = idx; break; } // fire on the earliest qualifying bar in the catch-up window
+  }
   if (!sig) {
     ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np-verdict', 'NO SIGNAL', 'var(--dim)');
@@ -20251,7 +20318,7 @@ async function aseEvaluateNiftyProV15() {
 
   ptSet2('ase-np-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
-  var dedupeKey = 'NP_' + latestCandleTime + '_' + sig.type;
+  var dedupeKey = 'NP_' + candles[i].time + '_' + sig.type;
   if (ASE_LAST_LOGGED_KEY['nifty_pro_v15'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
@@ -20275,8 +20342,9 @@ async function aseEvaluateNiftyProV15() {
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'nifty_pro_v15',
     signalType: 'BUY ' + sig.type,
-    reasons: 'NiftyProV15 · EMA20/50+VWAP+RSI+15mHTF aligned · R:R 1:2 · index SL @ ' + fN(sig.sl,1)
+    reasons: 'NiftyProV15 · EMA20/50+VWAP+RSI+15mHTF aligned · R:R 1:2 · index SL @ ' + fN(sig.sl,1) + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
   });
+
 
   ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
   if (res && res.trade) {
@@ -20436,32 +20504,41 @@ async function aseEvaluateNiftyProV2() {
   var vwapSeries = calcSessionVWAP(candles, dayKeys);
   var htf50Series = npAlignHTFEma(candles);
 
-  var i = candles.length - 1;
-  var closesArr = candles.slice(0, i+1).map(function(c){ return c.close; });
+  // Live readout always reflects the latest bar, regardless of catch-up scanning below.
+  var latestI = candles.length - 1;
+  var closesArr = candles.slice(0, latestI+1).map(function(c){ return c.close; });
   var ema20 = btEMA(closesArr.slice(-20), 20);
   var ema50 = btEMA(closesArr.slice(-50), 50);
   var rsi14 = calcRSI(closesArr, 14);
-  var macdNow = macdAt(closesArr, i);
-  var volNow = npv2VolumeConfirmed(candles, i);
+  var macdNow = macdAt(closesArr, latestI);
+  var volNow = npv2VolumeConfirmed(candles, latestI);
   ptSet2('ase-np2-emacross', ema20 > ema50 ? 'EMA20 > EMA50' : 'EMA20 < EMA50', ema20 > ema50 ? 'var(--g)' : 'var(--r)');
-  ptSet2('ase-np2-vwap', candles[i].close > vwapSeries[i] ? 'ABOVE' : 'BELOW', candles[i].close > vwapSeries[i] ? 'var(--g)' : 'var(--r)');
+  ptSet2('ase-np2-vwap', candles[latestI].close > vwapSeries[latestI] ? 'ABOVE' : 'BELOW', candles[latestI].close > vwapSeries[latestI] ? 'var(--g)' : 'var(--r)');
   ptSet2('ase-np2-rsi', rsi14.toFixed(1));
   ptSet2('ase-np2-macd', macdNow ? (macdNow.line > macdNow.signal ? 'BULLISH' : 'BEARISH') : 'BUILDING', macdNow ? (macdNow.line > macdNow.signal ? 'var(--g)' : 'var(--r)') : 'var(--w)');
   ptSet2('ase-np2-vol', volNow.ratio != null ? Math.round(volNow.ratio*100)+'% of avg' : '—', volNow.ok ? 'var(--g)' : 'var(--dim)');
-  ptSet2('ase-np2-htf', htf50Series[i] != null ? fN(htf50Series[i],1) : 'NOT ENOUGH 15m HISTORY YET', htf50Series[i] != null ? 'var(--txt)' : 'var(--w)');
+  ptSet2('ase-np2-htf', htf50Series[latestI] != null ? fN(htf50Series[latestI],1) : 'NOT ENOUGH 15m HISTORY YET', htf50Series[latestI] != null ? 'var(--txt)' : 'var(--w)');
 
   if (tradedToday) {
     ASE_NP2_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np2-verdict', 'ALREADY TRADED TODAY', 'var(--w)');
     return;
   }
-  if (htf50Series[i] == null) {
+  if (htf50Series[latestI] == null) {
     ASE_NP2_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np2-verdict', 'BUILDING 15m HISTORY', 'var(--w)');
     return;
   }
 
-  var sig = npv2ComputeSignal(candles, timeStrings, vwapSeries, htf50Series, i);
+  // Catch-up scan — same fix applied to Quality Breakout/ORB/V1.5 above.
+  var toCheck = aseCandlesToCheck(candles, ASE_NP2_LAST_CANDLE_TIME);
+  var sig = null, i = latestI;
+  for (var ci = 0; ci < toCheck.length; ci++) {
+    var idx = toCheck[ci];
+    if (htf50Series[idx] == null) continue;
+    var s = npv2ComputeSignal(candles, timeStrings, vwapSeries, htf50Series, idx);
+    if (s) { sig = s; i = idx; break; }
+  }
   if (!sig) {
     ASE_NP2_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np2-verdict', 'NO SIGNAL', 'var(--dim)');
@@ -20470,7 +20547,7 @@ async function aseEvaluateNiftyProV2() {
 
   ptSet2('ase-np2-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
-  var dedupeKey = 'NP2_' + latestCandleTime + '_' + sig.type;
+  var dedupeKey = 'NP2_' + candles[i].time + '_' + sig.type;
   if (ASE_LAST_LOGGED_KEY['nifty_pro_v2'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
@@ -20494,8 +20571,9 @@ async function aseEvaluateNiftyProV2() {
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'nifty_pro_v2',
     signalType: 'BUY ' + sig.type,
-    reasons: 'NiftyProV2 · EMA20/50+VWAP+RSI+15mHTF+MACD+VOL+candle-strength aligned · ATR SL/TGT · R:R 1:2'
+    reasons: 'NiftyProV2 · EMA20/50+VWAP+RSI+15mHTF+MACD+VOL+candle-strength aligned · ATR SL/TGT · R:R 1:2' + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
   });
+
 
   ASE_NP2_LAST_CANDLE_TIME = latestCandleTime;
   if (res && res.trade) {
@@ -20555,11 +20633,12 @@ async function aseEvaluateORB() {
   var vwapSeries = calcSessionVWAP(candles, dayKeys);
   var orSeries = orbBuildDailyRanges(candles, dayKeys);
 
-  var i = candles.length - 1;
-  var orNow = orSeries[i];
-  var rsiNow = i >= 14 ? calcRSI(candles.slice(0, i+1).map(function(c){ return c.close; }), 14) : null;
+  // Live readout always reflects the latest bar, regardless of catch-up scanning below.
+  var latestI = candles.length - 1;
+  var orNow = orSeries[latestI];
+  var rsiNow = latestI >= 14 ? calcRSI(candles.slice(0, latestI+1).map(function(c){ return c.close; }), 14) : null;
   ptSet2('ase-orb-range', orNow ? ('₹'+fN(orNow.low,0)+' - ₹'+fN(orNow.high,0)) : 'FORMING', orNow ? 'var(--txt)' : 'var(--w)');
-  ptSet2('ase-orb-vwap', candles[i].close > vwapSeries[i] ? 'ABOVE' : 'BELOW', candles[i].close > vwapSeries[i] ? 'var(--g)' : 'var(--r)');
+  ptSet2('ase-orb-vwap', candles[latestI].close > vwapSeries[latestI] ? 'ABOVE' : 'BELOW', candles[latestI].close > vwapSeries[latestI] ? 'var(--g)' : 'var(--r)');
   ptSet2('ase-orb-rsi', rsiNow != null ? rsiNow.toFixed(1) : '—');
 
   if (tradedToday) {
@@ -20573,7 +20652,20 @@ async function aseEvaluateORB() {
     return;
   }
 
-  var sig = orbComputeSignal(candles, i, orSeries, vwapSeries, timeStrings);
+  // Catch-up scan: check every bar missed since the last poll (same pattern
+  // Quality Breakout uses), not just the single newest one. Without this,
+  // a delayed/dropped poll cycle around the exact qualifying candle meant
+  // that candle was gone forever and the strategy only fired later when a
+  // different bar happened to independently qualify — producing a real
+  // entry-time lag behind the backtest for no underlying strategy reason.
+  var toCheck = aseCandlesToCheck(candles, ASE_ORB_LAST_CANDLE_TIME);
+  var sig = null, i = latestI;
+  for (var ci = 0; ci < toCheck.length; ci++) {
+    var idx = toCheck[ci];
+    var s = orbComputeSignal(candles, idx, orSeries, vwapSeries, timeStrings);
+    if (s) { sig = s; i = idx; break; } // fire on the earliest qualifying bar in the catch-up window
+  }
+
   if (!sig) {
     ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-orb-verdict', 'NO SIGNAL', 'var(--dim)');
@@ -20582,7 +20674,7 @@ async function aseEvaluateORB() {
 
   ptSet2('ase-orb-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
 
-  var dedupeKey = 'ORB_' + latestCandleTime + '_' + sig.type;
+  var dedupeKey = 'ORB_' + candles[i].time + '_' + sig.type;
   if (ASE_LAST_LOGGED_KEY['orb_vwap'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact ORB signal ("+dedupeKey+") — skipping."); return; }
 
   var strike = getATMStrike(ni.ltp, 50);
@@ -20603,7 +20695,7 @@ async function aseEvaluateORB() {
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'orb_vwap',
     signalType: 'BUY ' + sig.type,
-    reasons: 'ORBVWAP · Opening-range break + VWAP + RSI + volume aligned · R:R 1:1.5 · index SL @ ' + fN(sig.sl,1)
+    reasons: 'ORBVWAP · Opening-range break + VWAP + RSI + volume aligned · R:R 1:1.5 · index SL @ ' + fN(sig.sl,1) + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
   });
 
   ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
@@ -20742,6 +20834,113 @@ async function aseEvaluateOIBuildup() {
   } else if (res && res.error) {
     aseLog('⚠ OI Buildup signal found but could not log: ' + res.error);
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  IPO WATCH tab
+//  Static data snapshot (mainboard IPOs + GMP), taken 31 Jul 2026 —
+//  NOT wired to a live feed. GMP is unofficial/dealer-quoted and moves
+//  multiple times a day; treat every gmp value here as a single
+//  snapshot, not a live number. Re-search/update this list periodically
+//  rather than trusting it indefinitely.
+// ══════════════════════════════════════════════════════════════════
+var IPO_OPEN = [
+  {name:'Juniper Green Energy', sector:'RENEWABLE ENERGY', status:'open', size:'₹1,800 Cr', priceBand:'₹214–225', close:'Closes 3 Aug 2026', gmp:null, gmpNote:'Conflicting/just-started across trackers today', desc:'Renewable IPP — solar, wind, hybrid & FDRE projects with BESS backup; ~7,910 MW portfolio as of Jun 2026.'},
+  {name:'Manipal Health Enterprises', sector:'HEALTHCARE / HOSPITALS', status:'open', size:'₹9,273.6 Cr', priceBand:'₹560–590', close:'In progress', gmp:6, gmpPct:1.0, desc:'Multi-city hospital chain under the Manipal Group; opened for subscription Jul 29.'},
+  {name:'MV Electrosystems', sector:'ELECTRICAL EQUIPMENT', status:'open', size:'TBA', priceBand:'TBA', close:'In progress', gmp:100, gmpPct:null, desc:'Electrical systems / equipment manufacturer entering the primary market.'},
+  {name:'Dhaval Packaging', sector:'PACKAGING', status:'open', size:'TBA', priceBand:'TBA', close:'In progress', gmp:12, gmpPct:null, desc:'Packaging solutions provider, mainboard listing.'},
+  {name:'H.R. Hygiene Products', sector:'CONSUMER / FMCG', status:'open', size:'TBA', priceBand:'TBA', close:'Closes 31 Jul 2026', gmp:2, gmpPct:null, desc:'Hygiene & personal care products manufacturer.'},
+  {name:'Poojaa Precision Engg.', sector:'PRECISION ENGINEERING', status:'soon', size:'TBA', priceBand:'TBA', close:'Closed 30 Jul 2026', gmp:225, gmpPct:null, desc:'Precision engineering components supplier — subscription window closing/closed.'},
+  {name:'Oneindig Technologies', sector:'TECHNOLOGY', status:'open', size:'TBA', priceBand:'TBA', close:'In progress', gmp:0, gmpPct:0, desc:'Technology services company currently under subscription.'}
+];
+
+var IPO_UPCOMING = [
+  {name:'Zepto', sector:'QUICK COMMERCE', size:'₹8,010–12,000 Cr', window:'Early Aug 2026 (tentative)', desc:"India's fastest-growing quick-commerce platform — 1,139 dark stores, 66 cities. Revenue grew ~99% YoY in FY26; still thin on profitability. SEBI-approved; price band not yet announced.", checks:['Revenue growth is real, but check margin trend, not just topline','Price band vs. peer quick-commerce/e-comm valuations once announced','QIB anchor list quality — Morgan Stanley, Goldman Sachs, Axis Capital are BRLMs','GMP will only start trading once price band is announced — ignore any number claiming to be Zepto GMP before that']},
+  {name:'Shiprocket', sector:'E-COMMERCE LOGISTICS / SAAS', size:'TBA', window:'August 2026', desc:'Logistics-tech platform serving e-commerce sellers with shipping, fulfillment and SaaS tools.', checks:['Check unit economics — logistics margins are typically thin','Compare against listed logistics-tech peers for valuation sanity']},
+  {name:'Truhome Finance', sector:'HOUSING FINANCE (NBFC)', size:'₹3,000 Cr', window:'August 2026', desc:'Affordable housing finance company — a more traditional, easier-to-value financials business than the tech names in this batch.', checks:['NBFC asset quality — check GNPA/NNPA trend','Loan book growth vs. capital adequacy ratio']},
+  {name:'Elevate Campuses', sector:'STUDENT HOUSING / CO-LIVING', size:'₹2,550 Cr fresh issue', window:'August 2026', desc:'Managed student housing and co-living space operator.', checks:['Occupancy rates and rental yield trend','Real-estate-adjacent — check leverage/debt levels']},
+  {name:'LEAP India', sector:'SUPPLY CHAIN / PALLET POOLING', size:'₹400 Cr fresh + ₹2,000 Cr OFS', window:'August 2026', desc:'Supply-chain unit-movement company — timber pallets, foldable containers, pooling operations for logistics.', checks:['Large OFS component — means promoters/early investors are selling a big chunk','Check recurring revenue / contract renewal rates']},
+  {name:'Gaja Alternative Asset Mgmt', sector:'PE / ASSET MANAGEMENT', size:'₹549.2 Cr fresh + ₹107 Cr OFS', window:'August 2026', desc:'Private equity and alternative asset management firm raising capital to expand AUM.', checks:['AUM growth trend and fee structure','Fund performance track record vs. peers']},
+  {name:'ARCIL', sector:'ASSET RECONSTRUCTION (NBFC)', size:'TBA', window:'August 2026', desc:'Asset reconstruction company — buys and recovers distressed/bad loans from banks.', checks:['Recovery rate on acquired NPAs','Cyclical business — sensitive to credit cycle']},
+  {name:'Dhoot Transmission', sector:'AUTO COMPONENTS', size:'TBA', window:'August 2026', desc:'Automotive component manufacturer entering the mainboard.', checks:['Client concentration among auto OEMs','Margin sensitivity to input costs']},
+  {name:'Ardee Industries', sector:'MANUFACTURING', size:'TBA', window:'August 2026', desc:'Industrial manufacturing company, mainboard listing.', checks:['Order book visibility','Capacity utilization trend']},
+  {name:'Hy-Tech Engineers', sector:'ENGINEERING', size:'TBA', window:'August 2026', desc:'Engineering products/services company.', checks:['Revenue diversification across clients/sectors']},
+  {name:'Rays of Belief', sector:'HEALTHCARE (NEURODEVELOPMENTAL)', size:'TBA', window:'August 2026', desc:'Behavioural and neurodevelopmental healthcare services provider.', checks:['Niche healthcare — check scalability of care-delivery model']},
+  {name:'Shankesh Jewellers', sector:'CONSUMER / JEWELRY RETAIL', size:'TBA', window:'August 2026', desc:'Consumer jewelry retail chain.', checks:['Gold-price sensitivity to margins','Store expansion vs. same-store-sales growth']},
+  {name:'Learnfluence Education', sector:'ED-TECH / PUBLISHING', size:'TBA', window:'August 2026', desc:'Ed-tech and publishing company.', checks:['Revenue mix — subscription vs. one-time sales','Customer acquisition cost trend']}
+];
+
+function ipoEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function ipoGmpBlock(x) {
+  if (x.gmp === null || x.gmp === undefined) {
+    return '<div class="ipo-gmp unknown"><span class="l">GMP</span><span class="v unk">'+(x.gmpNote?ipoEsc(x.gmpNote):'NOT STARTED / UNAVAILABLE')+'</span></div>';
+  }
+  var cls = x.gmp > 0 ? 'pos' : (x.gmp < 0 ? 'neg' : 'unk');
+  var wrapCls = x.gmp > 0 ? '' : (x.gmp < 0 ? 'neg' : 'unknown');
+  var pctTxt = (typeof x.gmpPct === 'number') ? ' <span class="pct">('+(x.gmpPct>=0?'+':'')+x.gmpPct.toFixed(1)+'% est.)</span>' : '';
+  return '<div class="ipo-gmp '+wrapCls+'"><span class="l">GMP (SNAPSHOT)</span><span class="v '+cls+'">'+(x.gmp>=0?'+':'')+'₹'+x.gmp+pctTxt+'</span></div>';
+}
+
+function ipoRenderOpen() {
+  var html = IPO_OPEN.map(function(x, i){
+    var pillCls = x.status === 'soon' ? 'soon' : 'open';
+    var pillTxt = x.status === 'soon' ? 'CLOSING SOON' : 'OPEN';
+    return '<div class="ipo-card" style="animation-delay:'+(i*0.03)+'s">'+
+      '<div class="ipo-card-top"><div><div class="ipo-co-name">'+ipoEsc(x.name)+'</div><div class="ipo-co-sector">'+ipoEsc(x.sector)+'</div></div>'+
+      '<span class="ipo-pill '+pillCls+'">'+pillTxt+'</span></div>'+
+      '<div class="ipo-desc">'+ipoEsc(x.desc)+'</div>'+
+      ipoGmpBlock(x)+
+      '<div class="ipo-meta-row">'+
+        '<div class="ipo-meta"><div class="l">PRICE BAND</div><div class="v">'+ipoEsc(x.priceBand||'TBA')+'</div></div>'+
+        '<div class="ipo-meta"><div class="l">STATUS</div><div class="v">'+ipoEsc(x.close)+'</div></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  var el = document.getElementById('ipoGridOpen'); if (el) el.innerHTML = html;
+  var cnt = document.getElementById('ipoOpenCount'); if (cnt) cnt.textContent = IPO_OPEN.length;
+}
+
+function ipoRenderUpcoming() {
+  var html = IPO_UPCOMING.map(function(x, i){
+    var checksHtml = (x.checks||[]).map(function(c){ return '<div>'+ipoEsc(c)+'</div>'; }).join('');
+    return '<div class="ipo-card" style="animation-delay:'+(i*0.03)+'s">'+
+      '<div class="ipo-card-top"><div><div class="ipo-co-name">'+ipoEsc(x.name)+'</div><div class="ipo-co-sector">'+ipoEsc(x.sector)+'</div></div>'+
+      '<span class="ipo-pill tba">UPCOMING</span></div>'+
+      '<div class="ipo-desc">'+ipoEsc(x.desc)+'</div>'+
+      '<div class="ipo-gmp unknown"><span class="l">GMP</span><span class="v unk">NOT STARTED — PRICE BAND NOT ANNOUNCED</span></div>'+
+      '<div class="ipo-meta-row">'+
+        '<div class="ipo-meta"><div class="l">ISSUE SIZE</div><div class="v">'+ipoEsc(x.size)+'</div></div>'+
+        '<div class="ipo-meta"><div class="l">EXPECTED WINDOW</div><div class="v">'+ipoEsc(x.window)+'</div></div>'+
+      '</div>'+
+      '<details class="ipo-details"><summary>WHAT TO CHECK BEFORE DECIDING</summary><div class="ipo-check-list">'+checksHtml+'</div></details>'+
+    '</div>';
+  }).join('');
+  var el = document.getElementById('ipoGridUpcoming'); if (el) el.innerHTML = html;
+  var cnt = document.getElementById('ipoUpcomingCount'); if (cnt) cnt.textContent = IPO_UPCOMING.length;
+}
+
+function ipoRenderTicker() {
+  var items = IPO_OPEN.map(function(x){ return {name:x.name, cls:'open', tag: x.gmp!=null ? ('GMP +₹'+x.gmp) : 'OPEN'}; })
+    .concat(IPO_UPCOMING.slice(0,8).map(function(x){ return {name:x.name, cls:'soon', tag:'UPCOMING'}; }));
+  var row = items.map(function(x){ return '<span class="ipo-tick-item '+x.cls+'"><b>'+ipoEsc(x.name)+'</b> · '+ipoEsc(x.tag)+'</span>'; }).join('');
+  var el = document.getElementById('ipoTickerInner'); if (el) el.innerHTML = row + row;
+}
+
+function ipoShowTab(which) {
+  var go = document.getElementById('ipoGridOpen'), gu = document.getElementById('ipoGridUpcoming');
+  var bo = document.getElementById('ipoBtnOpen'), bu = document.getElementById('ipoBtnUpcoming');
+  if (go) go.style.display = which === 'open' ? 'grid' : 'none';
+  if (gu) gu.style.display = which === 'upcoming' ? 'grid' : 'none';
+  if (bo) bo.classList.toggle('active', which === 'open');
+  if (bu) bu.classList.toggle('active', which === 'upcoming');
+}
+
+function ipoInit() {
+  ipoRenderOpen();
+  ipoRenderUpcoming();
+  ipoRenderTicker();
+  ipoShowTab('open');
 }
 
 function ptSet2(id, val, color) {
@@ -21156,6 +21355,35 @@ window.jarvisPopupFallback = function(html, title){
 <!-- ═══════════════════════════════════════════════════════ -->
 <!-- DASHBOARD V2 — JARVIS COMMAND CENTER -->
 <!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-ipo">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div>
+      <div style="font-family:Orbitron;font-weight:900;font-size:18px;letter-spacing:2px;color:var(--txt);display:flex;align-items:center;gap:9px">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);display:inline-block"></span> IPO WATCH
+      </div>
+      <div style="font-family:'Share Tech Mono';font-size:10px;color:var(--dim);letter-spacing:1px;margin-top:3px">MAINBOARD ISSUES · NSE / BSE · GMP SNAPSHOT INCLUDED</div>
+    </div>
+    <div style="font-family:'Share Tech Mono';font-size:9px;color:var(--w);border:1px solid rgba(255,204,0,.3);background:rgba(255,204,0,.06);padding:5px 10px;border-radius:20px;letter-spacing:1px" id="ipo-snapshot-date">SNAPSHOT: 31 JUL 2026</div>
+  </div>
+
+  <div class="ipo-ticker-outer"><div class="ipo-ticker-inner" id="ipoTickerInner"></div></div>
+
+  <div class="ipo-disclaimer">
+    <span class="ic">⚠</span>
+    <div><b>Factual info only — not a buy/sell recommendation.</b> Price bands, dates and lot sizes are marked TBA where not yet finalized. <b>GMP (Grey Market Premium) is unofficial, dealer-quoted, and changes multiple times per day</b> — the figures here are a single snapshot, not live. Always verify current GMP, price band, and dates on NSE/BSE or a live GMP tracker before applying, and weigh QIB subscription + anchor investor quality more heavily than GMP alone.</div>
+  </div>
+
+  <div class="ipo-tabbar">
+    <button class="ipo-tabbtn active" id="ipoBtnOpen" onclick="ipoShowTab('open')">OPEN NOW <span class="cnt" id="ipoOpenCount">0</span></button>
+    <button class="ipo-tabbtn" id="ipoBtnUpcoming" onclick="ipoShowTab('upcoming')">UPCOMING <span class="cnt" id="ipoUpcomingCount">0</span></button>
+  </div>
+
+  <div class="ipo-grid" id="ipoGridOpen"></div>
+  <div class="ipo-grid" id="ipoGridUpcoming" style="display:none"></div>
+
+  <div class="ipo-foot">DATA SNAPSHOT — VERIFY LIVE STATUS &amp; GMP ON NSE.COM / BSEINDIA.COM OR A LIVE GMP TRACKER BEFORE APPLYING</div>
+</div>
+
 <div class="page" id="page-dashv2">
 <style>
 /* ── DV2 ROOT VARS ── */
