@@ -6612,7 +6612,7 @@ function generateOptionsSignals() {
   // Market not open
   if (hour < 9 || (hour === 9 && min < 20) || hour >= 15) {
     OPT_STATE.nifty  = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:niftyExpiry, entry:0, target:0, sl:0, lotQty:65 }; // revised 31-Dec-2025
-    OPT_STATE.bnifty = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:bnExpiry,    entry:0, target:0, sl:0, lotQty:35 };
+    OPT_STATE.bnifty = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:bnExpiry,    entry:0, target:0, sl:0, lotQty:30 };
     OPT_STATE.sensex = { signal:'wait', reason:'Market closed / pre-open', time:timeStr, confidence:0, strike:0, expiry:sxExpiry,    entry:0, target:0, sl:0, lotQty:20 };
     renderOptionsSignals(); return;
   }
@@ -6811,7 +6811,7 @@ function renderOptionsSignals() {
 
   var signals = [
     { label:'NIFTY',     state: OPT_STATE.nifty,  color:'#00bcd4', lotQty:65 }, // revised 31-Dec-2025
-    { label:'BANKNIFTY', state: OPT_STATE.bnifty,  color:'#ff9800', lotQty:35 },
+    { label:'BANKNIFTY', state: OPT_STATE.bnifty,  color:'#ff9800', lotQty:30 },
     { label:'SENSEX',    state: OPT_STATE.sensex,  color:'#ab47bc', lotQty:20 }
   ];
 
@@ -7036,9 +7036,9 @@ function buildTicker() {
 var FO_CALLS = [
   {id:1,instr:'NIFTY',type:'CE',strike:'24600 CE',expiry:'05 May 26',lotQty:75,buyTime:'09:20 AM',buyPrice:'₹88–98',target:'₹170–200',sellTime:'10:30 AM or TGT',sl:'₹52',slNote:'Nifty breaks below 24,450',rr:'1:2.2',conf:76,status:'🔥 ACTIVE',color:'var(--g)',cond:'Nifty BREAKS ABOVE 24,550 on 9:15 candle with vol >1.5L lots. RSI 55–68. Enter 9:20 only if confirmed.',reason:'PCR 1.18 bullish. 5-min MACD positive. VIX 20.6 — premiums cheap.'},
   {id:2,instr:'NIFTY',type:'PE',strike:'24300 PE',expiry:'05 May 26',lotQty:75,buyTime:'09:20 AM conditional',buyPrice:'₹68–78',target:'₹135–165',sellTime:'10:30 AM or TGT',sl:'₹40',slNote:'Nifty closes above 24,600',rr:'1:2',conf:55,status:'⏳ CONDITIONAL',color:'var(--r)',cond:'ONLY if Nifty BREAKS BELOW 24,450 on 9:15 candle. Red candle + volume spike required. Skip if flat.',reason:'Hedge against CE. Enter only on confirmed breakdown.'},
-  {id:3,instr:'BANKNIFTY',type:'CE',strike:'52500 CE',expiry:'26 May 26',lotQty:35,buyTime:'09:25 AM',buyPrice:'₹195–220',target:'₹390–440',sellTime:'11:00 AM or TGT',sl:'₹118',slNote:'BankNifty breaks below 52,200',rr:'1:2',conf:72,status:'🔥 ACTIVE',color:'var(--g)',cond:'BankNifty BREAKS ABOVE 52,600 on 9:20 candle. HDFC Bank >₹1,810 confirms bullish. Volume >2x avg.',reason:'BankNifty holding 52,000 support. HDFC Bank strength driving index today.'},
+  {id:3,instr:'BANKNIFTY',type:'CE',strike:'52500 CE',expiry:'26 May 26',lotQty:30,buyTime:'09:25 AM',buyPrice:'₹195–220',target:'₹390–440',sellTime:'11:00 AM or TGT',sl:'₹118',slNote:'BankNifty breaks below 52,200',rr:'1:2',conf:72,status:'🔥 ACTIVE',color:'var(--g)',cond:'BankNifty BREAKS ABOVE 52,600 on 9:20 candle. HDFC Bank >₹1,810 confirms bullish. Volume >2x avg.',reason:'BankNifty holding 52,000 support. HDFC Bank strength driving index today.'},
   {id:4,instr:'SENSEX',type:'CE',strike:'81000 CE',expiry:'30 Mar 26',lotQty:20,buyTime:'09:30 AM',buyPrice:'₹145–165',target:'₹290–340',sellTime:'11:00 AM or TGT',sl:'₹88',slNote:'Sensex breaks below 80,700',rr:'1:2.1',conf:70,status:'✅ CONFIRMED',color:'var(--g)',cond:'Sensex BREAKS ABOVE 81,200 on 9:15 candle. Weekly expiry Thursday. Confirm with Nifty co-movement.',reason:'Sensex consolidating above 80,500 support. Thursday expiry premium decay favors buyers.'},
-  {id:5,instr:'BANKNIFTY',type:'PE',strike:'51500 PE',expiry:'26 May 26',lotQty:35,buyTime:'09:20 AM conditional',buyPrice:'₹160–185',target:'₹325–375',sellTime:'10:30 AM or TGT',sl:'₹98',slNote:'BankNifty holds above 52,000',rr:'1:2',conf:58,status:'⏳ CONDITIONAL',color:'var(--r)',cond:'ONLY if BankNifty BREAKS BELOW 51,800 on 9:15 candle. Red candle + volume spike required.',reason:'Hedge against CE. Enter only on confirmed BankNifty breakdown below 51,800.'},
+  {id:5,instr:'BANKNIFTY',type:'PE',strike:'51500 PE',expiry:'26 May 26',lotQty:30,buyTime:'09:20 AM conditional',buyPrice:'₹160–185',target:'₹325–375',sellTime:'10:30 AM or TGT',sl:'₹98',slNote:'BankNifty holds above 52,000',rr:'1:2',conf:58,status:'⏳ CONDITIONAL',color:'var(--r)',cond:'ONLY if BankNifty BREAKS BELOW 51,800 on 9:15 candle. Red candle + volume spike required.',reason:'Hedge against CE. Enter only on confirmed BankNifty breakdown below 51,800.'},
   {id:6,instr:'SENSEX',type:'PE',strike:'80000 PE',expiry:'30 Mar 26',lotQty:20,buyTime:'02:15 PM',buyPrice:'₹128–148',target:'₹265–310',sellTime:'3:15 PM or TGT',sl:'₹80',slNote:'Sensex holds above 80,500',rr:'1:2.1',conf:63,status:'⏳ CONDITIONAL',color:'var(--r)',cond:'SENSEX BREAKDOWN below 80,200 on 2:10 PM candle. RSI divergence + volume drop. Thursday expiry edge.',reason:'Afternoon weakness near Thursday expiry. Only enter on confirmed 2PM candle close below 80,200.'}
 ];
 function renderFOCalls() {
@@ -7116,11 +7116,11 @@ var CALLS_LOG_DEFAULT = [
   {dt:'22 Apr',buyTime:'11:20',exitTime:'12:50',instr:'SENSEX 81000 CE 01MAY26',   type:'CE',lotQty:20, buy:162, exit:298, target:290, sl:98,  brok:40, status:'CLOSED', strat:'Stock CE Options'},
   // 23 Apr
   {dt:'23 Apr',buyTime:'09:28',exitTime:'10:10',instr:'NIFTY 24650 CE 05MAY26',    type:'CE',lotQty:75, buy:112, exit:204, target:200, sl:68,  brok:40, status:'CLOSED', strat:'Nifty CE Breakout'},
-  {dt:'23 Apr',buyTime:'11:05',exitTime:'12:30',instr:'BANKNIFTY 52000 PE 27MAY26',type:'PE',lotQty:35, buy:198, exit:374, target:355, sl:120, brok:40, status:'CLOSED', strat:'BankNifty CE/PE'},
+  {dt:'23 Apr',buyTime:'11:05',exitTime:'12:30',instr:'BANKNIFTY 52000 PE 27MAY26',type:'PE',lotQty:30, buy:198, exit:374, target:355, sl:120, brok:40, status:'CLOSED', strat:'BankNifty CE/PE'},
   {dt:'23 Apr',buyTime:'13:15',exitTime:'14:20',instr:'SENSEX 81200 PE 01MAY26',   type:'PE',lotQty:20, buy:172, exit:108, target:318, sl:104, brok:40, status:'CLOSED', strat:'12–2 PM Trades'},
   // 24 Apr
   {dt:'24 Apr',buyTime:'09:35',exitTime:'09:55',instr:'NIFTY 24700 CE 05MAY26',    type:'CE',lotQty:75, buy:98,  exit:60,  target:182, sl:58,  brok:40, status:'CLOSED', strat:'Nifty CE Breakout'},
-  {dt:'24 Apr',buyTime:'10:45',exitTime:'12:00',instr:'BANKNIFTY 52500 CE 27MAY26',type:'CE',lotQty:35, buy:218, exit:398, target:390, sl:132, brok:40, status:'CLOSED', strat:'BankNifty CE/PE'},
+  {dt:'24 Apr',buyTime:'10:45',exitTime:'12:00',instr:'BANKNIFTY 52500 CE 27MAY26',type:'CE',lotQty:30, buy:218, exit:398, target:390, sl:132, brok:40, status:'CLOSED', strat:'BankNifty CE/PE'},
   // 25 Apr
   {dt:'25 Apr',buyTime:'10:22',exitTime:'12:45',instr:'NIFTY 24550 CE 05MAY26',    type:'CE',lotQty:75, buy:125, exit:254, target:240, sl:76,  brok:40, status:'CLOSED', strat:'Nifty CE Breakout'},
   {dt:'25 Apr',buyTime:'13:10',exitTime:'14:30',instr:'SENSEX 81500 CE 01MAY26',   type:'CE',lotQty:20, buy:178, exit:326, target:335, sl:108, brok:40, status:'CLOSED', strat:'12–2 PM Trades'},
@@ -7275,7 +7275,7 @@ function renderLiveFOSignals() {
 
   var signals = [
     { label:'NIFTY',     state: OPT_STATE.nifty,  color:'#00bcd4', lotQty:65 }, // revised 31-Dec-2025
-    { label:'BANKNIFTY', state: OPT_STATE.bnifty,  color:'#ff9800', lotQty:35 },
+    { label:'BANKNIFTY', state: OPT_STATE.bnifty,  color:'#ff9800', lotQty:30 },
     { label:'SENSEX',    state: OPT_STATE.sensex,  color:'#ab47bc', lotQty:20 }
   ];
 
