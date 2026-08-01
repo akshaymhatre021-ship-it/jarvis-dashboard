@@ -20838,39 +20838,140 @@ async function aseEvaluateOIBuildup() {
 
 // ══════════════════════════════════════════════════════════════════
 //  IPO WATCH tab
-//  Static data snapshot (mainboard IPOs + GMP), taken 31 Jul 2026 —
-//  NOT wired to a live feed. GMP is unofficial/dealer-quoted and moves
-//  multiple times a day; treat every gmp value here as a single
-//  snapshot, not a live number. Re-search/update this list periodically
-//  rather than trusting it indefinitely.
+//  Static data snapshot (mainboard IPOs + GMP + subscription), taken
+//  31 Jul 2026 — NOT wired to a live feed. GMP and subscription figures
+//  are unofficial/change constantly; treat every value here as a single
+//  snapshot, not a live number. Re-search/update this list periodically.
+//
+//  investorFit is deliberately segmented by investor TYPE (long-term /
+//  listing-gain seeker / risk-averse / first-timer) rather than a single
+//  "buy or don't buy" verdict — the right call genuinely differs by what
+//  someone is trying to get out of the IPO, and a blanket recommendation
+//  would hide that. fit: 'consider' | 'caution' | 'avoid'.
 // ══════════════════════════════════════════════════════════════════
 var IPO_OPEN = [
-  {name:'Juniper Green Energy', sector:'RENEWABLE ENERGY', status:'open', size:'₹1,800 Cr', priceBand:'₹214–225', close:'Closes 3 Aug 2026', gmp:null, gmpNote:'Conflicting/just-started across trackers today', desc:'Renewable IPP — solar, wind, hybrid & FDRE projects with BESS backup; ~7,910 MW portfolio as of Jun 2026.'},
-  {name:'Manipal Health Enterprises', sector:'HEALTHCARE / HOSPITALS', status:'open', size:'₹9,273.6 Cr', priceBand:'₹560–590', close:'In progress', gmp:6, gmpPct:1.0, desc:'Multi-city hospital chain under the Manipal Group; opened for subscription Jul 29.'},
-  {name:'MV Electrosystems', sector:'ELECTRICAL EQUIPMENT', status:'open', size:'TBA', priceBand:'TBA', close:'In progress', gmp:100, gmpPct:null, desc:'Electrical systems / equipment manufacturer entering the primary market.'},
-  {name:'Dhaval Packaging', sector:'PACKAGING', status:'open', size:'TBA', priceBand:'TBA', close:'In progress', gmp:12, gmpPct:null, desc:'Packaging solutions provider, mainboard listing.'},
-  {name:'H.R. Hygiene Products', sector:'CONSUMER / FMCG', status:'open', size:'TBA', priceBand:'TBA', close:'Closes 31 Jul 2026', gmp:2, gmpPct:null, desc:'Hygiene & personal care products manufacturer.'},
-  {name:'Poojaa Precision Engg.', sector:'PRECISION ENGINEERING', status:'soon', size:'TBA', priceBand:'TBA', close:'Closed 30 Jul 2026', gmp:225, gmpPct:null, desc:'Precision engineering components supplier — subscription window closing/closed.'},
-  {name:'Oneindig Technologies', sector:'TECHNOLOGY', status:'open', size:'TBA', priceBand:'TBA', close:'In progress', gmp:0, gmpPct:0, desc:'Technology services company currently under subscription.'}
+  {
+    name:'Manipal Health Enterprises', sector:'HEALTHCARE / HOSPITALS', status:'open',
+    size:'₹9,273.6 Cr', priceBand:'₹560–590', lotSize:'25 shares', minInvestment:'₹14,750',
+    close:'Closes 31 Jul 2026', listingDate:'5 Aug 2026', allotmentDate:'3 Aug 2026',
+    gmp:4, gmpTrend:'down', gmpAsOf:'10:59 AM, 31 Jul', gmpPrev:6,
+    subscription:{overall:0.55, qib:0.71, nii:0.21, retail:0.57, asOf:'~12:15 PM, Day 3 (31 Jul)'},
+    useOfProceeds:'Mostly debt repayment — ₹5,378 Cr of the ₹8,000 Cr fresh issue clears subsidiary (Manipal Hospitals) borrowings; ₹574 Cr for a minority stake buy-in; rest general corporate. Also carries a ₹1,275 Cr OFS (existing shareholders selling).',
+    anchorNote:'Kotak, Axis Capital, Goldman Sachs, Jefferies, JPMorgan, UBS and DBS as lead managers — a strong-quality bank lineup despite the muted retail response so far.',
+    desc:'Multi-city hospital chain under the Manipal Group — 38 hospitals (48 pro forma), 10,761+ beds, spanning oncology, cardiology, transplants and more.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'Healthcare is a durable, high-barrier sector with steady demand, but most proceeds go to debt repayment rather than expansion capex — weigh that against the brand strength before committing for the long haul.'},
+      {who:'Listing-Gain Seeker', fit:'avoid', note:'GMP has fallen from ₹6 to ₹4 and the issue was still only 0.55x subscribed overall by midday on the final day — both point to a flat, not explosive, listing.'},
+      {who:'Risk-Averse Investor', fit:'caution', note:'Well-known promoter group and an established, profitable business reduce company-level risk, but the weak subscription makes the listing-day outcome genuinely uncertain.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'A recognizable, well-covered name can be an easier first IPO to research — just go in with tempered listing-day expectations given the current demand signal.'}
+    ]
+  },
+  {
+    name:'Juniper Green Energy', sector:'RENEWABLE ENERGY', status:'open',
+    size:'₹1,800 Cr', priceBand:'₹214–225', lotSize:'66 shares', minInvestment:'₹14,850',
+    close:'Closes 3 Aug 2026', listingDate:'6 Aug 2026', allotmentDate:'4 Aug 2026',
+    gmp:7, gmpTrend:'down', gmpAsOf:'31 Jul 2026', gmpPrev:8, gmpHigh:17,
+    subscription:{overall:0.40, qib:0.00, nii:0.03, retail:0.08, asOf:'Day 1–2 (30–31 Jul), early bidding'},
+    useOfProceeds:'100% deleveraging — ₹683 Cr repays company-level borrowings, ₹729 Cr repays subsidiary borrowings, remainder general corporate. Entirely a fresh issue — no OFS, so no existing shareholder is cashing out.',
+    anchorNote:'₹539 Cr anchor book from 31 institutional investors incl. Abu Dhabi Investment Authority + strong domestic MF participation (Nippon India, ICICI Pru, SBI, Mirae Asset, HSBC, DSP) — 74.79% of the anchor book went to domestic mutual funds.',
+    desc:'Renewable energy IPP — solar, wind, hybrid & FDRE projects with BESS backup; ~7,910 MW portfolio as of Jun 2026.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'consider', note:'Reputable sector with a strong, high-quality anchor book (sovereign wealth + top domestic MFs) and proceeds used entirely to delever rather than fund an OFS exit — fits a multi-year India-renewables thesis better than most in this batch.'},
+      {who:'Listing-Gain Seeker', fit:'avoid', note:'GMP has more than halved from a ₹17 high on 28 Jul down to ₹7 by 31 Jul, and QIB demand was literally 0.00x in early bidding — grey-market sentiment has clearly cooled since the open.'},
+      {who:'Risk-Averse Investor', fit:'caution', note:'Renewable IPPs are typically capital-intensive and carry real leverage — the fact 100% of proceeds go to debt paydown is responsible, but also confirms the balance sheet needed it.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'The anchor book quality is a genuine positive signal, but early retail/NII demand has been thin — don\'t assume a big listing pop just because institutions participated.'}
+    ]
+  },
+  {name:'MV Electrosystems', sector:'ELECTRICAL EQUIPMENT', status:'open', size:'TBA', priceBand:'₹405–425', lotSize:'TBA', minInvestment:'TBA', close:'In progress', gmp:105, gmpTrend:'down', gmpAsOf:'30–31 Jul', gmpPrev:120, desc:'Electrical systems / equipment manufacturer entering the primary market.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'Limited public detail available yet on order book/margins — verify fundamentals directly before treating the high GMP as a quality signal.'},
+      {who:'Listing-Gain Seeker', fit:'caution', note:'GMP is elevated (~25% of price band) but has been sliding day over day — momentum is cooling, not building.'},
+      {who:'Risk-Averse Investor', fit:'caution', note:'Smaller, less-covered name — do your own diligence rather than relying on grey-market chatter.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'Lower analyst/media coverage than the mainboard names above — harder to research thoroughly as a first IPO.'}
+    ]},
+  {name:'Dhaval Packaging', sector:'PACKAGING', status:'open', size:'TBA', priceBand:'TBA', lotSize:'TBA', minInvestment:'TBA', close:'In progress', gmp:12, gmpTrend:'flat', gmpAsOf:'31 Jul', desc:'Packaging solutions provider, mainboard listing.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'Packaging is a steady but low-margin, competitive sector — check client concentration and margin trend before a long hold.'},
+      {who:'Listing-Gain Seeker', fit:'caution', note:'Modest, stable GMP — doesn\'t signal a strong listing pop either way.'},
+      {who:'Risk-Averse Investor', fit:'consider', note:'Defensive, non-cyclical business type; lower business-model risk than growth-stage names in this batch.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'Limited public coverage — do independent research beyond GMP before applying.'}
+    ]},
+  {name:'H.R. Hygiene Products', sector:'CONSUMER / FMCG', status:'open', size:'TBA', priceBand:'TBA', lotSize:'TBA', minInvestment:'TBA', close:'Closes 31 Jul 2026', gmp:2, gmpTrend:'flat', gmpAsOf:'31 Jul', desc:'Hygiene & personal care products manufacturer.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'FMCG/hygiene is defensive, but a ₹2 GMP signals limited grey-market conviction either way — lean on fundamentals, not sentiment.'},
+      {who:'Listing-Gain Seeker', fit:'avoid', note:'Near-flat GMP suggests little listing-day premium expected.'},
+      {who:'Risk-Averse Investor', fit:'consider', note:'Consumer staples are typically lower-volatility than tech/growth names.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'Small, thinly-covered issue — harder to verify claims independently.'}
+    ]},
+  {name:'Poojaa Precision Engg.', sector:'PRECISION ENGINEERING', status:'soon', size:'TBA', priceBand:'TBA', lotSize:'TBA', minInvestment:'TBA', close:'Closed 30 Jul 2026', gmp:225, gmpTrend:'down', gmpAsOf:'31 Jul', gmpPrev:230, desc:'Precision engineering components supplier — subscription window closing/closed.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'Precision engineering can ride capex/manufacturing cycles — check order book durability, not just the current GMP.'},
+      {who:'Listing-Gain Seeker', fit:'caution', note:'GMP is very high in absolute terms but has just started slipping — a late entrant chasing this number carries real reversal risk.'},
+      {who:'Risk-Averse Investor', fit:'avoid', note:'A GMP this large relative to typical price bands usually means the issue is already priced for a strong pop — limited margin of safety if sentiment turns.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'High-GMP issues attract crowds late — allotment odds are often worse exactly when hype peaks.'}
+    ]},
+  {name:'Oneindig Technologies', sector:'TECHNOLOGY', status:'open', size:'TBA', priceBand:'TBA', lotSize:'TBA', minInvestment:'TBA', close:'In progress', gmp:0, gmpTrend:'flat', gmpAsOf:'31 Jul', desc:'Technology services company currently under subscription.',
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'Zero GMP by itself isn\'t disqualifying, but it does mean there\'s no grey-market conviction to lean on — fundamentals-only decision here.'},
+      {who:'Listing-Gain Seeker', fit:'avoid', note:'A flat ₹0 GMP signals no expected listing pop.'},
+      {who:'Risk-Averse Investor', fit:'caution', note:'Limited public information available — hard to size the actual business risk.'},
+      {who:'First-Time IPO Applicant', fit:'avoid', note:'Low visibility and no listing-gain buzz make this a harder one to research as a first IPO.'}
+    ]}
 ];
 
 var IPO_UPCOMING = [
-  {name:'Zepto', sector:'QUICK COMMERCE', size:'₹8,010–12,000 Cr', window:'Early Aug 2026 (tentative)', desc:"India's fastest-growing quick-commerce platform — 1,139 dark stores, 66 cities. Revenue grew ~99% YoY in FY26; still thin on profitability. SEBI-approved; price band not yet announced.", checks:['Revenue growth is real, but check margin trend, not just topline','Price band vs. peer quick-commerce/e-comm valuations once announced','QIB anchor list quality — Morgan Stanley, Goldman Sachs, Axis Capital are BRLMs','GMP will only start trading once price band is announced — ignore any number claiming to be Zepto GMP before that']},
-  {name:'Shiprocket', sector:'E-COMMERCE LOGISTICS / SAAS', size:'TBA', window:'August 2026', desc:'Logistics-tech platform serving e-commerce sellers with shipping, fulfillment and SaaS tools.', checks:['Check unit economics — logistics margins are typically thin','Compare against listed logistics-tech peers for valuation sanity']},
-  {name:'Truhome Finance', sector:'HOUSING FINANCE (NBFC)', size:'₹3,000 Cr', window:'August 2026', desc:'Affordable housing finance company — a more traditional, easier-to-value financials business than the tech names in this batch.', checks:['NBFC asset quality — check GNPA/NNPA trend','Loan book growth vs. capital adequacy ratio']},
-  {name:'Elevate Campuses', sector:'STUDENT HOUSING / CO-LIVING', size:'₹2,550 Cr fresh issue', window:'August 2026', desc:'Managed student housing and co-living space operator.', checks:['Occupancy rates and rental yield trend','Real-estate-adjacent — check leverage/debt levels']},
-  {name:'LEAP India', sector:'SUPPLY CHAIN / PALLET POOLING', size:'₹400 Cr fresh + ₹2,000 Cr OFS', window:'August 2026', desc:'Supply-chain unit-movement company — timber pallets, foldable containers, pooling operations for logistics.', checks:['Large OFS component — means promoters/early investors are selling a big chunk','Check recurring revenue / contract renewal rates']},
-  {name:'Gaja Alternative Asset Mgmt', sector:'PE / ASSET MANAGEMENT', size:'₹549.2 Cr fresh + ₹107 Cr OFS', window:'August 2026', desc:'Private equity and alternative asset management firm raising capital to expand AUM.', checks:['AUM growth trend and fee structure','Fund performance track record vs. peers']},
-  {name:'ARCIL', sector:'ASSET RECONSTRUCTION (NBFC)', size:'TBA', window:'August 2026', desc:'Asset reconstruction company — buys and recovers distressed/bad loans from banks.', checks:['Recovery rate on acquired NPAs','Cyclical business — sensitive to credit cycle']},
-  {name:'Dhoot Transmission', sector:'AUTO COMPONENTS', size:'TBA', window:'August 2026', desc:'Automotive component manufacturer entering the mainboard.', checks:['Client concentration among auto OEMs','Margin sensitivity to input costs']},
-  {name:'Ardee Industries', sector:'MANUFACTURING', size:'TBA', window:'August 2026', desc:'Industrial manufacturing company, mainboard listing.', checks:['Order book visibility','Capacity utilization trend']},
-  {name:'Hy-Tech Engineers', sector:'ENGINEERING', size:'TBA', window:'August 2026', desc:'Engineering products/services company.', checks:['Revenue diversification across clients/sectors']},
-  {name:'Rays of Belief', sector:'HEALTHCARE (NEURODEVELOPMENTAL)', size:'TBA', window:'August 2026', desc:'Behavioural and neurodevelopmental healthcare services provider.', checks:['Niche healthcare — check scalability of care-delivery model']},
+  {name:'Zepto', sector:'QUICK COMMERCE', size:'₹8,010–12,000 Cr', window:'Early Aug 2026 (tentative)', desc:"India's fastest-growing quick-commerce platform — 1,139 dark stores, 66 cities. Revenue grew ~99% YoY in FY26; still thin on profitability. SEBI-approved; price band not yet announced.", checks:['Revenue growth is real, but check margin trend, not just topline','Price band vs. peer quick-commerce/e-comm valuations once announced','QIB anchor list quality — Morgan Stanley, Goldman Sachs, Axis Capital are BRLMs','GMP will only start trading once price band is announced — ignore any number claiming to be Zepto GMP before that'],
+    investorFit:[
+      {who:'Long-Term Investor', fit:'caution', note:'Explosive growth (~99% YoY) but still not clearly profitable — classic high-growth/high-valuation-risk profile, only for those comfortable holding through volatility.'},
+      {who:'Listing-Gain Seeker', fit:'caution', note:'High-profile names often already price in enthusiasm before listing, which can cap the pop — no price band yet to judge this properly.'},
+      {who:'Risk-Averse Investor', fit:'avoid', note:'Pre-profitability, richly-anticipated growth story — structurally not a conservative pick regardless of brand recognition.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'Being a well-known consumer brand doesn\'t make it a "safe" first IPO — high-hype names can be more volatile post-listing, not less.'}
+    ]},
+  {name:'Shiprocket', sector:'E-COMMERCE LOGISTICS / SAAS', size:'TBA', window:'August 2026', desc:'Logistics-tech platform serving e-commerce sellers with shipping, fulfillment and SaaS tools.', checks:['Check unit economics — logistics margins are typically thin','Compare against listed logistics-tech peers for valuation sanity'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'SaaS + logistics hybrid — check what share of revenue is high-margin software vs thin-margin logistics before valuing it like a pure SaaS name.'},{who:'Listing-Gain Seeker', fit:'caution', note:'No pricing details yet to gauge listing-day setup.'},{who:'Risk-Averse Investor', fit:'caution', note:'Logistics-adjacent businesses are typically more cyclical and lower-margin than pure software.'},{who:'First-Time IPO Applicant', fit:'caution', note:'Wait for price band and subscription data before treating this as a must-apply.'}]},
+  {name:'Truhome Finance', sector:'HOUSING FINANCE (NBFC)', size:'₹3,000 Cr', window:'August 2026', desc:'Affordable housing finance company — a more traditional, easier-to-value financials business than the tech names in this batch.', checks:['NBFC asset quality — check GNPA/NNPA trend','Loan book growth vs. capital adequacy ratio'],
+    investorFit:[{who:'Long-Term Investor', fit:'consider', note:'Traditional NBFC financials are far easier to value on standard metrics (NIM, GNPA, capital adequacy) than a growth-tech story — better fit for fundamentals-driven long-term investors.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Financials IPOs rarely see explosive listing pops the way consumer-tech names do.'},{who:'Risk-Averse Investor', fit:'consider', note:'More conservative, well-understood business model — but still check asset quality trend before assuming safety.'},{who:'First-Time IPO Applicant', fit:'consider', note:'Straightforward business model makes it easier to research than a complex tech story.'}]},
+  {name:'Elevate Campuses', sector:'STUDENT HOUSING / CO-LIVING', size:'₹2,550 Cr fresh issue', window:'August 2026', desc:'Managed student housing and co-living space operator.', checks:['Occupancy rates and rental yield trend','Real-estate-adjacent — check leverage/debt levels'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'Real-estate-adjacent businesses carry real leverage and occupancy-cycle risk — check debt levels before a long hold.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Niche sector with no clear listed peer to benchmark listing-day sentiment against.'},{who:'Risk-Averse Investor', fit:'caution', note:'Real-estate leverage exposure is a genuine risk factor here.'},{who:'First-Time IPO Applicant', fit:'caution', note:'A less mainstream sector — worth extra homework before applying.'}]},
+  {name:'LEAP India', sector:'SUPPLY CHAIN / PALLET POOLING', size:'₹400 Cr fresh + ₹2,000 Cr OFS', window:'August 2026', desc:'Supply-chain unit-movement company — timber pallets, foldable containers, pooling operations for logistics.', checks:['Large OFS component — means promoters/early investors are selling a big chunk','Check recurring revenue / contract renewal rates'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'₹2,000 Cr of the ₹2,400 Cr issue is OFS (existing investors exiting) vs only ₹400 Cr actually raising fresh capital for the business — worth asking why early backers are selling this much.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Heavy OFS issues can face more supply-side pressure post-listing as more shares are freely tradeable.'},{who:'Risk-Averse Investor', fit:'caution', note:'A large OFS by itself isn\'t disqualifying, but it does warrant asking why insiders are reducing exposure now.'},{who:'First-Time IPO Applicant', fit:'caution', note:'Understanding OFS vs fresh-issue mix is exactly the kind of detail worth learning before applying to any IPO, not just this one.'}]},
+  {name:'Gaja Alternative Asset Mgmt', sector:'PE / ASSET MANAGEMENT', size:'₹549.2 Cr fresh + ₹107 Cr OFS', window:'August 2026', desc:'Private equity and alternative asset management firm raising capital to expand AUM.', checks:['AUM growth trend and fee structure','Fund performance track record vs. peers'],
+    investorFit:[{who:'Long-Term Investor', fit:'consider', note:'Asset managers can be attractive long-term compounders if AUM growth and fee economics are strong — verify the track record directly.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Niche financial-services listings don\'t typically see retail-driven listing pops.'},{who:'Risk-Averse Investor', fit:'caution', note:'Mostly fresh issue (good sign) but PE/AMC earnings can be lumpy — check fee-income stability.'},{who:'First-Time IPO Applicant', fit:'caution', note:'A specialized business model — understand how asset managers earn before applying.'}]},
+  {name:'ARCIL', sector:'ASSET RECONSTRUCTION (NBFC)', size:'TBA', window:'August 2026', desc:'Asset reconstruction company — buys and recovers distressed/bad loans from banks.', checks:['Recovery rate on acquired NPAs','Cyclical business — sensitive to credit cycle'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'Distressed-debt recovery is inherently cyclical and tied to the credit cycle — not a steady-compounder profile.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Niche NBFC segment, thin retail familiarity, uncertain listing-day demand.'},{who:'Risk-Averse Investor', fit:'avoid', note:'Recovery-rate risk on distressed assets is a genuinely higher-risk business model than a standard lender.'},{who:'First-Time IPO Applicant', fit:'caution', note:'A complex, niche business — not the easiest first IPO to evaluate independently.'}]},
+  {name:'Dhoot Transmission', sector:'AUTO COMPONENTS', size:'TBA', window:'August 2026', desc:'Automotive component manufacturer entering the mainboard.', checks:['Client concentration among auto OEMs','Margin sensitivity to input costs'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'Auto-component makers ride the auto sales cycle and input-cost swings — check OEM client concentration before committing.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Auto ancillaries rarely see outsized listing pops.'},{who:'Risk-Averse Investor', fit:'caution', note:'Cyclical, margin-sensitive sector.'},{who:'First-Time IPO Applicant', fit:'caution', note:'Check client concentration numbers once the DRHP financials are available.'}]},
+  {name:'Ardee Industries', sector:'MANUFACTURING', size:'TBA', window:'August 2026', desc:'Industrial manufacturing company, mainboard listing.', checks:['Order book visibility','Capacity utilization trend'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'Industrial manufacturers are only as good as their order-book visibility — verify before a long hold.'},{who:'Listing-Gain Seeker', fit:'caution', note:'No strong public GMP signal yet.'},{who:'Risk-Averse Investor', fit:'caution', note:'Capacity-utilization-dependent earnings can be lumpy.'},{who:'First-Time IPO Applicant', fit:'caution', note:'Wait for more financial disclosure before applying.'}]},
+  {name:'Hy-Tech Engineers', sector:'ENGINEERING', size:'TBA', window:'August 2026', desc:'Engineering products/services company.', checks:['Revenue diversification across clients/sectors'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'Check client/sector diversification — concentrated engineering revenue is a common risk in this space.'},{who:'Listing-Gain Seeker', fit:'caution', note:'Low public coverage so far, hard to gauge sentiment.'},{who:'Risk-Averse Investor', fit:'caution', note:'Limited information available at this stage.'},{who:'First-Time IPO Applicant', fit:'caution', note:'Revisit once more financial detail is public.'}]},
+  {name:'Rays of Belief', sector:'HEALTHCARE (NEURODEVELOPMENTAL)', size:'TBA', window:'August 2026', desc:'Behavioural and neurodevelopmental healthcare services provider.', checks:['Niche healthcare — check scalability of care-delivery model'],
+    investorFit:[{who:'Long-Term Investor', fit:'caution', note:'Niche healthcare services can scale well, but check unit economics of the care-delivery model, not just the growth story.'},{who:'Listing-Gain Seeker', fit:'caution', note:'A very niche category — hard to predict retail demand.'},{who:'Risk-Averse Investor', fit:'caution', note:'Newer, less-tested business category in public markets.'},{who:'First-Time IPO Applicant', fit:'caution', note:'A specialized sector — extra research warranted.'}]},
   {name:'Shankesh Jewellers', sector:'CONSUMER / JEWELRY RETAIL', size:'TBA', window:'August 2026', desc:'Consumer jewelry retail chain.', checks:['Gold-price sensitivity to margins','Store expansion vs. same-store-sales growth']},
   {name:'Learnfluence Education', sector:'ED-TECH / PUBLISHING', size:'TBA', window:'August 2026', desc:'Ed-tech and publishing company.', checks:['Revenue mix — subscription vs. one-time sales','Customer acquisition cost trend']}
 ];
+// Fill a lightweight default investorFit for any upcoming entry that
+// doesn\'t have one yet (keeps the render logic simple and consistent).
+IPO_UPCOMING.forEach(function(x){
+  if (!x.investorFit) {
+    x.investorFit = [
+      {who:'Long-Term Investor', fit:'caution', note:'Price band and financials not yet public — revisit once the DRHP/RHP details are announced.'},
+      {who:'Listing-Gain Seeker', fit:'caution', note:'No GMP exists yet since pricing hasn\'t been announced.'},
+      {who:'Risk-Averse Investor', fit:'caution', note:'Insufficient public detail to assess risk yet.'},
+      {who:'First-Time IPO Applicant', fit:'caution', note:'Wait for full disclosure before treating this as a research target.'}
+    ];
+  }
+});
 
 function ipoEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function ipoSentiment(sub) {
+  if (!sub || typeof sub.overall !== 'number') return {label:'NOT YET AVAILABLE', cls:'unk'};
+  if (sub.overall >= 3) return {label:'STRONG DEMAND', cls:'pos'};
+  if (sub.overall >= 1) return {label:'MODERATE DEMAND', cls:'pos'};
+  if (sub.overall >= 0.5) return {label:'MUTED DEMAND', cls:'neg'};
+  return {label:'WEAK DEMAND', cls:'neg'};
+}
 
 function ipoGmpBlock(x) {
   if (x.gmp === null || x.gmp === undefined) {
@@ -20878,23 +20979,90 @@ function ipoGmpBlock(x) {
   }
   var cls = x.gmp > 0 ? 'pos' : (x.gmp < 0 ? 'neg' : 'unk');
   var wrapCls = x.gmp > 0 ? '' : (x.gmp < 0 ? 'neg' : 'unknown');
-  var pctTxt = (typeof x.gmpPct === 'number') ? ' <span class="pct">('+(x.gmpPct>=0?'+':'')+x.gmpPct.toFixed(1)+'% est.)</span>' : '';
-  return '<div class="ipo-gmp '+wrapCls+'"><span class="l">GMP (SNAPSHOT)</span><span class="v '+cls+'">'+(x.gmp>=0?'+':'')+'₹'+x.gmp+pctTxt+'</span></div>';
+  var arrow = x.gmpTrend === 'up' ? '▲' : x.gmpTrend === 'down' ? '▼' : x.gmpTrend === 'flat' ? '—' : '';
+  var arrowCls = x.gmpTrend === 'up' ? 'pos' : x.gmpTrend === 'down' ? 'neg' : 'unk';
+  var trendTxt = (x.gmpPrev != null) ? ' <span class="pct">(was ₹'+x.gmpPrev+')</span>' : (x.gmpHigh != null ? ' <span class="pct">(high ₹'+x.gmpHigh+')</span>' : '');
+  var asOfTxt = x.gmpAsOf ? '<div style="font-family:\'Share Tech Mono\';font-size:8px;color:var(--dim);margin-top:2px">as of '+ipoEsc(x.gmpAsOf)+'</div>' : '';
+  return '<div class="ipo-gmp '+wrapCls+'" style="flex-direction:column;align-items:stretch;gap:2px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<span class="l">GMP (SNAPSHOT)</span>'+
+      '<span class="v '+cls+'">'+(arrow?'<span style="color:var(--'+(arrowCls==='pos'?'g':arrowCls==='neg'?'r':'dim')+')">'+arrow+'</span> ':'')+(x.gmp>=0?'+':'')+'₹'+x.gmp+trendTxt+'</span>'+
+    '</div>'+asOfTxt+
+  '</div>';
+}
+
+function ipoSubscriptionBlock(sub) {
+  if (!sub) return '';
+  var sent = ipoSentiment(sub);
+  function row(label, val) {
+    var pct = Math.min(100, (val/1)*100); // 1x = full bar
+    var barCls = val >= 1 ? 'pos' : val >= 0.5 ? 'mid' : 'neg';
+    return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'+
+      '<div style="font-family:\'Share Tech Mono\';font-size:8.5px;color:var(--dim);width:44px;flex-shrink:0">'+label+'</div>'+
+      '<div style="flex:1;height:6px;background:var(--ov3);border-radius:3px;overflow:hidden">'+
+        '<div style="height:100%;width:'+pct+'%;background:'+(barCls==='pos'?'var(--g)':barCls==='mid'?'var(--w)':'var(--r)')+'"></div>'+
+      '</div>'+
+      '<div style="font-family:\'Share Tech Mono\';font-size:9px;color:var(--txt);width:38px;text-align:right;flex-shrink:0">'+val.toFixed(2)+'x</div>'+
+    '</div>';
+  }
+  return '<div style="background:var(--ov3);border-radius:6px;padding:9px 10px;margin-bottom:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'+
+      '<span style="font-family:\'Share Tech Mono\';font-size:8px;color:var(--dim);letter-spacing:1px">SUBSCRIPTION</span>'+
+      '<span class="ipo-pill '+(sent.cls==='pos'?'open':sent.cls==='neg'?'soon':'tba')+'" style="font-size:7.5px">'+sent.label+'</span>'+
+    '</div>'+
+    row('QIB', sub.qib) + row('NII', sub.nii) + row('Retail', sub.retail) +
+    '<div style="font-family:\'Share Tech Mono\';font-size:8px;color:var(--dim);margin-top:4px">Overall: '+sub.overall.toFixed(2)+'x · as of '+ipoEsc(sub.asOf)+'</div>'+
+  '</div>';
+}
+
+function ipoFitIcon(fit) {
+  if (fit === 'consider') return {icon:'✓', cls:'pos'};
+  if (fit === 'avoid') return {icon:'✕', cls:'neg'};
+  return {icon:'△', cls:'unk'};
+}
+
+function ipoFitBlock(investorFit) {
+  if (!investorFit || !investorFit.length) return '';
+  var rows = investorFit.map(function(f){
+    var ic = ipoFitIcon(f.fit);
+    var color = ic.cls === 'pos' ? 'var(--g)' : ic.cls === 'neg' ? 'var(--r)' : 'var(--w)';
+    return '<div style="display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--border)">'+
+      '<div style="font-family:\'Share Tech Mono\';font-size:12px;color:'+color+';flex-shrink:0;width:14px;text-align:center;font-weight:700">'+ic.icon+'</div>'+
+      '<div><div style="font-family:\'Share Tech Mono\';font-size:10px;color:'+color+';letter-spacing:.5px;margin-bottom:2px">'+ipoEsc(f.who)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--dim);line-height:1.45">'+ipoEsc(f.note)+'</div></div>'+
+    '</div>';
+  }).join('');
+  return '<details class="ipo-details"><summary>WHO SHOULD / SHOULDN\'T CONSIDER THIS</summary><div style="margin-top:4px">'+rows+'</div></details>';
 }
 
 function ipoRenderOpen() {
   var html = IPO_OPEN.map(function(x, i){
     var pillCls = x.status === 'soon' ? 'soon' : 'open';
     var pillTxt = x.status === 'soon' ? 'CLOSING SOON' : 'OPEN';
+    var metaExtra = (x.lotSize || x.minInvestment) ?
+      '<div class="ipo-meta-row">'+
+        '<div class="ipo-meta"><div class="l">LOT SIZE</div><div class="v">'+ipoEsc(x.lotSize||'TBA')+'</div></div>'+
+        '<div class="ipo-meta"><div class="l">MIN. INVESTMENT</div><div class="v">'+ipoEsc(x.minInvestment||'TBA')+'</div></div>'+
+      '</div>' : '';
+    var datesExtra = (x.listingDate || x.allotmentDate) ?
+      '<div class="ipo-meta-row">'+
+        '<div class="ipo-meta"><div class="l">ALLOTMENT</div><div class="v">'+ipoEsc(x.allotmentDate||'TBA')+'</div></div>'+
+        '<div class="ipo-meta"><div class="l">LISTING</div><div class="v">'+ipoEsc(x.listingDate||'TBA')+'</div></div>'+
+      '</div>' : '';
+    var proceedsExtra = x.useOfProceeds ? '<div style="font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:8px"><span style="color:var(--txt);font-family:\'Share Tech Mono\';font-size:8px;letter-spacing:1px">USE OF PROCEEDS — </span>'+ipoEsc(x.useOfProceeds)+'</div>' : '';
+    var anchorExtra = x.anchorNote ? '<div style="font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:10px"><span style="color:var(--txt);font-family:\'Share Tech Mono\';font-size:8px;letter-spacing:1px">ANCHOR BOOK — </span>'+ipoEsc(x.anchorNote)+'</div>' : '';
     return '<div class="ipo-card" style="animation-delay:'+(i*0.03)+'s">'+
       '<div class="ipo-card-top"><div><div class="ipo-co-name">'+ipoEsc(x.name)+'</div><div class="ipo-co-sector">'+ipoEsc(x.sector)+'</div></div>'+
       '<span class="ipo-pill '+pillCls+'">'+pillTxt+'</span></div>'+
       '<div class="ipo-desc">'+ipoEsc(x.desc)+'</div>'+
       ipoGmpBlock(x)+
+      ipoSubscriptionBlock(x.subscription)+
       '<div class="ipo-meta-row">'+
         '<div class="ipo-meta"><div class="l">PRICE BAND</div><div class="v">'+ipoEsc(x.priceBand||'TBA')+'</div></div>'+
         '<div class="ipo-meta"><div class="l">STATUS</div><div class="v">'+ipoEsc(x.close)+'</div></div>'+
       '</div>'+
+      metaExtra + datesExtra + proceedsExtra + anchorExtra +
+      ipoFitBlock(x.investorFit)+
     '</div>';
   }).join('');
   var el = document.getElementById('ipoGridOpen'); if (el) el.innerHTML = html;
@@ -20913,7 +21081,8 @@ function ipoRenderUpcoming() {
         '<div class="ipo-meta"><div class="l">ISSUE SIZE</div><div class="v">'+ipoEsc(x.size)+'</div></div>'+
         '<div class="ipo-meta"><div class="l">EXPECTED WINDOW</div><div class="v">'+ipoEsc(x.window)+'</div></div>'+
       '</div>'+
-      '<details class="ipo-details"><summary>WHAT TO CHECK BEFORE DECIDING</summary><div class="ipo-check-list">'+checksHtml+'</div></details>'+
+      (checksHtml ? '<details class="ipo-details"><summary>WHAT TO CHECK BEFORE DECIDING</summary><div class="ipo-check-list">'+checksHtml+'</div></details>' : '')+
+      ipoFitBlock(x.investorFit)+
     '</div>';
   }).join('');
   var el = document.getElementById('ipoGridUpcoming'); if (el) el.innerHTML = html;
@@ -20921,7 +21090,7 @@ function ipoRenderUpcoming() {
 }
 
 function ipoRenderTicker() {
-  var items = IPO_OPEN.map(function(x){ return {name:x.name, cls:'open', tag: x.gmp!=null ? ('GMP +₹'+x.gmp) : 'OPEN'}; })
+  var items = IPO_OPEN.map(function(x){ return {name:x.name, cls:'open', tag: x.gmp!=null ? ('GMP '+(x.gmpTrend==='down'?'▼':x.gmpTrend==='up'?'▲':'')+' +₹'+x.gmp) : 'OPEN'}; })
     .concat(IPO_UPCOMING.slice(0,8).map(function(x){ return {name:x.name, cls:'soon', tag:'UPCOMING'}; }));
   var row = items.map(function(x){ return '<span class="ipo-tick-item '+x.cls+'"><b>'+ipoEsc(x.name)+'</b> · '+ipoEsc(x.tag)+'</span>'; }).join('');
   var el = document.getElementById('ipoTickerInner'); if (el) el.innerHTML = row + row;
