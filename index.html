@@ -927,6 +927,33 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
 .ipo-foot{margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--dim);text-align:center;letter-spacing:.5px;}
 @media(max-width:640px){.ipo-grid{grid-template-columns:1fr}}
 
+/* ══ STRATEGY HEALTH tab (sh- prefixed) ══ */
+.sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
+.sh-card{background:var(--panel,#0d1424);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.sh-card.warn{border-color:rgba(255,204,0,.3);}
+.sh-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.sh-name{font-family:'Orbitron',sans-serif;font-weight:700;font-size:14px;color:var(--txt);letter-spacing:.5px;}
+.sh-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);margin-top:3px;letter-spacing:1px;}
+.sh-pnl{font-family:'Orbitron',sans-serif;font-weight:900;font-size:18px;}
+.sh-pnl.pos{color:var(--g);} .sh-pnl.neg{color:var(--r);} .sh-pnl.flat{color:var(--dim);}
+.sh-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.sh-stat{background:var(--ov3);border-radius:6px;padding:7px 9px;}
+.sh-stat .l{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:1px;margin-bottom:2px;}
+.sh-stat .v{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--txt);}
+.sh-bar-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.sh-bar-label{font-family:'Share Tech Mono',monospace;font-size:8.5px;color:var(--dim);width:78px;flex-shrink:0;}
+.sh-bar-track{flex:1;height:7px;background:var(--ov3);border-radius:3px;overflow:hidden;}
+.sh-bar-fill{height:100%;}
+.sh-bar-val{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt);width:76px;text-align:right;flex-shrink:0;}
+.sh-flag{margin-top:10px;padding:8px 10px;border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.5;}
+.sh-flag.leak{background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.22);color:var(--dim);}
+.sh-flag.leak b{color:var(--r);}
+.sh-flag.ok{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.22);color:var(--dim);}
+.sh-flag.ok b{color:var(--g);}
+.sh-flag.thin{background:var(--ov3);border:1px solid var(--border);color:var(--dim);}
+.sh-flag.thin b{color:var(--w);}
+.sh-empty{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);text-align:center;padding:30px 10px;}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -1152,6 +1179,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <button class="nav-tab" onclick="showPage('ipo',this)" style="border-color:rgba(255,204,0,.3);color:#ffcc00;">🚀 IPO WATCH</button>
+  <button class="nav-tab" onclick="showPage('strathealth',this)" style="border-color:rgba(0,212,255,.3);color:#00d4ff;">📊 STRATEGY HEALTH</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
 
   <!-- ══ GLOBAL NOTIFICATION BELL — accessible from any tab ══ -->
@@ -3413,7 +3441,7 @@ setTimeout(nd2SyncAll, 2000);
 
           <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:Share Tech Mono;font-size:10px;color:var(--txt);cursor:pointer">
             <input type="checkbox" id="notif-quiet-hours" style="accent-color:var(--a);width:14px;height:14px">
-            🌙 Quiet hours — only alert during market hours (9:15–15:30 IST, Mon–Fri)
+            🌙 Quiet hours — only alert during market hours (9:15–15:40 IST, Mon–Fri)
           </label>
 
           <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:6px">🔕 MUTE PER STRATEGY — checked strategies won't push alerts (entry or close), but still trade + log normally</div>
@@ -5157,11 +5185,11 @@ function simLD() {
       SENSEX    :{ltp:81650,open:81280,high:81920,low:81180,close:81320,volume:245000000,avgPrice:81640,chg:330,dp:0.41}
     };
   }
-  // Only drift prices during market hours (Mon-Fri 9:15 AM - 3:30 PM IST)
+  // Only drift prices during market hours (Mon-Fri 9:15 AM - 3:40 PM IST — F&O close extended 3 Aug 2026)
   var _ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
   var _day = _ist.getDay();
   var _min = _ist.getHours() * 60 + _ist.getMinutes();
-  var _mktOpen = (_day >= 1 && _day <= 5) && (_min >= 555 && _min <= 930);
+  var _mktOpen = (_day >= 1 && _day <= 5) && (_min >= 555 && _min <= 940);
 
   Object.keys(_simBase).forEach(function(k) {
     var b = _simBase[k];
@@ -8641,6 +8669,7 @@ function showPage(id,btn){
         try{ if(window._faLastBuckets && window._faLastInv){ faDrawPie(window._faLastBuckets, window._faLastInv); } }catch(e){}
       }
       if(id==='ipo'){ try{ ipoInit(); }catch(e){} }
+      if(id==='strathealth'){ try{ shRender(); }catch(e){} }
     }catch(e){console.error('showPage error:',id,e);}
   },80);
 }
@@ -8751,7 +8780,10 @@ function computeIdleTimeoutMs() {
   var now = getIST();
   var day = now.getDay(); // 0=Sun...6=Sat
   var mins = now.getHours()*60 + now.getMinutes();
-  var MARKET_OPEN = 9*60+15, MARKET_CLOSE = 15*60+30;
+  // NSE extended F&O trading hours from 3:30 PM to 3:40 PM effective
+  // 3 Aug 2026 (new Closing Auction Session in the cash market). Updated
+  // here so the idle-logout grace period is computed from the real close.
+  var MARKET_OPEN = 9*60+15, MARKET_CLOSE = 15*60+40;
   var isWeekday = day >= 1 && day <= 5;
   var inMarketHours = isWeekday && mins >= MARKET_OPEN && mins < MARKET_CLOSE;
   if (inMarketHours) {
@@ -10054,7 +10086,7 @@ function runSignalEngine() {
 
   var mktLbl = mktLabel();
   if (mktLbl !== 'OPEN') {
-    showSignal(null, 'Market ' + mktLbl + ' — signals only during 9:15 AM – 3:30 PM');
+    showSignal(null, 'Market ' + mktLbl + ' — signals only during 9:15 AM – 3:40 PM');
     return;
   }
 
@@ -11088,7 +11120,32 @@ async function _buildChainDataInner() {
   var baseIV    = OC_STATE.vix / 100;
   var skewFactor = idx==='NIFTY' ? 8.0 : idx==='BANKNIFTY' ? 6.0 : 5.5;
 
-  // ── Try NSE live option chain first ──
+  // v1.1 reorder (4 Aug 2026): previously NSE-via-proxy was tried first and
+  // Angel-direct was only the fallback. But NSE's fetch here depends on
+  // free, unauthenticated public CORS proxies (allorigins.win, codetabs.com)
+  // that are the actual repeated cause of "no live feed this cycle" skips.
+  // Angel-direct is a token-authenticated broker API call — structurally
+  // more reliable — so when logged in, try it FIRST and only fall back to
+  // NSE-via-proxy if Angel-direct itself fails or returns too few real quotes.
+  if (creds && creds.jwt) {
+    try {
+      var angelOK = await buildChainFromAngel(idx, spot, atm, step, numS, T, r, baseIV, skewFactor);
+      if (angelOK) {
+        var srcElA = document.getElementById('ocLastUpdate');
+        if (srcElA) srcElA.textContent = '🟢 ANGEL ONE LIVE — ' + new Date().toLocaleTimeString('en-IN');
+        return;
+      } else {
+        console.warn('[Chain] buildChainFromAngel returned false — trying NSE-via-proxy fallback this cycle.');
+      }
+    } catch(e) {
+      console.warn('[Chain] buildChainFromAngel threw:', e.message, '— trying NSE-via-proxy fallback.');
+    }
+  } else {
+    console.warn('[Chain] Skipping Angel-direct chain first-try — not connected (no creds.jwt), going straight to NSE.');
+  }
+
+  // ── NSE live option chain (now the fallback path when logged into Angel;
+  //    still the primary path when not connected to a broker at all) ──
   var ssEl = document.getElementById('signalStatus');
   var nseSymbol = idx==='BANKNIFTY' ? 'BANKNIFTY' : idx==='SENSEX' ? 'SENSEX' : 'NIFTY';
   var nseData = null;
@@ -11097,31 +11154,9 @@ async function _buildChainDataInner() {
 
   if (nseData && parseNSEChain(nseData, spot, atm, step, Math.max(T,0.001), r, baseIV, skewFactor)) {
     console.log('[Chain] ✅ parseNSEChain succeeded — using NSE live data this cycle.');
-    // ── ENHANCEMENT: Patch LTPs with Angel One NFO live quotes ──
-    if (creds && creds.jwt) {
-      try { await patchOCWithAngelLTP(idx, step, atm, numS); } catch(e) {}
-    }
     var srcEl = document.getElementById('ocLastUpdate');
-    if (srcEl) srcEl.textContent = (creds && creds.jwt ? '🟢 ANGEL ONE LIVE — ' : '🟢 NSE LIVE — ') + new Date().toLocaleTimeString('en-IN');
+    if (srcEl) srcEl.textContent = '🟢 NSE LIVE — ' + new Date().toLocaleTimeString('en-IN');
     return;
-  }
-
-  // ── Try Angel One NFO option quotes directly ──
-  if (creds && creds.jwt) {
-    try {
-      var angelOK = await buildChainFromAngel(idx, spot, atm, step, numS, T, r, baseIV, skewFactor);
-      if (angelOK) {
-        var srcEl = document.getElementById('ocLastUpdate');
-        if (srcEl) srcEl.textContent = '🟢 ANGEL ONE LIVE — ' + new Date().toLocaleTimeString('en-IN');
-        return;
-      } else {
-        console.warn('[Chain] buildChainFromAngel returned false — both NSE and Angel-direct failed this cycle, using BS model.');
-      }
-    } catch(e) {
-      console.warn('[Chain] buildChainFromAngel threw:', e.message);
-    }
-  } else {
-    console.warn('[Chain] Skipping Angel-direct chain — not connected (no creds.jwt).');
   }
 
   // ── Fallback: Black-Scholes synthetic chain ──
@@ -11840,14 +11875,14 @@ function aiCopyReport() {
   });
 }
 
-// Auto-trigger report at 3:30 PM IST
+// Auto-trigger report at 3:40 PM IST (NSE F&O close moved 15:30→15:40, 3 Aug 2026)
 setInterval(function(){
   try {
     var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-    if (ist.getHours()===15 && ist.getMinutes()===30 && ist.getSeconds()<35) {
+    if (ist.getHours()===15 && ist.getMinutes()===40 && ist.getSeconds()<35) {
       if (loggedUser==='Piyush' && typeof aiRunDayReport==='function') {
         aiRunDayReport();
-        admFixLog('📈 Auto-triggered post-market day report at 3:30 PM IST');
+        admFixLog('📈 Auto-triggered post-market day report at 3:40 PM IST');
       }
     }
   } catch(e){}
@@ -12039,7 +12074,7 @@ async function aiRunStrategyPicker() {
 
     // Time context
     var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-    var timeLabel = ist.getHours() < 10 ? 'Pre-market' : ist.getHours() < 12 ? 'Morning session (9:15-12:00)' : ist.getHours() < 14 ? 'Mid-session (12:00-14:00)' : ist.getHours() < 15 ? 'Afternoon session (14:00-15:30)' : 'Post-market';
+    var timeLabel = ist.getHours() < 10 ? 'Pre-market' : ist.getHours() < 12 ? 'Morning session (9:15-12:00)' : ist.getHours() < 14 ? 'Mid-session (12:00-14:00)' : ist.getHours() < 15 ? 'Afternoon session (14:00-15:40)' : 'Post-market';
 
     var mktData = [
       'Time: ' + timeLabel + ' IST',
@@ -12148,14 +12183,14 @@ function jarvisBrainComputeStats() {
   var srWinRate= srClosed.length ? Math.round(srWins.length/srClosed.length*100) : 0;
 
   // Time of day
-  var timeSlots = {'09:15-10:30':[], '10:30-12:00':[], '12:00-14:00':[], '14:00-15:30':[]};
+  var timeSlots = {'09:15-10:30':[], '10:30-12:00':[], '12:00-14:00':[], '14:00-15:40':[]};
   closed.forEach(function(t){
     var bt = parseInt((t.buyTime||'0930').replace(':',''));
     var pl = (t.exit - t.buy) * t.lotQty;
     if (bt < 1030)      timeSlots['09:15-10:30'].push(pl);
     else if (bt < 1200) timeSlots['10:30-12:00'].push(pl);
     else if (bt < 1400) timeSlots['12:00-14:00'].push(pl);
-    else                timeSlots['14:00-15:30'].push(pl);
+    else                timeSlots['14:00-15:40'].push(pl);
   });
   var bestSlot = '', bestSlotPL = -Infinity, worstSlot = '', worstSlotPL = Infinity;
   Object.keys(timeSlots).forEach(function(slot){
@@ -12800,7 +12835,7 @@ function jiComputeAll() {
   var rr      = avgLoss>0 ? (avgWin/avgLoss).toFixed(2) : '—';
 
   // Time slot analysis
-  var slots = {'09:15-10:30':[],'10:30-12:00':[],'12:00-14:00':[],'14:00-15:30':[]};
+  var slots = {'09:15-10:30':[],'10:30-12:00':[],'12:00-14:00':[],'14:00-15:40':[]};
   closed.forEach(function(t){
     var h = parseInt((t.buyTime||'09:00').split(':')[0]);
     var m = parseInt((t.buyTime||'09:00').split(':')[1]||0);
@@ -12808,7 +12843,7 @@ function jiComputeAll() {
     if (mins < 630) slots['09:15-10:30'].push(t);
     else if (mins < 720) slots['10:30-12:00'].push(t);
     else if (mins < 840) slots['12:00-14:00'].push(t);
-    else slots['14:00-15:30'].push(t);
+    else slots['14:00-15:40'].push(t);
   });
   var slotStats = {};
   Object.keys(slots).forEach(function(s){
@@ -16028,7 +16063,7 @@ function runBacktest() {
 
     var periodLabels = {'1m':'1 Month','3m':'3 Months','6m':'6 Months','1y':'1 Year'};
     var pl = document.getElementById('bt-period-label');
-    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') ? ' · synthetic data (no broker connection)' : '');
+    var dataSourceTag = usedRealData ? ' · REAL Angel One 5-min data' : ((strategyNeedsIntraday(strategy)) ? ' · synthetic data (no broker connection)' : '');
     if (pl) pl.textContent = ticker + ' · ' + (periodLabels[period]||period) + ' · ' + (strategy==='jarvis'?'JARVIS Standard':strategy) + dataSourceTag;
 
     // The trade log title used to always say "SIMULATED" regardless of
@@ -16057,7 +16092,7 @@ function runBacktest() {
   // data — it needs Angel One's actual 5-min candles to mean anything
   // (comparing against a live TradingView chart). Every other strategy
   // here still runs on synthetic daily data, same as before.
-  if ((strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') && ticker === 'NIFTY') {
+  if ((strategyNeedsIntraday(strategy)) && ticker === 'NIFTY') {
     var tm = (typeof TM !== 'undefined') ? TM.NIFTY50 : null;
     var connected = typeof creds !== 'undefined' && creds.jwt && creds.connected;
     if (!tm || !connected) {
@@ -16098,8 +16133,8 @@ function runBacktest() {
   }
 
   setTimeout(function(){
-    var data = (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
-    finish(data, false, (strategy === 'trendline' || strategy === 'trendline_confirmed' || strategy === 'quality_breakout' || strategy === 'nifty_pro_v15' || strategy === 'nifty_pro_v2' || strategy === 'orb_vwap') ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
+    var data = (strategyNeedsIntraday(strategy)) ? btGenerateIntradayPriceData(ticker, days) : btGeneratePriceData(ticker, days);
+    finish(data, false, (strategyNeedsIntraday(strategy)) ? '⚠ Only NIFTY supports real-data backtesting currently — showing synthetic data for ' + ticker + '.' : null);
   }, 2800);
 }
 
@@ -17161,8 +17196,20 @@ function ptGetLivePrice(t) {
 //      to lock in PT_TRAIL_LOCK_PCT of the peak gain. SL only ever moves up,
 //      never down, and never above target.
 //   3. Auto-closes the trade the moment live price hits target or SL.
-var PT_TRAIL_ARM_PCT  = 0.25; // must be 25% of the way to target before SL starts trailing
-var PT_TRAIL_LOCK_PCT = 0.60; // lock in 60% of the peak gain as the new SL floor
+// v1.1 recalibration (4 Aug 2026): analysis of 46 real paper trades showed
+// TRAIL SL exits (48% of all trades) averaged only +4.5% P&L, while the
+// designed target was typically +18-25%+, and only 3/46 trades (6.5%) ever
+// reached AUTO TARGET. Meanwhile AUTO SL losses ran the full designed stop
+// distance (avg -14.4%). That asymmetry — winners capped early, losers run
+// full length — was erasing most of the edge from a genuinely decent 54%
+// win rate. Arming later and locking more of the peak gives winners more
+// room to reach a meaningful fraction of the actual target before an
+// ordinary pullback (common in noisy 5-min option premiums) exits the
+// trade. Re-check this against a fresh batch of trades after the change —
+// this is a calibration adjustment based on one month of data, not a
+// guarantee.
+var PT_TRAIL_ARM_PCT  = 0.40; // must be 40% of the way to target before SL starts trailing (was 0.25)
+var PT_TRAIL_LOCK_PCT = 0.75; // lock in 75% of the peak gain as the new SL floor (was 0.60)
 function ptCheckAutoExits() {
   if (!PT_PORTFOLIO) return;
   var closedAny = false;
@@ -17218,7 +17265,11 @@ function ptStrategyLabel(key) {
     orb_vwap: 'ORB + VWAP',
     oi_buildup: 'OI Buildup', pipeline_test: 'Pipeline Test (removed)', manual: 'Manual', auto: 'Auto (unspecified)'
   };
-  return labels[key] || key || 'Manual';
+  if (labels[key]) return labels[key];
+  // Fallback to the registry for any strategy added later without custom
+  // wording added here — avoids silently showing a raw key string.
+  if (typeof STRATEGY_REGISTRY !== 'undefined' && STRATEGY_REGISTRY[key]) return STRATEGY_REGISTRY[key].label;
+  return key || 'Manual';
 }
 
 var PT_STRATEGY_FILTER = localStorage.getItem('jarvis_pt_strat_filter') || 'all';
@@ -19447,8 +19498,39 @@ async function ptCloudLoad() {
 var ASE_ON = false;
 var ASE_STRATEGY = 'pcr_ema_vix'; // primary/display strategy — ASE_STRATEGIES[0]; drives chart overlay + fallback labeling
 var ASE_STRATEGIES = ['pcr_ema_vix']; // multi-select: every strategy in this list is evaluated independently, every cycle
-var ASE_VALID_STRATEGIES = ['pcr_ema_vix', 'trendline', 'trendline_confirmed', 'quality_breakout', 'nifty_pro_v15', 'nifty_pro_v2', 'orb_vwap', 'oi_buildup'];
-var ASE_STRATEGY_LABELS = { pcr_ema_vix:'PCR + EMA21 + VIX', trendline:'Trendline Breakout (5-min)', trendline_confirmed:'Trendline + PCR/EMA Confirmation', quality_breakout:'Quality Breakout (Regime-Filtered)', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)', orb_vwap:'ORB + VWAP (Opening Range Breakout)' };
+// ══════════════════════════════════════════════════════════════════
+//  STRATEGY_REGISTRY — single source of truth (added 4 Aug 2026)
+//  Before this, adding one strategy meant touching ~9 separate scattered
+//  lists by hand (ASE_VALID_STRATEGIES, ASE_STRATEGY_LABELS,
+//  ptStrategyLabel, stratLabels, ROLLUP_STRAT_LABELS, the backtest
+//  dispatcher, the intraday-data-gate condition ×4, plus HTML dropdowns/
+//  checkboxes) — and missing just one of them is exactly what caused two
+//  separate real bugs when ORB + VWAP was added this session (the
+//  checkbox silently no-op'ing because ASE_VALID_STRATEGIES was missed,
+//  and the backtest silently using the wrong data shape because the
+//  intraday-data-gate was missed). The lists below that were the actual
+//  source of those two bugs — ASE_VALID_STRATEGIES and the intraday gate
+//  — now derive from this object instead of being hand-duplicated, so
+//  adding strategy #9 only requires one new entry here plus the HTML
+//  dropdown/checkbox markup (which still needs a visible UI element
+//  either way — that part isn't eliminated, just the invisible list
+//  drift is).
+// ══════════════════════════════════════════════════════════════════
+var STRATEGY_REGISTRY = {
+  pcr_ema_vix:          { label: 'PCR + EMA21 + VIX',                                  shortLabel: 'PCR+EMA+VIX',   needsIntraday: false },
+  trendline:            { label: 'Trendline Breakout (5-min)',                         shortLabel: 'Trendline',     needsIntraday: true  },
+  trendline_confirmed:  { label: 'Trendline + PCR/EMA Confirmation',                   shortLabel: 'Trend+Confirm', needsIntraday: true  },
+  quality_breakout:     { label: 'Quality Breakout (Regime-Filtered)',                 shortLabel: 'Quality BO',    needsIntraday: true  },
+  nifty_pro_v15:        { label: 'Nifty Pro V1.5',                                     shortLabel: 'Nifty Pro V1.5',needsIntraday: true  },
+  nifty_pro_v2:         { label: 'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)',           shortLabel: 'Nifty Pro V2',  needsIntraday: true  },
+  orb_vwap:             { label: 'ORB + VWAP (Opening Range Breakout)',                shortLabel: 'ORB+VWAP',      needsIntraday: true  },
+  oi_buildup:           { label: 'OI Buildup (Long/Short, v1)',                        shortLabel: 'OI Buildup',    needsIntraday: false }
+};
+function strategyNeedsIntraday(key) { return !!(STRATEGY_REGISTRY[key] && STRATEGY_REGISTRY[key].needsIntraday); }
+
+var ASE_VALID_STRATEGIES = Object.keys(STRATEGY_REGISTRY);
+var ASE_STRATEGY_LABELS = {};
+Object.keys(STRATEGY_REGISTRY).forEach(function(k){ ASE_STRATEGY_LABELS[k] = STRATEGY_REGISTRY[k].label; });
 // De-dupe: avoid re-logging same signal repeatedly. Keyed per-strategy (not a
 // single shared value) so that with 2-3 strategies active at once, one
 // strategy logging a trade can't clear/overwrite another strategy's de-dupe
@@ -19586,8 +19668,9 @@ function aseToggle() {
     if (typeof ensureChainTicker === 'function') ensureChainTicker();
     if (typeof buildOptionChain === 'function') buildOptionChain();
     if (typeof ocRecCloudPullMerge === 'function') ocRecCloudPullMerge((typeof OC_STATE !== 'undefined' && OC_STATE.index) || 'NIFTY').catch(function(e){console.warn('[ocRecCloudPullMerge]',e);});
+    jarvisRequestWakeLock();
   }
-  else aseLog('Engine turned OFF.');
+  else { aseLog('Engine turned OFF.'); jarvisReleaseWakeLock(); }
 }
 
 function aseUpdateToggleUI() {
@@ -21112,6 +21195,121 @@ function ipoInit() {
   ipoShowTab('open');
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  STRATEGY HEALTH panel
+//  Live version of the manual trade-history analysis done 4 Aug 2026 —
+//  computed fresh from PT_PORTFOLIO.trades every time the tab opens, so
+//  a leak like the trailing-SL one (winners capped at +4.5% vs a
+//  designed +18-25%+ target) shows up on a dashboard instead of
+//  requiring a manual backup-file review to catch.
+// ══════════════════════════════════════════════════════════════════
+function shEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function shComputeStats() {
+  if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO || !PT_PORTFOLIO.trades) return {};
+  var closed = PT_PORTFOLIO.trades.filter(function(t){ return t.status === 'PROFIT' || t.status === 'LOSS'; });
+  var byStrat = {};
+  closed.forEach(function(t){
+    var key = t.strategy || 'manual';
+    if (!byStrat[key]) byStrat[key] = { trades: [] };
+    byStrat[key].trades.push(t);
+  });
+
+  var out = {};
+  Object.keys(byStrat).forEach(function(key){
+    var trades = byStrat[key].trades;
+    var wins = trades.filter(function(t){ return (t.net||0) > 0; });
+    var losses = trades.filter(function(t){ return (t.net||0) <= 0; });
+    var net = trades.reduce(function(a,t){ return a + (t.net||0); }, 0);
+    var winRate = trades.length ? wins.length/trades.length : 0;
+    var avgWinPct = wins.length ? wins.reduce(function(a,t){ return a + parseFloat(t.pnlPct||0); }, 0)/wins.length : 0;
+    var avgLossPct = losses.length ? losses.reduce(function(a,t){ return a + parseFloat(t.pnlPct||0); }, 0)/losses.length : 0;
+    var expectancyPct = (winRate*avgWinPct) + ((1-winRate)*avgLossPct);
+
+    // Designed target % for winning trades (buy→target distance), to
+    // compare against what was actually realized (avgWinPct above).
+    var designedPcts = wins.filter(function(t){ return t.target && t.buy; })
+      .map(function(t){ return (t.target - t.buy)/t.buy*100; });
+    var avgDesignedPct = designedPcts.length ? designedPcts.reduce(function(a,b){return a+b;},0)/designedPcts.length : null;
+
+    var byExitReason = {};
+    trades.forEach(function(t){
+      var r = t.autoExitReason || (t.status === 'PROFIT' ? '(manual close, profit)' : '(manual close, loss)');
+      if (!byExitReason[r]) byExitReason[r] = { count:0, net:0 };
+      byExitReason[r].count++;
+      byExitReason[r].net += (t.net||0);
+    });
+
+    out[key] = {
+      count: trades.length, net: net, winRate: winRate,
+      avgWinPct: avgWinPct, avgLossPct: avgLossPct, expectancyPct: expectancyPct,
+      avgDesignedPct: avgDesignedPct, byExitReason: byExitReason
+    };
+  });
+  return out;
+}
+
+function shBar(label, pct, cls) {
+  var w = Math.min(100, Math.max(2, Math.abs(pct)));
+  return '<div class="sh-bar-row">'+
+    '<div class="sh-bar-label">'+shEsc(label)+'</div>'+
+    '<div class="sh-bar-track"><div class="sh-bar-fill" style="width:'+w+'%;background:'+(cls==='pos'?'var(--g)':cls==='neg'?'var(--r)':'var(--w)')+'"></div></div>'+
+    '<div class="sh-bar-val">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</div>'+
+  '</div>';
+}
+
+function shRender() {
+  var grid = document.getElementById('shGrid');
+  if (!grid) return;
+  var stats = shComputeStats();
+  var keys = Object.keys(stats);
+  if (!keys.length) {
+    grid.innerHTML = '<div class="sh-empty">No closed paper trades yet — this panel fills in once the Auto Signal Engine (or manual paper trades) have some closed history to analyze.</div>';
+    return;
+  }
+  // Sort by trade count descending — most-active strategies first.
+  keys.sort(function(a,b){ return stats[b].count - stats[a].count; });
+
+  var html = keys.map(function(key){
+    var s = stats[key];
+    var label = (typeof ptStrategyLabel === 'function') ? ptStrategyLabel(key) : key;
+    var pnlCls = s.net > 0 ? 'pos' : s.net < 0 ? 'neg' : 'flat';
+
+    var gapFlag = '';
+    if (s.avgDesignedPct != null && s.avgDesignedPct > 0 && s.avgWinPct > 0) {
+      var capturedRatio = s.avgWinPct / s.avgDesignedPct;
+      if (capturedRatio < 0.4) {
+        gapFlag = '<div class="sh-flag leak"><b>⚠ Winners capped early:</b> realized avg win (+'+s.avgWinPct.toFixed(1)+'%) is only '+Math.round(capturedRatio*100)+'% of the designed target (+'+s.avgDesignedPct.toFixed(1)+'%) — likely the trailing SL exiting before the trade reaches meaningful profit.</div>';
+      } else if (capturedRatio >= 0.7) {
+        gapFlag = '<div class="sh-flag ok"><b>✓ Capturing most of design:</b> realized avg win (+'+s.avgWinPct.toFixed(1)+'%) is '+Math.round(capturedRatio*100)+'% of the designed target (+'+s.avgDesignedPct.toFixed(1)+'%).</div>';
+      }
+    }
+    var thinFlag = s.count < 10 ? '<div class="sh-flag thin"><b>Thin sample:</b> only '+s.count+' closed trade'+(s.count===1?'':'s')+' — treat win rate / expectancy as provisional until there\'s more history.</div>' : '';
+
+    var exitRows = Object.keys(s.byExitReason).sort(function(a,b){ return s.byExitReason[b].count - s.byExitReason[a].count; })
+      .map(function(r){
+        var e = s.byExitReason[r];
+        return '<div style="display:flex;justify-content:space-between;font-family:\'Share Tech Mono\',monospace;font-size:9.5px;color:var(--dim);padding:3px 0;border-top:1px solid var(--border)">'+
+          '<span>'+shEsc(r)+' × '+e.count+'</span><span style="color:'+(e.net>=0?'var(--g)':'var(--r)')+'">'+(e.net>=0?'+':'')+'₹'+Math.round(e.net)+'</span></div>';
+      }).join('');
+
+    return '<div class="sh-card'+(gapFlag.indexOf('leak')>-1?' warn':'')+'">'+
+      '<div class="sh-card-top"><div><div class="sh-name">'+shEsc(label)+'</div><div class="sh-sub">'+s.count+' closed trade'+(s.count===1?'':'s')+'</div></div>'+
+      '<div class="sh-pnl '+pnlCls+'">'+(s.net>=0?'+':'')+'₹'+Math.round(s.net)+'</div></div>'+
+      '<div class="sh-stat-row">'+
+        '<div class="sh-stat"><div class="l">WIN RATE</div><div class="v">'+(s.winRate*100).toFixed(1)+'%</div></div>'+
+        '<div class="sh-stat"><div class="l">EXPECTANCY/TRADE</div><div class="v" style="color:'+(s.expectancyPct>=0?'var(--g)':'var(--r)')+'">'+(s.expectancyPct>=0?'+':'')+s.expectancyPct.toFixed(2)+'%</div></div>'+
+      '</div>'+
+      shBar('Avg Win', s.avgWinPct, 'pos') + shBar('Avg Loss', s.avgLossPct, 'neg') +
+      (s.avgDesignedPct != null ? shBar('Designed Target', s.avgDesignedPct, 'mid') : '') +
+      '<div style="margin-top:8px">'+exitRows+'</div>'+
+      gapFlag + thinFlag +
+    '</div>';
+  }).join('');
+
+  grid.innerHTML = html;
+}
+
 function ptSet2(id, val, color) {
   var el = document.getElementById(id);
   if (!el) return;
@@ -21270,7 +21468,7 @@ function srExportJSON() {
     ind.id = 'mkt-indicator';
     ind.style.cssText = 'display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--ov3);'
       +'border-radius:6px;font-family:Share Tech Mono;font-size:9px;white-space:nowrap;margin-left:auto;border:1px solid #1a2840;cursor:pointer';
-    ind.title = 'NSE Market Hours: 9:15 AM - 3:30 PM IST';
+    ind.title = 'NSE Market Hours: 9:15 AM - 3:40 PM IST (F&O close extended 3 Aug 2026)';
     nav.appendChild(ind);
     updateIndicator();
     setInterval(updateIndicator, 30000);
@@ -21551,6 +21749,24 @@ window.jarvisPopupFallback = function(html, title){
   <div class="ipo-grid" id="ipoGridUpcoming" style="display:none"></div>
 
   <div class="ipo-foot">DATA SNAPSHOT — VERIFY LIVE STATUS &amp; GMP ON NSE.COM / BSEINDIA.COM OR A LIVE GMP TRACKER BEFORE APPLYING</div>
+</div>
+
+<div class="page" id="page-strathealth">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div>
+      <div style="font-family:Orbitron;font-weight:900;font-size:18px;letter-spacing:2px;color:var(--txt);display:flex;align-items:center;gap:9px">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--a);box-shadow:0 0 8px var(--a);display:inline-block"></span> STRATEGY HEALTH
+      </div>
+      <div style="font-family:'Share Tech Mono';font-size:10px;color:var(--dim);letter-spacing:1px;margin-top:3px">WIN RATE · REALIZED VS DESIGNED R:R · EXIT BREAKDOWN — PER STRATEGY, PAPER TRADING</div>
+    </div>
+    <button onclick="shRender()" style="font-family:'Share Tech Mono';font-size:9px;color:var(--a);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);padding:6px 12px;border-radius:20px;letter-spacing:1px;cursor:pointer">⟳ REFRESH</button>
+  </div>
+
+  <div style="padding:10px 14px;background:var(--ov3);border:1px solid var(--border);border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--dim);line-height:1.6;margin-bottom:14px">
+    <b style="color:var(--txt)">What "realized vs designed" means:</b> for winning trades, this compares the average % gain actually captured against the average % gain the trade was designed to reach (its target). A big gap between the two is the signature of a trailing stop cutting winners short before they get near target — exactly what the Aug 2026 trade-history review found (trail-stopped wins averaged +4.5% against designed targets of +18-25%+).
+  </div>
+
+  <div class="sh-grid" id="shGrid"></div>
 </div>
 
 <div class="page" id="page-dashv2">
@@ -23272,7 +23488,10 @@ function jarvisInMarketHours() {
   var day = ist.getDay();
   if (day === 0 || day === 6) return false; // weekend
   var mins = ist.getHours()*60 + ist.getMinutes();
-  return mins >= (9*60+15) && mins <= (15*60+30);
+  // NSE F&O close moved 15:30 → 15:40 effective 3 Aug 2026 — updated so
+  // real signals in the last 10 min of the (now-extended) session aren't
+  // wrongly suppressed as "outside market hours."
+  return mins >= (9*60+15) && mins <= (15*60+40);
 }
 
 /* ─── Notification history (last 20) ─── */
@@ -23496,6 +23715,42 @@ function setupFOCallNotifUI() {
 setTimeout(setupFOCallNotifUI, 1500);
 
 /* ═══════════════════════════════════════════════════════════
+   SCREEN WAKE LOCK
+   Keeps the screen from dimming/locking while the Auto Signal Engine
+   is ON and the tab is in the foreground — addresses the most common
+   failure mode (screen times out from inactivity while JARVIS is still
+   the active app). This does NOT help if you deliberately switch to a
+   different app/tab — the OS controls background execution at that
+   point, not this page. Browsers force-release the lock whenever the
+   tab is hidden, so it's re-acquired on every visibilitychange back to
+   visible. Feature-detected — silently no-ops on browsers without
+   support (e.g. desktop Firefox as of this writing) rather than erroring.
+═══════════════════════════════════════════════════════════ */
+var JARVIS_WAKE_LOCK = null;
+async function jarvisRequestWakeLock() {
+  if (!('wakeLock' in navigator)) { console.warn('[WakeLock] Not supported on this browser — screen may dim/lock during long idle periods.'); return; }
+  try {
+    JARVIS_WAKE_LOCK = await navigator.wakeLock.request('screen');
+    JARVIS_WAKE_LOCK.addEventListener('release', function(){ console.log('[WakeLock] released (tab hidden, or OS reclaimed it).'); });
+    console.log('[WakeLock] acquired — screen will stay awake while this tab is in the foreground.');
+    if (typeof aseLog === 'function') aseLog('🔆 Screen wake lock active — screen won\'t dim while this tab stays in the foreground.');
+  } catch (e) {
+    console.warn('[WakeLock] request failed:', e.message); // common if tab isn't visible at request time
+  }
+}
+function jarvisReleaseWakeLock() {
+  if (JARVIS_WAKE_LOCK) { try { JARVIS_WAKE_LOCK.release(); } catch(e) {} JARVIS_WAKE_LOCK = null; }
+}
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible' && typeof ASE_ON !== 'undefined' && ASE_ON && !JARVIS_WAKE_LOCK) {
+    jarvisRequestWakeLock();
+  }
+});
+// Re-acquire on load if the engine was already ON from a previous session
+// (ASE_ON is restored from localStorage earlier in the script).
+setTimeout(function(){ if (typeof ASE_ON !== 'undefined' && ASE_ON) jarvisRequestWakeLock(); }, 2000);
+
+/* ═══════════════════════════════════════════════════════════
    ENGINE HEALTH WATCHDOG
    aseEvaluate() stamps ASE_LAST_HEARTBEAT_TS every time it runs
    (every ~15s while the engine is on). If that stamp goes stale
@@ -23565,8 +23820,9 @@ setTimeout(jarvisCheckExpiryReminder, 8000);
 
 /* ═══════════════════════════════════════════════════════════
    EOD SUMMARY — push notification + PDF sent to Telegram
-   Fires once, shortly after 15:30 IST on trading days, for
-   today's Auto Signal Engine trades only.
+   Fires once, shortly after 15:40 IST on trading days (NSE F&O close
+   moved 15:30→15:40 effective 3 Aug 2026), for today's Auto Signal
+   Engine trades only.
 ═══════════════════════════════════════════════════════════ */
 function jarvisCheckEodSummary() {
   if (typeof PT_PORTFOLIO === 'undefined' || !PT_PORTFOLIO) return;
@@ -23574,7 +23830,7 @@ function jarvisCheckEodSummary() {
   var day = ist.getDay();
   if (day === 0 || day === 6) return;
   var mins = ist.getHours()*60 + ist.getMinutes();
-  if (mins < (15*60+31)) return;
+  if (mins < (15*60+41)) return;
   var todayKey = ist.toLocaleDateString('en-CA');
   if (JARVIS_NOTIF_SETTINGS.lastEodDate === todayKey) return;
   JARVIS_NOTIF_SETTINGS.lastEodDate = todayKey;
@@ -23616,7 +23872,7 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
   doc.setTextColor(TXT); doc.setFontSize(11);
   doc.text('END-OF-DAY F&O SUMMARY', W-x, y+5, { align: 'right' });
   doc.setTextColor(DIM); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text(dayKey + '  ·  NSE Session Closed 15:30 IST', W-x, y+10, { align: 'right' });
+  doc.text(dayKey + '  ·  NSE F&O Session Closed 15:40 IST', W-x, y+10, { align: 'right' });
 
   y += 20;
   var stats = [['CALLS', String(all.length)], ['WINS', String(wins.length)], ['LOSSES', String(losses.length)], ['OPEN', String(open.length)], ['NET P&L', (net>=0?'+':'') + '₹' + Math.round(net)]];
@@ -23646,7 +23902,8 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
   y += rowH;
 
   doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
-  var stratLabels = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', orb_vwap:'ORB+VWAP', oi_buildup:'OI Buildup' };
+  var stratLabels = {};
+  Object.keys(STRATEGY_REGISTRY).forEach(function(k){ stratLabels[k] = STRATEGY_REGISTRY[k].shortLabel; });
   all.slice(0, 22).forEach(function(t, ri){
     if (y > 275) { doc.addPage(); doc.setFillColor(BG); doc.rect(0,0,W,297,'F'); y = 18; }
     doc.setFillColor(ri % 2 === 0 ? PANEL : '#0f1928'); doc.rect(x, y, W-2*x, rowH, 'F');
@@ -23685,7 +23942,8 @@ function jarvisBuildEodPdfBlob(all, wins, losses, open, net, dayKey) {
    trend table and a strategy breakdown, so the trajectory is
    visible instead of just one noisy day at a time.
 ═══════════════════════════════════════════════════════════ */
-var ROLLUP_STRAT_LABELS = { pcr_ema_vix:'PCR+EMA+VIX', trendline:'Trendline', trendline_confirmed:'Trend+Confirm', quality_breakout:'Quality BO', nifty_pro_v15:'Nifty Pro V1.5', nifty_pro_v2:'Nifty Pro V2', orb_vwap:'ORB+VWAP', oi_buildup:'OI Buildup', manual:'Manual' };
+var ROLLUP_STRAT_LABELS = { manual:'Manual' };
+Object.keys(STRATEGY_REGISTRY).forEach(function(k){ ROLLUP_STRAT_LABELS[k] = STRATEGY_REGISTRY[k].shortLabel; });
 
 function jarvisIsLastWeekdayOfMonth(d) {
   var next = new Date(d);
