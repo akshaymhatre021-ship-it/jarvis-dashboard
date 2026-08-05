@@ -19790,6 +19790,63 @@ function aseEvaluate() {
 // and draws them on the chart. Shared by both strategies so the chart
 // updates live no matter which one is active, without duplicate fetches.
 var ASE_LAST_CANDLES = null;
+
+// ══════════════════════════════════════════════════════════════════
+//  LIVE (FORMING) CANDLE — early signal detection (4 Aug 2026)
+//  ASE_LAST_CANDLES only ever contains CLOSED 5-min candles — the
+//  broker's historical-candle endpoint doesn't return the bar that's
+//  still forming, so a strategy could only ever react up to 5 minutes
+//  after a real breakout actually happened.
+//
+//  This builds ONE synthetic "live" bar from real-time LTP ticks since
+//  the current 5-min bucket started. Evaluators check it as an
+//  ADDITIONAL, LATER check — only after scanning real closed candles
+//  (via aseCandlesToCheck) finds nothing — so a noisy live tick can
+//  never pre-empt a cleaner already-closed-bar signal; it only fills
+//  the gap while waiting for the next real candle to close.
+//
+//  Deliberately NOT changing the underlying candle interval or any
+//  strategy's EMA/RSI/ADX/HTF bar-count calibration — those all stay
+//  exactly as validated. This only adds an earlier look at the bar
+//  that's currently forming, using the same signal functions as
+//  everything else.
+//
+//  Known, honest limitation: this synthetic bar has no real volume —
+//  index spot ticks don't carry a meaningful per-tick volume the way
+//  an option contract's LTP feed does. Strategies with a hard volume-
+//  confirm gate (ORB, Nifty Pro V2) will simply never fire early on
+//  this synthetic bar — they gracefully fall back to waiting for the
+//  real closed candle instead of firing on an assumed volume pass.
+// ══════════════════════════════════════════════════════════════════
+var ASE_LIVE_BAR = null;
+
+function aseBuildLiveBar(closedCandles) {
+  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
+  if (!ni || !ni.ltp || !closedCandles || !closedCandles.length) return null;
+
+  var lastClosed = closedCandles[closedCandles.length - 1];
+  var lastTimeStr = String(lastClosed.time || '');
+  var ist = (typeof getIST === 'function') ? getIST() : new Date();
+  var bucketMin = Math.floor(ist.getMinutes()/5)*5;
+  var pad = function(n){ return (n<10?'0':'')+n; };
+  var bucketKey = ist.getFullYear()+'-'+pad(ist.getMonth()+1)+'-'+pad(ist.getDate())+' '+pad(ist.getHours())+':'+pad(bucketMin);
+
+  // If the "live" bucket is actually already the last CLOSED candle
+  // (can happen right at/just after rollover, before the next historical
+  // fetch catches up), there's nothing to synthesize — the real candle
+  // already covers this slot.
+  if (lastTimeStr.indexOf(bucketKey) === 0) { ASE_LIVE_BAR = null; return null; }
+
+  if (!ASE_LIVE_BAR || ASE_LIVE_BAR.time !== bucketKey) {
+    ASE_LIVE_BAR = { time: bucketKey, open: ni.ltp, high: ni.ltp, low: ni.ltp, close: ni.ltp, vol: 0, isLive: true };
+  } else {
+    ASE_LIVE_BAR.high = Math.max(ASE_LIVE_BAR.high, ni.ltp);
+    ASE_LIVE_BAR.low  = Math.min(ASE_LIVE_BAR.low, ni.ltp);
+    ASE_LIVE_BAR.close = ni.ltp;
+  }
+  return ASE_LIVE_BAR;
+}
+
 // Price-scale snapshot from the last full chart draw (set inside
 // aseDrawTrendlineChart). Used by aseDrawLiveOverlay to plot a fast-moving
 // live-price line without re-fetching candles from the broker or redrawing
@@ -19983,12 +20040,28 @@ async function aseEvaluateTrendline() {
     if (b) { breakout = b; breakoutIdx = idx; break; }
   }
 
+  // Early check: if no closed-candle breakout, also check the currently
+  // forming bar via live tick data — catches a real breakout as it
+  // happens instead of waiting up to 5 min for the candle to close.
+  var isLiveFireTL = false;
+  if (!breakout) {
+    var liveBarTL = aseBuildLiveBar(candles);
+    if (liveBarTL) {
+      var candlesLiveTL = candles.concat([liveBarTL]);
+      var liveIdxTL = candlesLiveTL.length - 1;
+      var liveBreakoutTL = checkTrendlineBreakout(candlesLiveTL.slice(0, liveIdxTL), candlesLiveTL[liveIdxTL-1].close, candlesLiveTL[liveIdxTL].close);
+      if (liveBreakoutTL) { breakout = liveBreakoutTL; breakoutIdx = liveIdxTL; candles = candlesLiveTL; isLiveFireTL = true; }
+    }
+  }
+
   if (!breakout) {
     ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-tl-verdict', 'NO BREAKOUT', 'var(--dim)');
     return;
   }
-  if (breakoutIdx !== candles.length - 1) {
+  if (isLiveFireTL) {
+    aseLog('⚡ Trendline: live-tick breakout on the forming candle, ahead of its close.');
+  } else if (breakoutIdx !== candles.length - 1) {
     aseLog('📼 Catch-up: found a real Trendline breakout on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
   }
 
@@ -20018,7 +20091,7 @@ async function aseEvaluateTrendline() {
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'trendline',
     signalType: 'BUY ' + breakout.type,
-    reasons: 'Trendline ' + breakout.line + ' · SL line @ ' + fN(breakout.slLevel,1) + ' · 5-min, 14-bar pivot'
+    reasons: 'Trendline ' + breakout.line + ' · SL line @ ' + fN(breakout.slLevel,1) + ' · 5-min, 14-bar pivot' + (isLiveFireTL ? ' · LIVE TICK (forming candle, ahead of close)' : '')
   });
 
   ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
@@ -20092,6 +20165,19 @@ async function aseEvaluateTrendlineConfirmed() {
     if (b) { breakout = b; breakoutIdx = idx; break; }
   }
 
+  // Early check: if no closed-candle breakout, also check the currently
+  // forming bar via live tick data.
+  var isLiveFireCF = false;
+  if (!breakout) {
+    var liveBarCF = aseBuildLiveBar(candles);
+    if (liveBarCF) {
+      var candlesLiveCF = candles.concat([liveBarCF]);
+      var liveIdxCF = candlesLiveCF.length - 1;
+      var liveBreakoutCF = checkTrendlineBreakout(candlesLiveCF.slice(0, liveIdxCF), candlesLiveCF[liveIdxCF-1].close, candlesLiveCF[liveIdxCF].close, BT_CONFIRMED_MIN_STRENGTH_ATR);
+      if (liveBreakoutCF) { breakout = liveBreakoutCF; breakoutIdx = liveIdxCF; candles = candlesLiveCF; isLiveFireCF = true; }
+    }
+  }
+
   if (!breakout) {
     ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-cf-breakout', 'none', 'var(--dim)');
@@ -20099,7 +20185,9 @@ async function aseEvaluateTrendlineConfirmed() {
     ptSet2('ase-cf-verdict', 'NO BREAKOUT', 'var(--dim)');
     return;
   }
-  if (breakoutIdx !== candles.length - 1) {
+  if (isLiveFireCF) {
+    aseLog('⚡ Trendline+Confirm: live-tick breakout on the forming candle, ahead of its close.');
+  } else if (breakoutIdx !== candles.length - 1) {
     aseLog('📼 Catch-up: found a real Trendline+Confirm breakout on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
   }
 
@@ -20143,7 +20231,7 @@ async function aseEvaluateTrendlineConfirmed() {
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'trendline_confirmed',
     signalType: 'BUY ' + breakout.type, pcr: pcr,
-    reasons: 'Trendline ' + breakout.line + ' CONFIRMED (' + confirmReason + ') · SL line @ ' + fN(breakout.slLevel,1)
+    reasons: 'Trendline ' + breakout.line + ' CONFIRMED (' + confirmReason + ') · SL line @ ' + fN(breakout.slLevel,1) + (isLiveFireCF ? ' · LIVE TICK (forming candle, ahead of close)' : '')
   });
 
   ASE_CF_LAST_CANDLE_TIME = latestCandleTime;
@@ -20231,6 +20319,19 @@ async function aseEvaluateQualityBreakout() {
     if (b) { breakout = b; breakoutIdx = idx; break; }
   }
 
+  // Early check: if no closed-candle breakout, also check the currently
+  // forming bar via live tick data.
+  var isLiveFireQB = false;
+  if (!breakout) {
+    var liveBarQB = aseBuildLiveBar(candles);
+    if (liveBarQB) {
+      var candlesLiveQB = candles.concat([liveBarQB]);
+      var liveIdxQB = candlesLiveQB.length - 1;
+      var liveBreakoutQB = checkTrendlineBreakout(candlesLiveQB.slice(0, liveIdxQB), candlesLiveQB[liveIdxQB-1].close, candlesLiveQB[liveIdxQB].close, BT_CONFIRMED_MIN_STRENGTH_ATR);
+      if (liveBreakoutQB) { breakout = liveBreakoutQB; breakoutIdx = liveIdxQB; candles = candlesLiveQB; isLiveFireQB = true; }
+    }
+  }
+
   if (!breakout) {
     ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-qb-breakout', 'none', 'var(--dim)');
@@ -20241,8 +20342,12 @@ async function aseEvaluateQualityBreakout() {
 
   // If we're catching up on an earlier candle, recompute ADX/regime as of
   // THAT candle's timing (matching backtest's history-up-to-that-point
-  // convention) rather than trusting the display value for "now".
-  if (breakoutIdx !== candles.length - 1) {
+  // convention) rather than trusting the display value for "now". For a
+  // live-tick fire, ADX as of "now" (already computed above) is correct
+  // as-is — the forming bar IS now.
+  if (isLiveFireQB) {
+    aseLog('⚡ Quality Breakout: live-tick breakout on the forming candle, ahead of its close.');
+  } else if (breakoutIdx !== candles.length - 1) {
     aseLog('📼 Catch-up: found a real Quality Breakout setup on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
     adxRes = calcADX(candles.slice(0, breakoutIdx), 14);
     trending = adxRes && adxRes.adx > QB_ADX_TREND_THRESHOLD;
@@ -20294,7 +20399,7 @@ async function aseEvaluateQualityBreakout() {
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'quality_breakout',
     signalType: 'BUY ' + breakout.type,
-    reasons: 'QualityBreakout ' + breakout.line + ' · ADX ' + adxRes.adx.toFixed(1) + ' (trending) · follow-through confirmed · R:R 1:1.75 · SL line @ ' + fN(breakout.slLevel,1)
+    reasons: 'QualityBreakout ' + breakout.line + ' · ADX ' + adxRes.adx.toFixed(1) + ' (trending) · follow-through confirmed · R:R 1:1.75 · SL line @ ' + fN(breakout.slLevel,1) + (isLiveFireQB ? ' · LIVE TICK (forming candle, ahead of close)' : '')
   });
 
   ASE_QB_LAST_CANDLE_TIME = latestCandleTime;
@@ -20393,6 +20498,25 @@ async function aseEvaluateNiftyProV15() {
     var s = npComputeSignal(candles, timeStrings, vwapSeries, htf50Series, idx);
     if (s) { sig = s; i = idx; break; } // fire on the earliest qualifying bar in the catch-up window
   }
+  // Early check: if no closed-candle signal, also check the currently
+  // forming bar via live tick data — same mechanism as ORB above.
+  var isLiveFireNP = false;
+  if (!sig) {
+    var liveBarNP = aseBuildLiveBar(candles);
+    if (liveBarNP) {
+      var candlesLiveNP = candles.concat([liveBarNP]);
+      var timeStringsLiveNP = candlesLiveNP.map(function(c){ return String(c.time).slice(11,16); });
+      var dayKeysLiveNP = candlesLiveNP.map(function(c){ return String(c.time).slice(0,10); });
+      var vwapSeriesLiveNP = calcSessionVWAP(candlesLiveNP, dayKeysLiveNP);
+      var htf50SeriesLiveNP = npAlignHTFEma(candlesLiveNP);
+      var liveIdxNP = candlesLiveNP.length - 1;
+      if (htf50SeriesLiveNP[liveIdxNP] != null) {
+        var liveSigNP = npComputeSignal(candlesLiveNP, timeStringsLiveNP, vwapSeriesLiveNP, htf50SeriesLiveNP, liveIdxNP);
+        if (liveSigNP) { sig = liveSigNP; i = liveIdxNP; candles = candlesLiveNP; isLiveFireNP = true; }
+      }
+    }
+  }
+
   if (!sig) {
     ASE_NP_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np-verdict', 'NO SIGNAL', 'var(--dim)');
@@ -20422,10 +20546,11 @@ async function aseEvaluateNiftyProV15() {
   var instr  = 'NIFTY ' + strike + sig.type + ' ' + getNiftyExpiry();
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
+  var extraNoteNP = isLiveFireNP ? ' · LIVE TICK (forming candle, ahead of close)' : (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '');
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'nifty_pro_v15',
     signalType: 'BUY ' + sig.type,
-    reasons: 'NiftyProV15 · EMA20/50+VWAP+RSI+15mHTF aligned · R:R 1:2 · index SL @ ' + fN(sig.sl,1) + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
+    reasons: 'NiftyProV15 · EMA20/50+VWAP+RSI+15mHTF aligned · R:R 1:2 · index SL @ ' + fN(sig.sl,1) + extraNoteNP
   });
 
 
@@ -20622,6 +20747,29 @@ async function aseEvaluateNiftyProV2() {
     var s = npv2ComputeSignal(candles, timeStrings, vwapSeries, htf50Series, idx);
     if (s) { sig = s; i = idx; break; }
   }
+  // Early check: if no closed-candle signal, also check the currently
+  // forming bar via live tick data — same mechanism as ORB/V1.5 above.
+  // Note: the synthetic live bar has vol:0, so V2's volume-confirm gate
+  // (npv2VolumeConfirmed) will almost always fail on it — this strategy
+  // will mostly still wait for the real closed candle, which is the
+  // correct, safe behavior rather than assuming a volume pass.
+  var isLiveFireNP2 = false;
+  if (!sig) {
+    var liveBarNP2 = aseBuildLiveBar(candles);
+    if (liveBarNP2) {
+      var candlesLiveNP2 = candles.concat([liveBarNP2]);
+      var timeStringsLiveNP2 = candlesLiveNP2.map(function(c){ return String(c.time).slice(11,16); });
+      var dayKeysLiveNP2 = candlesLiveNP2.map(function(c){ return String(c.time).slice(0,10); });
+      var vwapSeriesLiveNP2 = calcSessionVWAP(candlesLiveNP2, dayKeysLiveNP2);
+      var htf50SeriesLiveNP2 = npAlignHTFEma(candlesLiveNP2);
+      var liveIdxNP2 = candlesLiveNP2.length - 1;
+      if (htf50SeriesLiveNP2[liveIdxNP2] != null) {
+        var liveSigNP2 = npv2ComputeSignal(candlesLiveNP2, timeStringsLiveNP2, vwapSeriesLiveNP2, htf50SeriesLiveNP2, liveIdxNP2);
+        if (liveSigNP2) { sig = liveSigNP2; i = liveIdxNP2; candles = candlesLiveNP2; isLiveFireNP2 = true; }
+      }
+    }
+  }
+
   if (!sig) {
     ASE_NP2_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-np2-verdict', 'NO SIGNAL', 'var(--dim)');
@@ -20651,10 +20799,11 @@ async function aseEvaluateNiftyProV2() {
   var instr  = 'NIFTY ' + strike + sig.type + ' ' + getNiftyExpiry();
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
+  var extraNoteNP2 = isLiveFireNP2 ? ' · LIVE TICK (forming candle, ahead of close)' : (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '');
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'nifty_pro_v2',
     signalType: 'BUY ' + sig.type,
-    reasons: 'NiftyProV2 · EMA20/50+VWAP+RSI+15mHTF+MACD+VOL+candle-strength aligned · ATR SL/TGT · R:R 1:2' + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
+    reasons: 'NiftyProV2 · EMA20/50+VWAP+RSI+15mHTF+MACD+VOL+candle-strength aligned · ATR SL/TGT · R:R 1:2' + extraNoteNP2
   });
 
 
@@ -20749,6 +20898,26 @@ async function aseEvaluateORB() {
     if (s) { sig = s; i = idx; break; } // fire on the earliest qualifying bar in the catch-up window
   }
 
+  // Early check: if no closed-candle signal, also check the currently
+  // forming bar via live tick data (aseBuildLiveBar) — catches a real
+  // breakout as it happens instead of waiting up to 5 min for the candle
+  // to close. Only runs after catch-up scanning above found nothing, so
+  // it never pre-empts a cleaner closed-bar signal.
+  var isLiveFire = false;
+  if (!sig) {
+    var liveBar = aseBuildLiveBar(candles);
+    if (liveBar) {
+      var candlesLive = candles.concat([liveBar]);
+      var dayKeysLive = candlesLive.map(function(c){ return String(c.time).slice(0,10); });
+      var timeStringsLive = candlesLive.map(function(c){ return String(c.time).slice(11,16); });
+      var vwapSeriesLive = calcSessionVWAP(candlesLive, dayKeysLive);
+      var orSeriesLive = orbBuildDailyRanges(candlesLive, dayKeysLive);
+      var liveIdx = candlesLive.length - 1;
+      var liveSig = orbComputeSignal(candlesLive, liveIdx, orSeriesLive, vwapSeriesLive, timeStringsLive);
+      if (liveSig) { sig = liveSig; i = liveIdx; candles = candlesLive; isLiveFire = true; }
+    }
+  }
+
   if (!sig) {
     ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
     ptSet2('ase-orb-verdict', 'NO SIGNAL', 'var(--dim)');
@@ -20775,10 +20944,11 @@ async function aseEvaluateORB() {
   var instr  = 'NIFTY ' + strike + sig.type + ' ' + getNiftyExpiry();
   var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
 
+  var extraNote = isLiveFire ? ' · LIVE TICK (forming candle, ahead of close)' : (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '');
   var res = ptAddAutoTrade({
     instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'orb_vwap',
     signalType: 'BUY ' + sig.type,
-    reasons: 'ORBVWAP · Opening-range break + VWAP + RSI + volume aligned · R:R 1:1.5 · index SL @ ' + fN(sig.sl,1) + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
+    reasons: 'ORBVWAP · Opening-range break + VWAP + RSI + volume aligned · R:R 1:1.5 · index SL @ ' + fN(sig.sl,1) + extraNote
   });
 
   ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
@@ -21723,6 +21893,7 @@ window.jarvisPopupFallback = function(html, title){
 <!-- DASHBOARD V2 — JARVIS COMMAND CENTER -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="page" id="page-ipo">
+<div style="max-width:1200px;margin:0 auto;padding:10px">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
     <div>
       <div style="font-family:Orbitron;font-weight:900;font-size:18px;letter-spacing:2px;color:var(--txt);display:flex;align-items:center;gap:9px">
@@ -21750,8 +21921,10 @@ window.jarvisPopupFallback = function(html, title){
 
   <div class="ipo-foot">DATA SNAPSHOT — VERIFY LIVE STATUS &amp; GMP ON NSE.COM / BSEINDIA.COM OR A LIVE GMP TRACKER BEFORE APPLYING</div>
 </div>
+</div>
 
 <div class="page" id="page-strathealth">
+<div style="max-width:1200px;margin:0 auto;padding:10px">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
     <div>
       <div style="font-family:Orbitron;font-weight:900;font-size:18px;letter-spacing:2px;color:var(--txt);display:flex;align-items:center;gap:9px">
@@ -21767,6 +21940,7 @@ window.jarvisPopupFallback = function(html, title){
   </div>
 
   <div class="sh-grid" id="shGrid"></div>
+</div>
 </div>
 
 <div class="page" id="page-dashv2">
