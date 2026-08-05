@@ -17097,6 +17097,14 @@ function ptAddTrade() {
 //    reasons) needed later for day-wise breakdowns and loss analysis.
 function ptAddAutoTrade(opts) {
   if (!PT_PORTFOLIO) ptInit();
+  // v1.2 defense-in-depth (5 Aug 2026): the real gate is in aseEvaluate()
+  // now, but this is the actual point a trade gets created — checking
+  // here too means this bug class (after-hours entries against stale or
+  // synthetic data) can't resurface even if some other code path ever
+  // calls this function directly without going through that gate.
+  if (typeof jarvisInMarketHours === 'function' && !jarvisInMarketHours()) {
+    return { error: 'Market closed — auto trades are not placed outside real trading hours.' };
+  }
   var cost = opts.buy * opts.qty;
   if (cost > PT_PORTFOLIO.cash) return { error: 'Insufficient paper cash' };
   var now = new Date();
@@ -17212,6 +17220,14 @@ var PT_TRAIL_ARM_PCT  = 0.40; // must be 40% of the way to target before SL star
 var PT_TRAIL_LOCK_PCT = 0.75; // lock in 75% of the peak gain as the new SL floor (was 0.60)
 function ptCheckAutoExits() {
   if (!PT_PORTFOLIO) return;
+  // v1.2 fix (5 Aug 2026): same root cause as the aseEvaluate() gate above
+  // — this ran unconditionally every cycle regardless of market hours, so
+  // an open position could get auto-closed against stale/synthetic
+  // after-hours "prices" (e.g. an exit logged at 8:59 AM, 16 minutes
+  // before the market even opens). Open positions now simply wait until
+  // the next real session instead of being evaluated against data that
+  // was never actually live.
+  if (typeof jarvisInMarketHours === 'function' && !jarvisInMarketHours()) return;
   var closedAny = false;
   PT_PORTFOLIO.trades.forEach(function(t){
     if (t.status !== 'OPEN') return;
@@ -19739,6 +19755,21 @@ function aseIsExpiryDayOpenGuard() {
 function aseEvaluate() {
   window.ASE_LAST_HEARTBEAT_TS = Date.now();
   var statusEl = document.getElementById('ase-last-check');
+
+  // v1.2 fix (5 Aug 2026): this loop previously ran unconditionally every
+  // cycle, 24/7 — including nights, weekends, and the gap between close
+  // and next open. After hours, real NSE/Angel option-chain data isn't
+  // reliably available, so the chain-build step falls back to the
+  // synthetic Black-Scholes model (see buildChainData) — and this loop
+  // would happily evaluate strategies and log real trades against that
+  // synthetic/stale data as if it were live. That's exactly how a trade
+  // could show a 4:58 PM entry (after the close) — the engine was still
+  // polling and firing signals off data that was never actually live.
+  if (typeof jarvisInMarketHours === 'function' && !jarvisInMarketHours()) {
+    if (statusEl) statusEl.textContent = 'Market closed — engine idle (checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ')';
+    return;
+  }
+
   if (statusEl) statusEl.textContent = 'Checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
   (async function(){
