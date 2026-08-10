@@ -104,6 +104,29 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .bbar-w{width:290px;}
 .bbar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
 .bbar-f{height:100%;background:linear-gradient(90deg,var(--a),var(--g));border-radius:2px;width:0%;transition:width .12s linear;}
+
+/* ── BIOMETRIC SCAN — plays before #bootScreen (5 Aug 2026) ── */
+#bioScanScreen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:none;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;}
+#bioScanScreen.show{display:flex;}
+#bioScanScreen .bio-skip{position:absolute;top:18px;right:18px;font-family:'Share Tech Mono';font-size:9px;color:var(--dim);letter-spacing:1px;opacity:.6;}
+.bio-stage{display:none;flex-direction:column;align-items:center;}
+.bio-stage.active{display:flex;}
+.bio-icon-w{position:relative;width:120px;height:120px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;}
+.bio-icon-w svg{width:88px;height:88px;position:relative;z-index:2;}
+.bio-icon-w .bio-ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(0,212,255,.25);}
+.bio-icon-w .bio-ring.pulse{animation:bioRingPulse 1.6s ease-out infinite;}
+@keyframes bioRingPulse{0%{transform:scale(.85);opacity:.9;}100%{transform:scale(1.35);opacity:0;}}
+.bio-scanline{position:absolute;left:6px;right:6px;height:2px;background:linear-gradient(90deg,transparent,var(--a),transparent);box-shadow:0 0 10px 2px rgba(0,212,255,.7);top:0;animation:bioScanMove 1.1s ease-in-out infinite;z-index:3;}
+@keyframes bioScanMove{0%{top:8px;}50%{top:104px;}100%{top:8px;}}
+.bio-label{font-family:'Share Tech Mono';font-size:11px;color:var(--a);letter-spacing:2px;margin-bottom:6px;min-height:16px;}
+.bio-status{font-family:'Share Tech Mono';font-size:10px;color:var(--dim);letter-spacing:1px;opacity:0;transition:opacity .25s;}
+.bio-status.show{opacity:1;color:var(--g);}
+.bio-fp-path{stroke:rgba(0,212,255,.35);stroke-width:2.2;fill:none;stroke-linecap:round;}
+.bio-fp-path.lit{stroke:var(--a);filter:drop-shadow(0 0 4px rgba(0,212,255,.8));transition:stroke .25s,filter .25s;}
+.bio-face-outline{stroke:rgba(0,212,255,.3);stroke-width:1.6;fill:none;}
+.bio-face-bracket{stroke:var(--a);stroke-width:2.2;fill:none;opacity:.85;}
+.bio-face-dot{fill:rgba(0,212,255,.25);transition:fill .2s,filter .2s;}
+.bio-face-dot.lit{fill:var(--g);filter:drop-shadow(0 0 4px rgba(0,255,136,.9));}
 .bpct{font-family:'Share Tech Mono';font-size:10px;color:var(--a);margin-top:4px;text-align:center;}
 
 /* ─── APP SHELL ─── */
@@ -1016,6 +1039,48 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
     <button onclick="supaTestConnection()" style="width:100%;margin-top:6px;padding:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:7px;color:#00d4ff;font-family:Share Tech Mono;font-size:10px;cursor:pointer">🔗 TEST CLOUD CONNECTION</button>
     <div class="lp-err" id="lp-err">❌ Invalid credentials. Please try again.</div>
     <div class="lp-disc">⚠️ EDUCATIONAL PAPER TRADING ONLY · NOT SEBI REGISTERED</div>
+  </div>
+</div>
+
+<!-- BIOMETRIC SCAN (plays before BOOT) -->
+<div id="bioScanScreen" onclick="bioScanSkip()">
+  <div class="bio-skip">TAP TO SKIP</div>
+
+  <div class="bio-stage active" id="bioStageFinger">
+    <div class="bio-icon-w">
+      <div class="bio-ring pulse"></div>
+      <div class="bio-scanline" id="bioFingerLine"></div>
+      <svg viewBox="0 0 100 100">
+        <path class="bio-fp-path" id="fp1" d="M50 18 C30 18 18 32 18 50 C18 68 30 82 50 82 C70 82 82 68 82 50"/>
+        <path class="bio-fp-path" id="fp2" d="M50 26 C36 26 26 37 26 50 C26 63 36 74 50 74 C64 74 74 63 74 50"/>
+        <path class="bio-fp-path" id="fp3" d="M50 34 C41 34 34 41 34 50 C34 59 41 66 50 66 C59 66 66 59 66 50 C66 44 63 39 58 36"/>
+        <path class="bio-fp-path" id="fp4" d="M50 42 C46 42 42 46 42 50 C42 54 46 58 50 58 C54 58 58 54 58 50"/>
+        <path class="bio-fp-path" id="fp5" d="M50 50 L50 50"/>
+        <path class="bio-fp-path" id="fp6" d="M20 58 C22 68 30 78 42 81"/>
+      </svg>
+    </div>
+    <div class="bio-label">SCANNING FINGERPRINT...</div>
+    <div class="bio-status" id="bioFingerStatus">✓ FINGERPRINT VERIFIED</div>
+  </div>
+
+  <div class="bio-stage" id="bioStageFace">
+    <div class="bio-icon-w">
+      <div class="bio-scanline" id="bioFaceLine"></div>
+      <svg viewBox="0 0 100 100">
+        <ellipse class="bio-face-outline" cx="50" cy="52" rx="26" ry="32"/>
+        <path class="bio-face-bracket" d="M14 22 L14 12 L24 12"/>
+        <path class="bio-face-bracket" d="M86 22 L86 12 L76 12"/>
+        <path class="bio-face-bracket" d="M14 82 L14 92 L24 92"/>
+        <path class="bio-face-bracket" d="M86 82 L86 92 L76 92"/>
+        <circle class="bio-face-dot" id="fd1" cx="39" cy="46" r="2.6"/>
+        <circle class="bio-face-dot" id="fd2" cx="61" cy="46" r="2.6"/>
+        <circle class="bio-face-dot" id="fd3" cx="50" cy="58" r="2.6"/>
+        <circle class="bio-face-dot" id="fd4" cx="42" cy="68" r="2.6"/>
+        <circle class="bio-face-dot" id="fd5" cx="58" cy="68" r="2.6"/>
+      </svg>
+    </div>
+    <div class="bio-label">SCANNING FACE ID...</div>
+    <div class="bio-status" id="bioFaceStatus">✓ FACE ID VERIFIED</div>
   </div>
 </div>
 
@@ -8848,6 +8913,13 @@ async function doLogin(){
         var _ma = document.getElementById('mainApp');
         if(_lp){ _lp.style.opacity='0'; setTimeout(function(){ _lp.style.display='none'; },300); }
         if(_ma){ _ma.style.display='block'; setTimeout(function(){ _ma.style.opacity='1'; },50); }
+        // Purely cosmetic — plays on top of the mainApp reveal above without
+        // touching any of the cloud-load/nav logic below.
+        try {
+          var _buS = document.getElementById('bootUser');
+          if (_buS) _buS.textContent = 'WELCOME, ' + (window.JARVIS_USER||'').toUpperCase();
+          if (typeof jarvisShowBioThenBootOverlay === 'function') setTimeout(jarvisShowBioThenBootOverlay, 60);
+        } catch(e) {}
         // showPage may not be ready yet - wait for it
         var _navAttempts = 0;
         var _navTimer = setInterval(function(){
@@ -8996,12 +9068,10 @@ async function doLogin(){
     document.getElementById('loginPage').style.cssText='opacity:0;transition:opacity .5s';
     setTimeout(function(){
       document.getElementById('loginPage').style.display='none';
-      var bs=document.getElementById('bootScreen');
-      if(bs){ bs.classList.add('show'); }
       var bu=document.getElementById('bootUser');
       if(bu) bu.textContent='WELCOME, '+loggedUser.toUpperCase();
+      jarvisShowBioThenBoot();
     },500);
-    startBoot();
 
   } catch(e) {
     var msg = e && e.message ? e.message : String(e);
@@ -9012,6 +9082,154 @@ async function doLogin(){
     console.error('[JARVIS doLogin]', e);
   }
 }
+// ══════════════════════════════════════════════════════════════════
+//  LOGIN INTRO — biometric scan (once/day) → existing boot sequence
+//  Added 5 Aug 2026. This is a VISUAL animation only — stylized
+//  fingerprint/Face ID graphics with scan-line effects. It does NOT
+//  read any real biometric data; there's no camera or fingerprint
+//  sensor access here. Real biometric auth would need the device's
+//  WebAuthn/platform authenticator APIs, which is a separate,
+//  much bigger security feature, not what this is.
+//
+//  Full sequence (fingerprint → face → boot log → dashboard) only
+//  plays once per calendar day, tracked via localStorage — every
+//  subsequent login that same day skips straight to the (already
+//  fast) boot log so it doesn't get tedious on repeat logins.
+//  Tap/click anywhere skips straight to the dashboard.
+// ══════════════════════════════════════════════════════════════════
+var BIOSCAN_SKIPPED = false;
+var BIOSCAN_MODE = 'full'; // 'full' = legacy path (controls boot screen + mainApp reveal) | 'overlay' = Supabase path (purely cosmetic, mainApp already handled by the caller)
+
+function bioScanSkip() {
+  BIOSCAN_SKIPPED = true;
+  var bs = document.getElementById('bioScanScreen');
+  if (bs) { bs.classList.remove('show'); }
+  if (BIOSCAN_MODE === 'overlay') {
+    var bootEl = document.getElementById('bootScreen');
+    if (bootEl) bootEl.classList.remove('show');
+    return; // mainApp is already visible/handled by the Supabase login path — nothing more to do
+  }
+  jarvisShowBootSequence();
+}
+
+function jarvisShowBootSequence() {
+  var bootEl = document.getElementById('bootScreen');
+  if (bootEl) bootEl.classList.add('show');
+  startBoot();
+}
+
+// Cosmetic-only variant of the boot log for the Supabase path — plays the
+// same log-line animation + sound, but does NOT touch mainApp visibility
+// or run any init functions, since the Supabase login path already
+// handles all of that itself (cloud data loads, nav timer, etc.) and
+// re-running startBoot()'s tail end here risked double-firing that logic.
+function jarvisPlayBootLogVisualOnly(onDone) {
+  var bootEl = document.getElementById('bootScreen');
+  if (bootEl) bootEl.classList.add('show');
+  try{var C=new(window.AudioContext||window.webkitAudioContext)();var tone=function(f,t,d,v){var o=C.createOscillator(),g=C.createGain();o.connect(g);g.connect(C.destination);o.frequency.value=f;g.gain.setValueAtTime(0,C.currentTime+t);g.gain.linearRampToValueAtTime(v||.12,C.currentTime+t+.05);g.gain.linearRampToValueAtTime(0,C.currentTime+t+d);o.start(C.currentTime+t);o.stop(C.currentTime+t+d+.1);};tone(220,0,.25,.1);tone(440,.2,.25,.14);tone(660,.4,.3,.17);tone(880,.65,.35,.2);tone(1320,1.1,.7,.12);}catch(e){}
+  var fill=document.getElementById('bfill'),pct=document.getElementById('bpct');
+  ['bl1','bl2','bl3','bl4','bl5'].forEach(function(id,i){
+    setTimeout(function(){
+      if (BIOSCAN_SKIPPED) return;
+      var el=document.getElementById(id); if(el) el.classList.add('show');
+      var pc=Math.round((i+1)/5*100); if(fill)fill.style.width=pc+'%'; if(pct)pct.textContent=pc+'%';
+    },400+i*600);
+  });
+  setTimeout(function(){
+    if (bootEl) bootEl.classList.remove('show');
+    ['bl1','bl2','bl3','bl4','bl5'].forEach(function(id){var el=document.getElementById(id); if(el) el.classList.remove('show');});
+    if(fill) fill.style.width='0%'; if(pct) pct.textContent='0%';
+    if (onDone) onDone();
+  }, 400 + 5*600 + 450);
+}
+
+function jarvisRunFingerprintStage(onDone) {
+  var ids = ['fp1','fp2','fp3','fp4','fp5','fp6'];
+  ids.forEach(function(id, i) {
+    setTimeout(function() {
+      if (BIOSCAN_SKIPPED) return;
+      var el = document.getElementById(id);
+      if (el) el.classList.add('lit');
+    }, 90 * i);
+  });
+  setTimeout(function() {
+    if (BIOSCAN_SKIPPED) return;
+    var st = document.getElementById('bioFingerStatus');
+    if (st) st.classList.add('show');
+  }, 90 * ids.length + 120);
+  setTimeout(function() { if (!BIOSCAN_SKIPPED) onDone(); }, 90 * ids.length + 620);
+}
+
+function jarvisRunFaceStage(onDone) {
+  var fingerStage = document.getElementById('bioStageFinger');
+  var faceStage = document.getElementById('bioStageFace');
+  if (fingerStage) fingerStage.classList.remove('active');
+  if (faceStage) faceStage.classList.add('active');
+
+  var ids = ['fd1','fd2','fd3','fd4','fd5'];
+  ids.forEach(function(id, i) {
+    setTimeout(function() {
+      if (BIOSCAN_SKIPPED) return;
+      var el = document.getElementById(id);
+      if (el) el.classList.add('lit');
+    }, 100 * i);
+  });
+  setTimeout(function() {
+    if (BIOSCAN_SKIPPED) return;
+    var st = document.getElementById('bioFaceStatus');
+    if (st) st.classList.add('show');
+  }, 100 * ids.length + 120);
+  setTimeout(function() { if (!BIOSCAN_SKIPPED) onDone(); }, 100 * ids.length + 620);
+}
+
+function jarvisRunBioScanCore(onComplete) {
+  BIOSCAN_SKIPPED = false;
+  var todayKey = new Date().toLocaleDateString('en-CA');
+  var lastKey = null;
+  try { lastKey = localStorage.getItem('jarvis_last_bioscan_date'); } catch(e) {}
+
+  if (lastKey === todayKey) {
+    // Already ran the full intro once today — skip straight to the boot log.
+    onComplete();
+    return;
+  }
+  try { localStorage.setItem('jarvis_last_bioscan_date', todayKey); } catch(e) {}
+
+  // Reset any stale state from a previous session (skip mid-animation, etc.)
+  ['fp1','fp2','fp3','fp4','fp5','fp6','fd1','fd2','fd3','fd4','fd5'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.classList.remove('lit');
+  });
+  var fs = document.getElementById('bioFingerStatus'); if (fs) fs.classList.remove('show');
+  var fcs = document.getElementById('bioFaceStatus'); if (fcs) fcs.classList.remove('show');
+  var fingerStage = document.getElementById('bioStageFinger');
+  var faceStage = document.getElementById('bioStageFace');
+  if (fingerStage) fingerStage.classList.add('active');
+  if (faceStage) faceStage.classList.remove('active');
+
+  var bs = document.getElementById('bioScanScreen');
+  if (bs) bs.classList.add('show');
+
+  jarvisRunFingerprintStage(function() {
+    jarvisRunFaceStage(function() {
+      if (bs) bs.classList.remove('show');
+      if (!BIOSCAN_SKIPPED) onComplete();
+    });
+  });
+}
+
+// Legacy login path: controls the boot screen AND the mainApp reveal.
+function jarvisShowBioThenBoot() {
+  BIOSCAN_MODE = 'full';
+  jarvisRunBioScanCore(jarvisShowBootSequence);
+}
+
+// Supabase cloud login path: purely cosmetic overlay — mainApp visibility,
+// cloud data loading, and page nav are already handled by the caller.
+function jarvisShowBioThenBootOverlay() {
+  BIOSCAN_MODE = 'overlay';
+  jarvisRunBioScanCore(jarvisPlayBootLogVisualOnly);
+}
+
 function startBoot(){
   try{var C=new(window.AudioContext||window.webkitAudioContext)();var tone=function(f,t,d,v){var o=C.createOscillator(),g=C.createGain();o.connect(g);g.connect(C.destination);o.frequency.value=f;g.gain.setValueAtTime(0,C.currentTime+t);g.gain.linearRampToValueAtTime(v||.12,C.currentTime+t+.05);g.gain.linearRampToValueAtTime(0,C.currentTime+t+d);o.start(C.currentTime+t);o.stop(C.currentTime+t+d+.1);};tone(220,0,.25,.1);tone(440,.2,.25,.14);tone(660,.4,.3,.17);tone(880,.65,.35,.2);tone(1320,1.1,.7,.12);}catch(e){}
   var fill=document.getElementById('bfill'),pct=document.getElementById('bpct');
