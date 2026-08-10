@@ -78,17 +78,23 @@
 
   console.log('[NativeBridge] Secure storage + biometric bridge active');
 
-  // Force a fresh reload from GitHub Pages every time the app returns
-  // to the foreground, so you always see the latest pushed version
-  // instead of a cached WebView session.
+  // Force a fresh reload from GitHub Pages when the app RESUMES from
+  // being backgrounded (not on cold/first start, which is already
+  // fresh) — with a guard so it can't fire repeatedly in a loop.
   var AppPlugin = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
   if (AppPlugin && AppPlugin.addListener) {
+    var appLoadTime = Date.now();
+    var reloadInFlight = false;
     AppPlugin.addListener('appStateChange', function (state) {
-      if (state && state.isActive) {
-        // cache-bust so GitHub Pages / the WebView can't serve a stale copy
-        var freshUrl = window.location.origin + window.location.pathname + '?_=' + Date.now();
-        window.location.replace(freshUrl);
-      }
+      if (!state || !state.isActive) return;
+      if (reloadInFlight) return;
+      // Ignore the state event Capacitor fires during cold start —
+      // only reload if the app has actually been open a while
+      // (i.e. this is a real resume-from-background, not first launch).
+      if (Date.now() - appLoadTime < 10000) return;
+      reloadInFlight = true;
+      var freshUrl = window.location.origin + window.location.pathname + '?_=' + Date.now();
+      window.location.replace(freshUrl);
     });
   }
 })();
