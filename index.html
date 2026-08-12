@@ -1245,6 +1245,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <button class="nav-tab" onclick="showPage('ipo',this)" style="border-color:rgba(255,204,0,.3);color:#ffcc00;">🚀 IPO WATCH</button>
   <button class="nav-tab" onclick="showPage('strathealth',this)" style="border-color:rgba(0,212,255,.3);color:#00d4ff;">📊 STRATEGY HEALTH</button>
+  <button class="nav-tab" onclick="showPage('journal',this)" style="border-color:rgba(255,140,0,.3);color:#ff8c00;">📓 JOURNAL</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
 
   <!-- ══ GLOBAL NOTIFICATION BELL — accessible from any tab ══ -->
@@ -19948,6 +19949,16 @@ function aseVixSpikePct() {
 }
 
 // Is current IST time inside one of the two allowed trading windows?
+// Returns true once it's past 3:00 PM IST — used to block any NEW
+// F&O paper-trade entry regardless of which strategy/engine triggers it.
+function fnoNoNewEntriesAfter3PM() {
+  try {
+    var ist = getIST();
+    var mins = ist.getHours() * 60 + ist.getMinutes();
+    return mins >= (15 * 60); // 15:00 IST
+  } catch (e) { return false; }
+}
+
 function aseInSessionWindow() {
   var ist = getIST();
   var mins = ist.getHours()*60 + ist.getMinutes();
@@ -19985,6 +19996,16 @@ function aseEvaluate() {
   // polling and firing signals off data that was never actually live.
   if (typeof jarvisInMarketHours === 'function' && !jarvisInMarketHours()) {
     if (statusEl) statusEl.textContent = 'Market closed — engine idle (checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ')';
+    return;
+  }
+
+  // ── HARD CUTOFF: no new F&O paper trades after 3:00 PM IST ──
+  // Personal rule — late-day F&O entries carry outsized theta/gamma risk
+  // into the close with little time to manage them. This blocks new
+  // entries only; existing open positions are untouched and can still
+  // be squared off normally.
+  if (typeof fnoNoNewEntriesAfter3PM === 'function' && fnoNoNewEntriesAfter3PM()) {
+    if (statusEl) statusEl.textContent = 'No new F&O entries after 3:00 PM IST (checked ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ')';
     return;
   }
 
@@ -22016,6 +22037,125 @@ window.jarvisPopupFallback = function(html, title){
   </div>
 
   <div class="sh-grid" id="shGrid"></div>
+</div>
+
+<div class="page" id="page-journal">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div>
+      <div style="font-family:Orbitron;font-weight:900;font-size:18px;letter-spacing:2px;color:var(--txt);display:flex;align-items:center;gap:9px">
+        <span style="width:8px;height:8px;border-radius:50%;background:#ff8c00;box-shadow:0 0 8px #ff8c00;display:inline-block"></span> JOURNAL &amp; RISK
+      </div>
+      <div style="font-family:'Share Tech Mono';font-size:10px;color:var(--dim);letter-spacing:1px;margin-top:3px">TRADE JOURNAL · TAX ESTIMATE · POSITION SIZING · PRE-MARKET · EXPORT</div>
+    </div>
+  </div>
+
+  <div class="nav" style="margin-bottom:12px">
+    <button class="nav-tab active" id="jr-tab-journal" onclick="jrTab('journal',this)" style="color:#ff8c00;border-color:rgba(255,140,0,.3)">📓 TRADE JOURNAL</button>
+    <button class="nav-tab" id="jr-tab-tax" onclick="jrTab('tax',this)">🧾 TAX ESTIMATE</button>
+    <button class="nav-tab" id="jr-tab-risk" onclick="jrTab('risk',this)">⚖️ RISK TOOLS</button>
+    <button class="nav-tab" id="jr-tab-premarket" onclick="jrTab('premarket',this)">🌅 PRE-MARKET</button>
+  </div>
+
+  <!-- ── TRADE JOURNAL ── -->
+  <div id="jr-page-journal">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><span class="pt">➕ NEW ENTRY</span></div>
+      <div style="padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Symbol</label><input id="jr-symbol" placeholder="e.g. NIFTY, RELIANCE"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Direction</label>
+          <select id="jr-dir" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:'Share Tech Mono';font-size:12px">
+            <option value="LONG">LONG / BUY</option><option value="SHORT">SHORT / SELL</option>
+          </select>
+        </div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Segment</label>
+          <select id="jr-segment" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:'Share Tech Mono';font-size:12px">
+            <option value="EQUITY">Equity</option><option value="FNO">F&amp;O</option><option value="MF">Mutual Fund</option>
+          </select>
+        </div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Qty</label><input id="jr-qty" type="number" placeholder="e.g. 50"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Entry Price</label><input id="jr-entry" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Entry Date</label><input id="jr-entrydate" type="date"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Exit Price (leave blank if open)</label><input id="jr-exit" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Exit Date</label><input id="jr-exitdate" type="date"></div>
+        <div class="sp-field" style="grid-column:span 2"><label style="font-size:9px;color:var(--dim)">Tag / Strategy</label><input id="jr-tag" placeholder="e.g. breakout, earnings-play"></div>
+        <div class="sp-field" style="grid-column:span 2"><label style="font-size:9px;color:var(--dim)">Reasoning / Notes</label><input id="jr-notes" placeholder="Why did you take this trade?"></div>
+      </div>
+      <div style="padding:0 12px 12px">
+        <button onclick="jrAddEntry()" style="width:100%;padding:10px;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.4);border-radius:7px;color:#ff8c00;font-family:Orbitron;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer">💾 SAVE ENTRY</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="pt">📊 STATS</span>
+        <button onclick="jrExportCSV()" style="font-family:'Share Tech Mono';font-size:9px;color:var(--a);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);padding:5px 10px;border-radius:20px;cursor:pointer">⬇ EXPORT CSV</button>
+      </div>
+      <div id="jr-stats" style="padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><span class="pt">📋 ENTRIES</span></div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:700px" id="jr-table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAX ESTIMATE ── -->
+  <div id="jr-page-tax" style="display:none">
+    <div style="padding:10px 14px;background:var(--ov3);border:1px solid var(--border);border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--dim);line-height:1.6;margin-bottom:14px">
+      <b style="color:var(--txt)">⚠ Estimate only, not tax advice.</b> This groups your <b>closed Equity journal entries</b> by holding period — under 365 days is treated as Short-Term (STCG), 365+ days as Long-Term (LTCG), per current Indian equity capital gains rules. F&amp;O entries are always business/speculative income in India and are listed separately, un-taxed-estimated here — consult a CA for your actual filing, especially for turnover-based presumptive taxation on F&amp;O.
+    </div>
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="pt">🧾 CAPITAL GAINS SUMMARY</span>
+        <button onclick="window.print()" style="font-family:'Share Tech Mono';font-size:9px;color:var(--a);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);padding:5px 10px;border-radius:20px;cursor:pointer">🖨 PRINT / SAVE PDF</button>
+      </div>
+      <div id="jr-tax-summary" style="padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="pt">📋 F&amp;O CLOSED TRADES (business income — not capital-gains taxed)</span></div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:600px" id="jr-fno-table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RISK TOOLS ── -->
+  <div id="jr-page-risk" style="display:none">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><span class="pt">🎯 POSITION SIZE CALCULATOR</span></div>
+      <div style="padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Account Size (₹)</label><input id="rk-capital" type="number" placeholder="e.g. 200000"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Risk per Trade (%)</label><input id="rk-riskpct" type="number" step="0.1" placeholder="e.g. 1"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Entry Price</label><input id="rk-entry" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Stop-Loss Price</label><input id="rk-sl" type="number" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="padding:0 12px 12px">
+        <button onclick="rkCalcPositionSize()" style="width:100%;padding:10px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.4);border-radius:7px;color:var(--a);font-family:Orbitron;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer">CALCULATE</button>
+      </div>
+      <div id="rk-result" style="padding:0 12px 14px;font-family:'Share Tech Mono';font-size:12px;color:var(--txt)"></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><span class="pt">📈 JOURNAL RISK SNAPSHOT (from open + closed entries)</span></div>
+      <div id="rk-portfolio-snapshot" style="padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- ── PRE-MARKET ── -->
+  <div id="jr-page-premarket" style="display:none">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="pt">🌅 PRE-MARKET SNAPSHOT</span>
+        <button onclick="pmRefresh()" style="font-family:'Share Tech Mono';font-size:9px;color:var(--a);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);padding:5px 10px;border-radius:20px;cursor:pointer">⟳ REFRESH</button>
+      </div>
+      <div id="pm-grid" style="padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+      <div style="padding:0 12px 12px;font-family:'Share Tech Mono';font-size:9px;color:var(--dim);line-height:1.6">
+        ⚠ Global index data depends on your browser being able to reach public market-data endpoints — reliability varies outside your existing Angel One feed. If a card shows "unavailable," use the direct link to check it manually.
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="page" id="page-dashv2">
@@ -24917,5 +25057,352 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
 
 })();
 </script>
-<script src="native-bridge.js"></script></body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     JOURNAL, TAX, RISK TOOLS & PRE-MARKET SNAPSHOT
+     Self-contained module — reads/writes its own localStorage keys
+     ('ja_journal'), doesn't touch any existing app state.
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  var JR_KEY = 'ja_journal';
+
+  function jrGetEntries(){
+    try { return JSON.parse(localStorage.getItem(JR_KEY) || '[]'); }
+    catch(e){ return []; }
+  }
+  function jrSaveEntries(list){
+    try { localStorage.setItem(JR_KEY, JSON.stringify(list)); } catch(e){}
+  }
+
+  window.jrTab = function(name, btn){
+    ['journal','tax','risk','premarket'].forEach(function(p){
+      var el = document.getElementById('jr-page-'+p);
+      if (el) el.style.display = (p===name) ? 'block' : 'none';
+    });
+    document.querySelectorAll('#page-journal .nav-tab').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    if (name==='journal') jrRender();
+    if (name==='tax') jrRenderTax();
+    if (name==='risk') jrRenderRiskSnapshot();
+    if (name==='premarket') pmRefresh();
+  };
+
+  window.jrAddEntry = function(){
+    var symbol = (document.getElementById('jr-symbol').value||'').trim().toUpperCase();
+    if (!symbol) { alert('Enter a symbol'); return; }
+    var entry = {
+      id: 'jr_' + Date.now(),
+      symbol: symbol,
+      dir: document.getElementById('jr-dir').value,
+      segment: document.getElementById('jr-segment').value,
+      qty: parseFloat(document.getElementById('jr-qty').value) || 0,
+      entryPrice: parseFloat(document.getElementById('jr-entry').value) || 0,
+      entryDate: document.getElementById('jr-entrydate').value || new Date().toISOString().slice(0,10),
+      exitPrice: document.getElementById('jr-exit').value ? parseFloat(document.getElementById('jr-exit').value) : null,
+      exitDate: document.getElementById('jr-exitdate').value || null,
+      tag: (document.getElementById('jr-tag').value||'').trim(),
+      notes: (document.getElementById('jr-notes').value||'').trim()
+    };
+    var list = jrGetEntries();
+    list.unshift(entry);
+    jrSaveEntries(list);
+    ['jr-symbol','jr-qty','jr-entry','jr-entrydate','jr-exit','jr-exitdate','jr-tag','jr-notes'].forEach(function(id){
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    jrRender();
+  };
+
+  window.jrDeleteEntry = function(id){
+    if (!confirm('Delete this journal entry?')) return;
+    jrSaveEntries(jrGetEntries().filter(function(e){ return e.id !== id; }));
+    jrRender();
+  };
+
+  function jrPnl(e){
+    if (e.exitPrice === null || e.exitPrice === undefined) return null;
+    var diff = e.dir === 'SHORT' ? (e.entryPrice - e.exitPrice) : (e.exitPrice - e.entryPrice);
+    return diff * (e.qty || 0);
+  }
+
+  function jrRender(){
+    var list = jrGetEntries();
+    var closed = list.filter(function(e){ return e.exitPrice !== null; });
+    var wins = closed.filter(function(e){ return jrPnl(e) > 0; });
+    var totalPnl = closed.reduce(function(s,e){ return s + (jrPnl(e)||0); }, 0);
+    var winRate = closed.length ? (wins.length/closed.length*100).toFixed(1) : '—';
+
+    var statsEl = document.getElementById('jr-stats');
+    if (statsEl) {
+      function card(label, val, color){
+        return '<div style="padding:10px;background:var(--ov3);border:1px solid var(--border);border-radius:8px;text-align:center">'
+          +'<div style="font-size:8px;color:var(--dim);letter-spacing:1px;margin-bottom:4px">'+label+'</div>'
+          +'<div style="font-family:Orbitron;font-size:15px;font-weight:700;color:'+color+'">'+val+'</div></div>';
+      }
+      statsEl.innerHTML =
+        card('TOTAL ENTRIES', list.length, 'var(--txt)') +
+        card('CLOSED', closed.length, 'var(--txt)') +
+        card('WIN RATE', winRate==='—'?'—':winRate+'%', 'var(--a)') +
+        card('TOTAL P&amp;L', '₹'+totalPnl.toFixed(0), totalPnl>=0?'var(--g)':'var(--r)');
+    }
+
+    var tbl = document.getElementById('jr-table');
+    if (tbl) {
+      var rows = '<tr style="border-bottom:1px solid var(--border);color:var(--dim);font-size:9px">'
+        +'<th style="text-align:left;padding:6px">SYMBOL</th><th style="text-align:left;padding:6px">DIR</th>'
+        +'<th style="text-align:left;padding:6px">SEG</th><th style="text-align:right;padding:6px">QTY</th>'
+        +'<th style="text-align:right;padding:6px">ENTRY</th><th style="text-align:right;padding:6px">EXIT</th>'
+        +'<th style="text-align:right;padding:6px">P&amp;L</th><th style="text-align:left;padding:6px">TAG</th>'
+        +'<th style="text-align:center;padding:6px"></th></tr>';
+      list.forEach(function(e){
+        var pnl = jrPnl(e);
+        var pnlStr = pnl===null ? '<span style="color:var(--dim)">OPEN</span>' : ('<span style="color:'+(pnl>=0?'var(--g)':'var(--r)')+'">₹'+pnl.toFixed(0)+'</span>');
+        rows += '<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:6px">'+e.symbol+'</td>'
+          +'<td style="padding:6px;color:'+(e.dir==='LONG'?'var(--g)':'var(--r)')+'">'+e.dir+'</td>'
+          +'<td style="padding:6px">'+e.segment+'</td>'
+          +'<td style="padding:6px;text-align:right">'+e.qty+'</td>'
+          +'<td style="padding:6px;text-align:right">'+e.entryPrice+'</td>'
+          +'<td style="padding:6px;text-align:right">'+(e.exitPrice===null?'—':e.exitPrice)+'</td>'
+          +'<td style="padding:6px;text-align:right">'+pnlStr+'</td>'
+          +'<td style="padding:6px;color:var(--dim)">'+(e.tag||'—')+'</td>'
+          +'<td style="padding:6px;text-align:center"><button onclick="jrDeleteEntry(\''+e.id+'\')" style="background:none;border:none;color:var(--r);cursor:pointer;font-size:11px">✕</button></td>'
+          +'</tr>';
+      });
+      tbl.innerHTML = rows || '<tr><td style="padding:12px;color:var(--dim)">No entries yet.</td></tr>';
+    }
+  }
+
+  window.jrExportCSV = function(){
+    var list = jrGetEntries();
+    var header = ['Symbol','Direction','Segment','Qty','EntryPrice','EntryDate','ExitPrice','ExitDate','PnL','Tag','Notes'];
+    var rows = list.map(function(e){
+      var pnl = jrPnl(e);
+      return [e.symbol,e.dir,e.segment,e.qty,e.entryPrice,e.entryDate,e.exitPrice||'',e.exitDate||'',pnl===null?'':pnl.toFixed(2),e.tag,('"'+(e.notes||'').replace(/"/g,'""')+'"')].join(',');
+    });
+    var csv = header.join(',') + '\n' + rows.join('\n');
+    var blob = new Blob([csv], {type:'text/csv'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'jarvis-journal-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // ── TAX ESTIMATE ──
+  function jrRenderTax(){
+    var list = jrGetEntries().filter(function(e){ return e.exitPrice !== null; });
+    var equity = list.filter(function(e){ return e.segment === 'EQUITY'; });
+    var fno = list.filter(function(e){ return e.segment === 'FNO'; });
+
+    var stcg = 0, ltcg = 0;
+    equity.forEach(function(e){
+      var pnl = jrPnl(e) || 0;
+      var days = 9999;
+      if (e.entryDate && e.exitDate) {
+        days = Math.round((new Date(e.exitDate) - new Date(e.entryDate)) / 86400000);
+      }
+      if (days <= 365) stcg += pnl; else ltcg += pnl;
+    });
+
+    var el = document.getElementById('jr-tax-summary');
+    if (el) {
+      function card(label, val, color, note){
+        return '<div style="padding:12px;background:var(--ov3);border:1px solid var(--border);border-radius:8px">'
+          +'<div style="font-size:8px;color:var(--dim);letter-spacing:1px;margin-bottom:4px">'+label+'</div>'
+          +'<div style="font-family:Orbitron;font-size:16px;font-weight:700;color:'+color+'">₹'+val.toFixed(0)+'</div>'
+          +(note?'<div style="font-size:8px;color:var(--dim);margin-top:4px">'+note+'</div>':'')
+          +'</div>';
+      }
+      el.innerHTML =
+        card('SHORT-TERM (STCG)', stcg, stcg>=0?'var(--g)':'var(--r)', '&lt;365 days · currently 20% flat rate') +
+        card('LONG-TERM (LTCG)', ltcg, ltcg>=0?'var(--g)':'var(--r)', '365+ days · ₹1.25L exemption/yr, 12.5% above') +
+        card('EQUITY TOTAL', stcg+ltcg, (stcg+ltcg)>=0?'var(--g)':'var(--r)', equity.length+' closed equity trades');
+    }
+
+    var fnoTbl = document.getElementById('jr-fno-table');
+    if (fnoTbl) {
+      var totalFno = fno.reduce(function(s,e){ return s+(jrPnl(e)||0); }, 0);
+      var rows = '<tr style="border-bottom:1px solid var(--border);color:var(--dim);font-size:9px">'
+        +'<th style="text-align:left;padding:6px">SYMBOL</th><th style="text-align:left;padding:6px">DIR</th>'
+        +'<th style="text-align:right;padding:6px">P&amp;L</th><th style="text-align:left;padding:6px">CLOSED</th></tr>';
+      fno.forEach(function(e){
+        var pnl = jrPnl(e);
+        rows += '<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px">'+e.symbol+'</td>'
+          +'<td style="padding:6px">'+e.dir+'</td>'
+          +'<td style="padding:6px;text-align:right;color:'+(pnl>=0?'var(--g)':'var(--r)')+'">₹'+pnl.toFixed(0)+'</td>'
+          +'<td style="padding:6px">'+(e.exitDate||'—')+'</td></tr>';
+      });
+      rows += '<tr><td colspan="2" style="padding:6px;font-weight:700">TOTAL</td><td style="padding:6px;text-align:right;font-weight:700;color:'+(totalFno>=0?'var(--g)':'var(--r)')+'">₹'+totalFno.toFixed(0)+'</td><td></td></tr>';
+      fnoTbl.innerHTML = rows;
+    }
+  }
+
+  // ── RISK TOOLS ──
+  window.rkCalcPositionSize = function(){
+    var capital = parseFloat(document.getElementById('rk-capital').value) || 0;
+    var riskPct = parseFloat(document.getElementById('rk-riskpct').value) || 0;
+    var entry = parseFloat(document.getElementById('rk-entry').value) || 0;
+    var sl = parseFloat(document.getElementById('rk-sl').value) || 0;
+    var out = document.getElementById('rk-result');
+    if (!capital || !riskPct || !entry || !sl || entry === sl) {
+      out.innerHTML = '<span style="color:var(--r)">Fill in all fields — entry and stop-loss must differ.</span>';
+      return;
+    }
+    var riskAmount = capital * (riskPct/100);
+    var perShareRisk = Math.abs(entry - sl);
+    var qty = Math.floor(riskAmount / perShareRisk);
+    var positionValue = qty * entry;
+    out.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+      +'<div style="padding:10px;background:var(--ov3);border-radius:8px;text-align:center"><div style="font-size:8px;color:var(--dim)">RISK AMOUNT</div><div style="font-family:Orbitron;font-size:14px;color:var(--r)">₹'+riskAmount.toFixed(0)+'</div></div>'
+      +'<div style="padding:10px;background:var(--ov3);border-radius:8px;text-align:center"><div style="font-size:8px;color:var(--dim)">SUGGESTED QTY</div><div style="font-family:Orbitron;font-size:14px;color:var(--a)">'+qty+'</div></div>'
+      +'<div style="padding:10px;background:var(--ov3);border-radius:8px;text-align:center"><div style="font-size:8px;color:var(--dim)">POSITION VALUE</div><div style="font-family:Orbitron;font-size:14px;color:var(--txt)">₹'+positionValue.toFixed(0)+'</div></div>'
+      +'</div>';
+  };
+
+  function jrRenderRiskSnapshot(){
+    var list = jrGetEntries();
+    var open = list.filter(function(e){ return e.exitPrice === null; });
+    var bySymbol = {};
+    open.forEach(function(e){
+      var exposure = (e.entryPrice||0) * (e.qty||0);
+      bySymbol[e.symbol] = (bySymbol[e.symbol]||0) + exposure;
+    });
+    var totalExposure = Object.keys(bySymbol).reduce(function(s,k){ return s+bySymbol[k]; }, 0);
+    var topSymbol = Object.keys(bySymbol).sort(function(a,b){ return bySymbol[b]-bySymbol[a]; })[0];
+    var concentration = topSymbol ? (bySymbol[topSymbol]/totalExposure*100).toFixed(0) : 0;
+
+    var el = document.getElementById('rk-portfolio-snapshot');
+    if (el) {
+      function card(label,val,color){
+        return '<div style="padding:12px;background:var(--ov3);border:1px solid var(--border);border-radius:8px;text-align:center">'
+          +'<div style="font-size:8px;color:var(--dim);letter-spacing:1px;margin-bottom:4px">'+label+'</div>'
+          +'<div style="font-family:Orbitron;font-size:15px;font-weight:700;color:'+color+'">'+val+'</div></div>';
+      }
+      el.innerHTML =
+        card('OPEN POSITIONS', open.length, 'var(--txt)') +
+        card('TOTAL EXPOSURE', '₹'+totalExposure.toFixed(0), 'var(--a)') +
+        card('LARGEST CONCENTRATION', (topSymbol||'—')+' '+(topSymbol?concentration+'%':''), concentration>50?'var(--r)':'var(--g)');
+    }
+  }
+
+  // ── PRE-MARKET SNAPSHOT ──
+  window.pmRefresh = function(){
+    var grid = document.getElementById('pm-grid');
+    if (!grid) return;
+    var items = [
+      {name:'GIFT NIFTY', link:'https://www.nseindia.com/', hint:'Check NSE / your broker app for live GIFT Nifty'},
+      {name:'DOW JONES', link:'https://www.google.com/search?q=dow+jones+close', hint:'Previous US close'},
+      {name:'NASDAQ', link:'https://www.google.com/search?q=nasdaq+close', hint:'Previous US close'},
+      {name:'SGX / NIKKEI', link:'https://www.google.com/search?q=nikkei+225+live', hint:'Asian market cue'},
+      {name:'USD/INR', link:'https://www.google.com/search?q=usd+inr', hint:'Currency cue'},
+      {name:'CRUDE OIL', link:'https://www.google.com/search?q=brent+crude+oil+price', hint:'Commodity cue'}
+    ];
+    grid.innerHTML = items.map(function(it){
+      return '<a href="'+it.link+'" target="_blank" rel="noopener" style="text-decoration:none;display:block;padding:12px;background:var(--ov3);border:1px solid var(--border);border-radius:8px;transition:border .2s" onmouseover="this.style.borderColor=\'var(--a)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+        +'<div style="font-family:Orbitron;font-size:11px;color:var(--txt);letter-spacing:1px;margin-bottom:4px">'+it.name+'</div>'
+        +'<div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">'+it.hint+' →</div>'
+        +'</a>';
+    }).join('');
+  };
+
+  // Render on load if journal tab happens to be active already
+  document.addEventListener('DOMContentLoaded', function(){
+    try { jrRender(); } catch(e){}
+  });
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     JARVIS VOICE COMMANDS — floating mic button, speech-to-text
+     command routing + spoken replies via the browser's built-in
+     speechSynthesis (same engine your 9AM briefing already uses).
+     Silently does nothing on browsers without speech recognition
+     support (older WebViews, etc.) — safe to include everywhere.
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // not supported on this browser — skip entirely
+
+  var btn = document.createElement('button');
+  btn.id = 'jarvis-mic-btn';
+  btn.innerHTML = '🎙️';
+  btn.title = 'Voice command';
+  btn.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:9998;width:52px;height:52px;border-radius:50%;border:2px solid rgba(0,212,255,.5);background:radial-gradient(circle at 35% 35%,rgba(0,212,255,.25),rgba(10,16,28,.95));color:#00d4ff;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,212,255,.25);transition:all .2s;';
+
+  var listening = false;
+  var recognition = new SR();
+  recognition.lang = 'en-IN';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  function speak(text){
+    try {
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = .95; u.pitch = .85; u.volume = .95;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch(e){}
+  }
+
+  function go(pageId){
+    var b = document.querySelector('.nav-tab[onclick*="\''+pageId+'\'"]');
+    if (typeof showPage === 'function') showPage(pageId, b);
+  }
+
+  function handleCommand(raw){
+    var t = raw.toLowerCase();
+    if (t.indexOf('dashboard') !== -1) { go('dash'); speak('Opening dashboard.'); }
+    else if (t.indexOf('option chain') !== -1 || t.indexOf('opt chain') !== -1) { go('chain'); speak('Opening option chain.'); }
+    else if (t.indexOf('mutual fund') !== -1) { go('mf'); speak('Opening mutual funds.'); }
+    else if (t.indexOf('f and o') !== -1 || t.indexOf('fno') !== -1 || t.indexOf('f n o') !== -1) { go('advanced'); speak('Opening F and O.'); }
+    else if (t.indexOf('stock advance') !== -1 || t.indexOf('stock advice') !== -1) { go('stockadv'); speak('Opening stock advance.'); }
+    else if (t.indexOf('financial advisor') !== -1 || t.indexOf('fin advisor') !== -1) { go('finadvice'); speak('Opening financial advisor.'); }
+    else if (t.indexOf('ipo') !== -1) { go('ipo'); speak('Opening I P O watch.'); }
+    else if (t.indexOf('strategy health') !== -1) { go('strathealth'); speak('Opening strategy health.'); }
+    else if (t.indexOf('journal') !== -1 || t.indexOf('tax') !== -1 || t.indexOf('risk') !== -1) { go('journal'); speak('Opening journal and risk tools.'); }
+    else if (t.indexOf('nifty') !== -1) {
+      var el = document.getElementById('idx-nifty');
+      var val = el ? el.querySelector('.idx-val') : null;
+      var txt = val ? val.textContent.trim() : '';
+      speak(txt ? ('Nifty is at ' + txt) : 'Nifty data is not loaded yet.');
+    }
+    else { speak("Sorry, I didn't catch that command."); }
+  }
+
+  recognition.onresult = function(e){
+    var transcript = e.results[0][0].transcript;
+    handleCommand(transcript);
+  };
+  recognition.onend = function(){
+    listening = false;
+    btn.style.borderColor = 'rgba(0,212,255,.5)';
+    btn.style.boxShadow = '0 4px 20px rgba(0,212,255,.25)';
+  };
+  recognition.onerror = function(){
+    listening = false;
+    btn.style.borderColor = 'rgba(0,212,255,.5)';
+  };
+
+  btn.onclick = function(){
+    if (listening) { recognition.stop(); return; }
+    listening = true;
+    btn.style.borderColor = '#ff3860';
+    btn.style.boxShadow = '0 4px 24px rgba(255,56,96,.5)';
+    try { recognition.start(); } catch(e){ listening = false; }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.body.appendChild(btn);
+  });
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    document.body.appendChild(btn);
+  }
+})();
+</script>
+
+<script src="native-bridge.js"></script>
+
+</body>
 </html>
