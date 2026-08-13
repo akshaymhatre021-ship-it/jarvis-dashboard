@@ -23477,6 +23477,7 @@ function admCreateUser() {
     if (window.SUPA_USER && window.SUPA_USER.role === 'admin') { try { supaRenderAdminUsers(); } catch(e) {} }
   });
 }
+window.admCreateUser = admCreateUser; // expose to global scope — the button's inline onclick needs this
 
 /* ─── Load All Users (admin) ─── */
 window.supaLoadAllUsers = async function() {
