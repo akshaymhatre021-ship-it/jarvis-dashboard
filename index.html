@@ -22056,6 +22056,8 @@ window.jarvisPopupFallback = function(html, title){
     <button class="nav-tab active" id="jr-tab-journal" onclick="jrTab('journal',this)" style="color:#ff8c00;border-color:rgba(255,140,0,.3)">📓 TRADE JOURNAL</button>
     <button class="nav-tab" id="jr-tab-tax" onclick="jrTab('tax',this)">🧾 TAX ESTIMATE</button>
     <button class="nav-tab" id="jr-tab-risk" onclick="jrTab('risk',this)">⚖️ RISK TOOLS</button>
+    <button class="nav-tab" id="jr-tab-alerts" onclick="jrTab('alerts',this)">🔔 ALERTS</button>
+    <button class="nav-tab" id="jr-tab-backup" onclick="jrTab('backup',this)">💾 BACKUP</button>
     <button class="nav-tab" id="jr-tab-premarket" onclick="jrTab('premarket',this)">🌅 PRE-MARKET</button>
   </div>
 
@@ -22094,6 +22096,16 @@ window.jarvisPopupFallback = function(html, title){
         <button onclick="jrExportCSV()" style="font-family:'Share Tech Mono';font-size:9px;color:var(--a);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);padding:5px 10px;border-radius:20px;cursor:pointer">⬇ EXPORT CSV</button>
       </div>
       <div id="jr-stats" style="padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><span class="pt">📈 EQUITY CURVE (closed trades, cumulative)</span></div>
+      <div style="padding:12px"><div id="jr-equity-chart" style="width:100%;height:160px"></div></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><span class="pt">🏷️ WIN RATE BY TAG</span></div>
+      <div id="jr-tag-bars" style="padding:12px"></div>
     </div>
 
     <div class="panel">
@@ -22143,6 +22155,75 @@ window.jarvisPopupFallback = function(html, title){
     <div class="panel">
       <div class="ph"><span class="pt">📈 JOURNAL RISK SNAPSHOT (from open + closed entries)</span></div>
       <div id="rk-portfolio-snapshot" style="padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  <div id="jr-page-alerts" style="display:none">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="pt">🔔 PRICE ALERTS</span>
+        <button onclick="alRequestNotifPermission()" id="al-notif-btn" style="font-family:'Share Tech Mono';font-size:9px;color:var(--a);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);padding:5px 10px;border-radius:20px;cursor:pointer">🔕 ENABLE NOTIFICATIONS</button>
+      </div>
+      <div style="padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Index</label>
+          <select id="al-symbol" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:'Share Tech Mono';font-size:12px">
+            <option value="idx-nifty">NIFTY 50</option>
+            <option value="idx-bnk">BANK NIFTY</option>
+            <option value="idx-bse">SENSEX</option>
+            <option value="idx-vix">INDIA VIX</option>
+          </select>
+        </div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Condition</label>
+          <select id="al-cond" style="width:100%;background:var(--ov45);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--txt);font-family:'Share Tech Mono';font-size:12px">
+            <option value="above">Crosses ABOVE</option>
+            <option value="below">Crosses BELOW</option>
+          </select>
+        </div>
+        <div class="sp-field"><label style="font-size:9px;color:var(--dim)">Target Price</label><input id="al-target" type="number" step="0.01" placeholder="e.g. 24500"></div>
+        <div style="display:flex;align-items:flex-end">
+          <button onclick="alAddAlert()" style="width:100%;padding:9px;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.4);border-radius:7px;color:#ff8c00;font-family:Orbitron;font-size:10px;font-weight:700;cursor:pointer">+ ADD</button>
+        </div>
+      </div>
+      <div style="padding:0 12px 12px;font-family:'Share Tech Mono';font-size:9px;color:var(--dim);line-height:1.6">
+        ⚠ Alerts check every 5 seconds while this app/tab is open. Enable notifications above to get a system popup even if you're on another tab — but on mobile, this still needs the app open in the background, not fully closed (a future native-app rebuild can add true closed-app push).
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="pt">📋 ACTIVE ALERTS</span></div>
+      <div id="al-list" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <!-- ── BACKUP & RESTORE ── -->
+  <div id="jr-page-backup" style="display:none">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><span class="pt">💾 EXPORT BACKUP</span></div>
+      <div style="padding:12px">
+        <div style="padding:9px 11px;background:var(--ov3);border:1px solid var(--border);border-radius:7px;font-family:'Share Tech Mono';font-size:9.5px;color:var(--dim);line-height:1.6;margin-bottom:12px">
+          Saves your Journal, Alerts, Watchlist, Auto Signal Engine settings, Paper Trading portfolio, notes and preferences to one file you can keep safe or move to another device/browser.
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono';font-size:10px;color:var(--txt);margin-bottom:12px;cursor:pointer">
+          <input type="checkbox" id="bk-include-creds" style="width:16px;height:16px">
+          Also include login credentials (API keys, TOTP secret, MPIN)
+        </label>
+        <div id="bk-cred-warning" style="display:none;padding:8px 10px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:6px;font-family:'Share Tech Mono';font-size:9px;color:#ff8fa3;margin-bottom:12px">
+          ⚠ The backup file will contain your credentials in plain, readable text. Only do this if you'll store the file somewhere secure (not email, not shared drives).
+        </div>
+        <button onclick="bkExport()" style="width:100%;padding:11px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.4);border-radius:7px;color:var(--g);font-family:Orbitron;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer">⬇ DOWNLOAD BACKUP FILE</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><span class="pt">📤 RESTORE FROM BACKUP</span></div>
+      <div style="padding:12px">
+        <div style="padding:9px 11px;background:rgba(255,204,0,.06);border:1px solid rgba(255,204,0,.25);border-radius:7px;font-family:'Share Tech Mono';font-size:9.5px;color:var(--dim);line-height:1.6;margin-bottom:12px">
+          ⚠ Restoring <b style="color:var(--txt)">overwrites</b> your current Journal, Alerts, Watchlist and settings on this device with whatever is in the file. Make sure this is what you want — consider exporting a fresh backup of your current data first, just in case.
+        </div>
+        <input type="file" id="bk-file-input" accept="application/json" style="display:none" onchange="bkHandleFile(event)">
+        <button onclick="document.getElementById('bk-file-input').click()" style="width:100%;padding:11px;background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.4);border-radius:7px;color:var(--w);font-family:Orbitron;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer">⬆ CHOOSE BACKUP FILE</button>
+        <div id="bk-restore-status" style="margin-top:10px;font-family:'Share Tech Mono';font-size:11px"></div>
+      </div>
     </div>
   </div>
 
@@ -25079,7 +25160,7 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
   }
 
   window.jrTab = function(name, btn){
-    ['journal','tax','risk','premarket'].forEach(function(p){
+    ['journal','tax','risk','alerts','backup','premarket'].forEach(function(p){
       var el = document.getElementById('jr-page-'+p);
       if (el) el.style.display = (p===name) ? 'block' : 'none';
     });
@@ -25088,6 +25169,8 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
     if (name==='journal') jrRender();
     if (name==='tax') jrRenderTax();
     if (name==='risk') jrRenderRiskSnapshot();
+    if (name==='alerts') alRender();
+    if (name==='backup') bkInit();
     if (name==='premarket') pmRefresh();
   };
 
@@ -25174,6 +25257,61 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
       });
       tbl.innerHTML = rows || '<tr><td style="padding:12px;color:var(--dim)">No entries yet.</td></tr>';
     }
+
+    jrRenderEquityCurve(list);
+    jrRenderTagBars(closed);
+  }
+
+  function jrRenderEquityCurve(list){
+    var el = document.getElementById('jr-equity-chart');
+    if (!el || !window.LightweightCharts) return;
+    var closed = list.filter(function(e){ return e.exitPrice !== null && e.exitDate; })
+      .sort(function(a,b){ return new Date(a.exitDate) - new Date(b.exitDate); });
+    if (!closed.length) { el.innerHTML = '<div style="color:var(--dim);font-family:Share Tech Mono;font-size:10px;padding:20px;text-align:center">No closed trades yet.</div>'; return; }
+    el.innerHTML = '';
+    var chart = LightweightCharts.createChart(el, {
+      layout: { background: { color: 'transparent' }, textColor: '#c8d8f0', fontFamily: "'Share Tech Mono', monospace", fontSize: 9 },
+      grid: { vertLines: { color: 'rgba(26,40,64,.5)' }, horzLines: { color: 'rgba(26,40,64,.5)' } },
+      rightPriceScale: { borderColor: '#1a2840' },
+      timeScale: { borderColor: '#1a2840', timeVisible: false },
+      handleScroll: false, handleScale: false
+    });
+    var series = chart.addAreaSeries({ lineColor: '#00d4ff', topColor: 'rgba(0,212,255,.25)', bottomColor: 'rgba(0,212,255,.02)', lineWidth: 2 });
+    var cum = 0, data = [], seenDates = {};
+    closed.forEach(function(e){
+      var diff = e.dir === 'SHORT' ? (e.entryPrice - e.exitPrice) : (e.exitPrice - e.entryPrice);
+      cum += diff * (e.qty || 0);
+      var t = Math.floor(new Date(e.exitDate).getTime()/1000);
+      while (seenDates[t]) t += 60; // nudge duplicate-day timestamps so the series stays valid
+      seenDates[t] = true;
+      data.push({ time: t, value: cum });
+    });
+    series.setData(data);
+    chart.timeScale().fitContent();
+    window.addEventListener('resize', function(){ chart.applyOptions({ width: el.clientWidth }); });
+  }
+
+  function jrRenderTagBars(closed){
+    var el = document.getElementById('jr-tag-bars');
+    if (!el) return;
+    var byTag = {};
+    closed.forEach(function(e){
+      var tag = e.tag || '(untagged)';
+      if (!byTag[tag]) byTag[tag] = { wins:0, total:0 };
+      byTag[tag].total++;
+      if (jrPnl(e) > 0) byTag[tag].wins++;
+    });
+    var tags = Object.keys(byTag);
+    if (!tags.length) { el.innerHTML = '<div style="color:var(--dim);font-family:Share Tech Mono;font-size:10px">No closed, tagged trades yet.</div>'; return; }
+    el.innerHTML = tags.map(function(tag){
+      var d = byTag[tag];
+      var pct = Math.round(d.wins/d.total*100);
+      var color = pct>=60 ? 'var(--g)' : pct>=40 ? 'var(--w)' : 'var(--r)';
+      return '<div style="margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;font-family:Share Tech Mono;font-size:10px;color:var(--txt);margin-bottom:3px"><span>'+tag+' ('+d.total+')</span><span style="color:'+color+'">'+pct+'%</span></div>'
+        +'<div style="height:6px;background:var(--ov3);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+'"></div></div>'
+        +'</div>';
+    }).join('');
   }
 
   window.jrExportCSV = function(){
@@ -25310,6 +25448,191 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
     }).join('');
   };
 
+  // ── PRICE ALERTS ──
+  var AL_KEY = 'ja_alerts';
+  var alNotifGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+
+  function alGet(){ try { return JSON.parse(localStorage.getItem(AL_KEY) || '[]'); } catch(e){ return []; } }
+  function alSave(list){ try { localStorage.setItem(AL_KEY, JSON.stringify(list)); } catch(e){} }
+
+  var AL_NAMES = { 'idx-nifty':'NIFTY 50', 'idx-bnk':'BANK NIFTY', 'idx-bse':'SENSEX', 'idx-vix':'INDIA VIX' };
+
+  window.alAddAlert = function(){
+    var symbol = document.getElementById('al-symbol').value;
+    var cond = document.getElementById('al-cond').value;
+    var target = parseFloat(document.getElementById('al-target').value);
+    if (!target) { alert('Enter a target price'); return; }
+    var list = alGet();
+    list.push({ id:'al_'+Date.now(), symbol:symbol, cond:cond, target:target, triggered:false });
+    alSave(list);
+    document.getElementById('al-target').value = '';
+    alRender();
+  };
+
+  window.alDeleteAlert = function(id){
+    alSave(alGet().filter(function(a){ return a.id !== id; }));
+    alRender();
+  };
+
+  window.alRequestNotifPermission = function(){
+    if (typeof Notification === 'undefined') { alert('Notifications not supported on this browser.'); return; }
+    Notification.requestPermission().then(function(perm){
+      alNotifGranted = (perm === 'granted');
+      var btn = document.getElementById('al-notif-btn');
+      if (btn) btn.textContent = alNotifGranted ? '🔔 NOTIFICATIONS ON' : '🔕 ENABLE NOTIFICATIONS';
+    });
+  };
+
+  function alRender(){
+    var list = alGet();
+    var el = document.getElementById('al-list');
+    if (!el) return;
+    var btn = document.getElementById('al-notif-btn');
+    if (btn) btn.textContent = alNotifGranted ? '🔔 NOTIFICATIONS ON' : '🔕 ENABLE NOTIFICATIONS';
+    if (!list.length) { el.innerHTML = '<div style="color:var(--dim);font-family:Share Tech Mono;font-size:10px">No alerts set.</div>'; return; }
+    el.innerHTML = list.map(function(a){
+      var status = a.triggered ? '<span style="color:var(--g)">✓ TRIGGERED</span>' : '<span style="color:var(--dim)">WATCHING</span>';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:var(--ov3);border:1px solid var(--border);border-radius:7px;margin-bottom:6px;font-family:Share Tech Mono;font-size:11px">'
+        +'<span>'+(AL_NAMES[a.symbol]||a.symbol)+' '+(a.cond==='above'?'&gt;':'&lt;')+' '+a.target+'</span>'
+        +'<span>'+status+' <button onclick="alDeleteAlert(\''+a.id+'\')" style="background:none;border:none;color:var(--r);cursor:pointer;margin-left:8px">✕</button></span>'
+        +'</div>';
+    }).join('');
+  }
+
+  function alCheckAll(){
+    var list = alGet();
+    if (!list.length) return;
+    var changed = false;
+    list.forEach(function(a){
+      if (a.triggered) return;
+      var cardEl = document.getElementById(a.symbol);
+      if (!cardEl) return;
+      var valEl = cardEl.querySelector('.idx-val');
+      if (!valEl) return;
+      var raw = valEl.textContent.replace(/[^0-9.\-]/g,'');
+      var price = parseFloat(raw);
+      if (!price) return;
+      var hit = a.cond === 'above' ? (price >= a.target) : (price <= a.target);
+      if (hit) {
+        a.triggered = true; changed = true;
+        var msg = (AL_NAMES[a.symbol]||a.symbol) + ' crossed ' + (a.cond==='above'?'above':'below') + ' ' + a.target + ' — now ' + price;
+        if (typeof showBriefToast === 'function') showBriefToast('🔔 ' + msg, 'info');
+        if (alNotifGranted) { try { new Notification('JARVIS Alert', { body: msg }); } catch(e){} }
+        try {
+          var u = new SpeechSynthesisUtterance('Alert. ' + msg);
+          u.rate=.95; u.pitch=.85; speechSynthesis.speak(u);
+        } catch(e){}
+      }
+    });
+    if (changed) { alSave(list); if (document.getElementById('jr-page-alerts') && document.getElementById('jr-page-alerts').style.display !== 'none') alRender(); }
+  }
+  setInterval(alCheckAll, 5000);
+
+  // ── BACKUP & RESTORE ──
+  // Credential keys are excluded by default — a backup file is just
+  // plain text, so bundling secrets into it by default would be an
+  // easy way to leak them (email, cloud drive, etc.) without realizing.
+  var BK_CRED_KEYS = ['ja_j','ja_m','ja_t','ja_k','ja_c','ja_f','ja_kite_secret','ja_kite_key','ja_kite_token','ja_kite_token_date','ja_kite_user','ja_pin','ja_totp'];
+  var BK_SKIP_ALWAYS = ['jarvis_supa_token','jarvis_supa_refresh']; // session tokens — expire anyway, no value in a backup
+
+  function bkInit(){
+    var cb = document.getElementById('bk-include-creds');
+    var warn = document.getElementById('bk-cred-warning');
+    if (cb && warn) {
+      cb.onchange = function(){ warn.style.display = cb.checked ? 'block' : 'none'; };
+    }
+  }
+
+  window.bkExport = function(){
+    var includeCreds = document.getElementById('bk-include-creds').checked;
+    var data = {};
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (BK_SKIP_ALWAYS.indexOf(key) !== -1) continue;
+      if (!includeCreds && BK_CRED_KEYS.indexOf(key) !== -1) continue;
+      data[key] = localStorage.getItem(key);
+    }
+    var payload = {
+      app: 'JARVIS', backupVersion: 1,
+      createdAt: new Date().toISOString(),
+      includesCredentials: includeCreds,
+      data: data
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'jarvis-backup-' + new Date().toISOString().slice(0,10) + (includeCreds ? '-WITH-CREDS' : '') + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  window.bkHandleFile = function(evt){
+    var file = evt.target.files[0];
+    if (!file) return;
+    var statusEl = document.getElementById('bk-restore-status');
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var payload;
+      try { payload = JSON.parse(e.target.result); }
+      catch(err) { statusEl.innerHTML = '<span style="color:var(--r)">✕ Not a valid backup file.</span>'; return; }
+      if (!payload || payload.app !== 'JARVIS' || !payload.data) {
+        statusEl.innerHTML = '<span style="color:var(--r)">✕ This doesn\'t look like a JARVIS backup file.</span>';
+        return;
+      }
+      var keys = Object.keys(payload.data);
+      var confirmMsg = 'Restore ' + keys.length + ' item(s) from a backup made on ' +
+        new Date(payload.createdAt).toLocaleString('en-IN') +
+        (payload.includesCredentials ? ' (includes login credentials)' : ' (no credentials — you\'ll need to log in again)') +
+        '?\n\nThis OVERWRITES your current data on this device.';
+      if (!confirm(confirmMsg)) { statusEl.innerHTML = '<span style="color:var(--dim)">Restore cancelled.</span>'; return; }
+      keys.forEach(function(k){ try { localStorage.setItem(k, payload.data[k]); } catch(err){} });
+      statusEl.innerHTML = '<span style="color:var(--g)">✓ Restored ' + keys.length + ' item(s). Reloading…</span>';
+      setTimeout(function(){ location.reload(); }, 1200);
+    };
+    reader.readAsText(file);
+  };
+
+  // ── DAILY AUTO-BRIEFING (rule-based summary from your own live data —
+  // not a true LLM call, since that needs a server-side API key this
+  // client-only app doesn't have. Wire your own key into your Cloudflare
+  // Worker later to upgrade this to real AI-generated narration.) ──
+  function buildAutoBriefing(){
+    function chg(id){
+      var cardEl = document.getElementById(id);
+      var chgEl = cardEl ? cardEl.querySelector('.idx-chg') : null;
+      return chgEl ? chgEl.textContent.trim() : '';
+    }
+    var niftyChg = chg('idx-nifty'), bnkChg = chg('idx-bnk'), vixChg = chg('idx-vix');
+    var mood = (niftyChg.indexOf('-') === 0) ? 'cautious, red' : (niftyChg ? 'positive, green' : 'still loading');
+    var aseState = (typeof ASE_ON !== 'undefined' && ASE_ON) ? 'ON and actively evaluating' : 'OFF';
+    var pnlEl = document.getElementById('nd2-pnl');
+    var pnlTxt = pnlEl ? pnlEl.textContent.trim() : '—';
+    return 'Market mood looks <b>'+mood+'</b> — NIFTY '+(niftyChg||'…')+', BANK NIFTY '+(bnkChg||'…')+', VIX '+(vixChg||'…')+
+      '. Auto Signal Engine is <b>'+aseState+'</b>. Your tracked P&amp;L stands at <b>'+pnlTxt+'</b>. '+
+      (aseState.indexOf('OFF')!==-1 ? 'Consider turning the engine on if you plan to trade today.' : 'Keep an eye on the signal log for new entries.');
+  }
+
+  function injectBriefingCard(){
+    if (document.getElementById('ja-auto-briefing')) return;
+    var indices = document.querySelector('#page-dash .indices, .indices');
+    if (!indices || !indices.parentElement) return;
+    var card = document.createElement('div');
+    card.id = 'ja-auto-briefing';
+    card.style.cssText = 'margin:12px 0;padding:12px 14px;background:linear-gradient(135deg,rgba(255,140,0,.08),rgba(0,212,255,.04));border:1px solid rgba(255,140,0,.25);border-radius:9px;font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--txt);line-height:1.7';
+    card.innerHTML = '<div style="font-family:Orbitron;font-size:10px;letter-spacing:1px;color:#ff8c00;margin-bottom:6px">📋 AUTO BRIEFING <span style="color:var(--dim);font-weight:normal">(smart summary from your live data)</span></div><div id="ja-auto-briefing-text">Loading…</div>';
+    indices.parentElement.insertBefore(card, indices.nextSibling);
+  }
+
+  function refreshBriefing(){
+    var el = document.getElementById('ja-auto-briefing-text');
+    if (el) el.innerHTML = buildAutoBriefing();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ injectBriefingCard(); refreshBriefing(); }, 2000);
+    setInterval(refreshBriefing, 60000);
+  });
+
   // Render on load if journal tab happens to be active already
   document.addEventListener('DOMContentLoaded', function(){
     try { jrRender(); } catch(e){}
@@ -25365,6 +25688,36 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
     else if (t.indexOf('ipo') !== -1) { go('ipo'); speak('Opening I P O watch.'); }
     else if (t.indexOf('strategy health') !== -1) { go('strathealth'); speak('Opening strategy health.'); }
     else if (t.indexOf('journal') !== -1 || t.indexOf('tax') !== -1 || t.indexOf('risk') !== -1) { go('journal'); speak('Opening journal and risk tools.'); }
+    else if (t.indexOf('start auto signal') !== -1 || t.indexOf('start signal engine') !== -1 || t.indexOf('turn on auto signal') !== -1) {
+      var cb = document.getElementById('ase-toggle');
+      if (cb) { cb.checked = true; if (typeof aseToggle === 'function') aseToggle(); speak('Auto signal engine turned on.'); }
+      else speak('Could not find the auto signal engine toggle.');
+    }
+    else if (t.indexOf('stop auto signal') !== -1 || t.indexOf('stop signal engine') !== -1 || t.indexOf('turn off auto signal') !== -1) {
+      var cb2 = document.getElementById('ase-toggle');
+      if (cb2) { cb2.checked = false; if (typeof aseToggle === 'function') aseToggle(); speak('Auto signal engine turned off.'); }
+      else speak('Could not find the auto signal engine toggle.');
+    }
+    else if (t.indexOf('portfolio') !== -1 || t.indexOf('my p and l') !== -1 || t.indexOf('my pnl') !== -1 || t.indexOf('profit') !== -1) {
+      var pnlEl = document.getElementById('nd2-pnl');
+      var txt = pnlEl ? pnlEl.textContent.trim() : '';
+      speak(txt ? ('Your portfolio P and L is ' + txt) : 'Portfolio data is not loaded yet.');
+    }
+    else if (t.indexOf('bank nifty') !== -1) {
+      var elB = document.getElementById('idx-bnk');
+      var valB = elB ? elB.querySelector('.idx-val') : null;
+      speak(valB && valB.textContent.trim() ? ('Bank Nifty is at ' + valB.textContent.trim()) : 'Bank Nifty data is not loaded yet.');
+    }
+    else if (t.indexOf('sensex') !== -1) {
+      var elS = document.getElementById('idx-bse');
+      var valS = elS ? elS.querySelector('.idx-val') : null;
+      speak(valS && valS.textContent.trim() ? ('Sensex is at ' + valS.textContent.trim()) : 'Sensex data is not loaded yet.');
+    }
+    else if (t.indexOf('vix') !== -1) {
+      var elV = document.getElementById('idx-vix');
+      var valV = elV ? elV.querySelector('.idx-val') : null;
+      speak(valV && valV.textContent.trim() ? ('India VIX is at ' + valV.textContent.trim()) : 'VIX data is not loaded yet.');
+    }
     else if (t.indexOf('nifty') !== -1) {
       var el = document.getElementById('idx-nifty');
       var val = el ? el.querySelector('.idx-val') : null;
@@ -25415,8 +25768,17 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
      ══════════════════════════════════════════════════════════════ -->
 <script>
 (function(){
-  var lwChart = null, candleSeries = null, volumeSeries = null;
+  var lwChart = null, candleSeries = null, volumeSeries = null, ema20Series = null, ema50Series = null;
   var UP = '#00ff88', DOWN = '#ff3d5a';
+
+  function ema(values, period){
+    var k = 2/(period+1), out = [], prev = null;
+    values.forEach(function(v){
+      prev = (prev === null) ? v : (v*k + prev*(1-k));
+      out.push(prev);
+    });
+    return out;
+  }
 
   function ensureChart(){
     if (lwChart) return true;
@@ -25442,12 +25804,32 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
     });
     volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
     candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.2 } });
+    ema20Series = lwChart.addLineSeries({ color: '#ffcc00', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+    ema50Series = lwChart.addLineSeries({ color: '#a78bfa', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 
     window.addEventListener('resize', function(){
       var wrap = el.parentElement;
       if (wrap) lwChart.applyOptions({ width: wrap.clientWidth, height: wrap.clientHeight });
     });
     return true;
+  }
+
+  // Pulls journal entries for this symbol and turns them into
+  // buy/sell arrow markers plotted on the candles at their entry date.
+  function buildJournalMarkers(stock){
+    try {
+      var list = JSON.parse(localStorage.getItem('ja_journal') || '[]');
+      var sym = (stock||'').toUpperCase();
+      return list.filter(function(e){ return e.symbol === sym && e.entryDate; }).map(function(e){
+        return {
+          time: Math.floor(new Date(e.entryDate).getTime()/1000),
+          position: e.dir === 'SHORT' ? 'aboveBar' : 'belowBar',
+          color: e.dir === 'SHORT' ? DOWN : UP,
+          shape: e.dir === 'SHORT' ? 'arrowDown' : 'arrowUp',
+          text: (e.dir === 'SHORT' ? 'SELL' : 'BUY') + (e.tag ? ' · '+e.tag : '')
+        };
+      });
+    } catch(e){ return []; }
   }
 
   // rawCandles: either real Angel One arrays [isoTime,o,h,l,c,vol]
@@ -25483,6 +25865,15 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
 
     candleSeries.setData(data);
     volumeSeries.setData(volData);
+
+    var closes = data.map(function(d){ return d.close; });
+    var ema20vals = ema(closes, 20), ema50vals = ema(closes, 50);
+    ema20Series.setData(data.map(function(d,i){ return { time:d.time, value: ema20vals[i] }; }));
+    ema50Series.setData(data.map(function(d,i){ return { time:d.time, value: ema50vals[i] }; }));
+
+    var markers = buildJournalMarkers(stock);
+    if (markers.length) candleSeries.setMarkers(markers);
+
     lwChart.timeScale().fitContent();
 
     var canvas = document.getElementById('mainChart');
