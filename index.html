@@ -17362,20 +17362,19 @@ function ptGetLivePrice(t) {
 //      to lock in PT_TRAIL_LOCK_PCT of the peak gain. SL only ever moves up,
 //      never down, and never above target.
 //   3. Auto-closes the trade the moment live price hits target or SL.
-// v1.1 recalibration (4 Aug 2026): analysis of 46 real paper trades showed
-// TRAIL SL exits (48% of all trades) averaged only +4.5% P&L, while the
-// designed target was typically +18-25%+, and only 3/46 trades (6.5%) ever
-// reached AUTO TARGET. Meanwhile AUTO SL losses ran the full designed stop
-// distance (avg -14.4%). That asymmetry — winners capped early, losers run
-// full length — was erasing most of the edge from a genuinely decent 54%
-// win rate. Arming later and locking more of the peak gives winners more
-// room to reach a meaningful fraction of the actual target before an
-// ordinary pullback (common in noisy 5-min option premiums) exits the
-// trade. Re-check this against a fresh batch of trades after the change —
-// this is a calibration adjustment based on one month of data, not a
-// guarantee.
-var PT_TRAIL_ARM_PCT  = 0.40; // must be 40% of the way to target before SL starts trailing (was 0.25)
-var PT_TRAIL_LOCK_PCT = 0.75; // lock in 75% of the peak gain as the new SL floor (was 0.60)
+// v1.3 recalibration (13 Aug 2026): the v1.1 change (0.25→0.40 arm,
+// 0.60→0.75 lock) was a step in the right direction but the following
+// month of real data (75+ closed trades across 8 strategies) still
+// showed the same pattern: realized avg wins landing at just 29-40% of
+// designed target across Nifty Pro V1.5, Trendline Breakout, Nifty Pro
+// V2, and ORB+VWAP. The lock percentage was still too tight relative to
+// the arm point — a normal pullback after arming was enough to trigger
+// the trailed SL well before price got anywhere near the real target.
+// Arming later AND locking less of the peak (looser trail once armed)
+// gives ordinary noise more room without giving back the whole gain.
+// Re-check against a fresh batch of trades after this change too.
+var PT_TRAIL_ARM_PCT  = 0.55; // must be 55% of the way to target before SL starts trailing (was 0.40)
+var PT_TRAIL_LOCK_PCT = 0.60; // lock in 60% of the peak gain as the new SL floor (was 0.75 — loosened)
 function ptCheckAutoExits() {
   if (!PT_PORTFOLIO) return;
   // v1.2 fix (5 Aug 2026): same root cause as the aseEvaluate() gate above
@@ -20221,8 +20220,14 @@ async function aseEvaluateTrendline() {
   // SL at the trendline level (index points) converted to an equivalent
   // premium retracement: how far price would have to move back through
   // the line, as a % of the move from the pivot, applied to premium.
+  // v1.1 recalibration (13 Aug 2026): the old clamp allowed up to 60% of
+  // premium as the stop distance — real trade history showed this
+  // strategy's avg loss (-17.1%) running nearly 1.5x its avg win
+  // (+12.2%), an inverted risk:reward that erodes edge even at a
+  // positive win rate. Tightening the max clamp caps how large any
+  // single loss can be, without changing the entry/breakout logic itself.
   var idxMoveAtEntry = Math.abs(ni.ltp - breakout.slLevel);
-  var slPct = Math.min(0.6, Math.max(0.15, idxMoveAtEntry / ni.ltp * 8)); // scaled, clamped 15-60%
+  var slPct = Math.min(0.30, Math.max(0.12, idxMoveAtEntry / ni.ltp * 8)); // scaled, clamped 12-30% (was 15-60%)
   var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain, same convention as the other strategy
   var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
   var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
@@ -20981,7 +20986,14 @@ async function aseEvaluateORB() {
     return;
   }
 
-  var riskPct = Math.min(0.35, Math.max(0.10, sig.risk / ni.ltp * 8));
+  // v1.1 recalibration (13 Aug 2026): real trade history showed ORB+VWAP's
+  // avg loss (-10.8%) running over 2x its avg win (+4.6%) — the 1:1.5
+  // R:R design was sound on paper, but combined with trailing SL capping
+  // wins early (see PT_TRAIL_ARM_PCT/LOCK_PCT above) while losses ran the
+  // full designed distance, the net effect was inverted. Tightening the
+  // max risk clamp caps single-trade loss size; the trailing-SL fix
+  // above should do most of the work of letting winners actually run.
+  var riskPct = Math.min(0.22, Math.max(0.08, sig.risk / ni.ltp * 8)); // clamped 8-22% (was 10-35%)
   var rewardPct = riskPct * 1.5; // R:R 1:1.5, matches the backtest runner
   var sl     = Math.round(chainLtp * (1 - riskPct) / 5) * 5;
   var target = Math.round(chainLtp * (1 + rewardPct) / 5) * 5;
