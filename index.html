@@ -17558,11 +17558,13 @@ function ptRefreshUI() {
           +'</div>'
           + (t.slTrailed ? '<div style="font-family:Share Tech Mono;font-size:9px;color:var(--g);margin-bottom:8px">🔒 Trailing SL active — locked up from original ₹'+(t.slOriginal!==undefined?t.slOriginal:t.sl)+' as price ran in your favour. Won\'t move back down.</div>' : '')
           + (t.reasons ? '<div style="font-family:Share Tech Mono;font-size:9px;color:#7a8db0;margin-bottom:8px">💡 <b style="color:#a064ff">Why this trade:</b> '+t.reasons+'</div>' : '')
-          +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-            +'<button onclick="ptShowExitModal('+t.id+')" style="padding:4px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">✅ CLOSE TRADE</button>'
-            +'<button onclick="ptToggleTrail('+t.id+')" title="Auto-ratchets your SL up to lock in profit as price runs toward target, and auto-closes on target/SL hit" style="padding:4px 12px;background:'+(t.trailSL!==false?'rgba(0,255,136,.08)':'rgba(255,255,255,.04)')+';border:1px solid '+(t.trailSL!==false?'rgba(0,255,136,.3)':'var(--border)')+';border-radius:4px;color:'+(t.trailSL!==false?'var(--g)':'var(--dim)')+';font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">'+(t.trailSL!==false?'🔒 TRAIL SL: ON':'🔓 TRAIL SL: OFF')+'</button>'
-            +'<button onclick="ptDeleteTrade('+t.id+')" style="padding:4px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🗑 DELETE</button>'
-          +'</div>'
+          +(t.cloudOwned
+            ? '<div style="font-family:Share Tech Mono;font-size:9px;color:#7a8db0">☁ Managed by cloud engine — closes/trails automatically</div>'
+            : '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+              +'<button onclick="ptShowExitModal('+t.id+')" style="padding:4px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:4px;color:var(--g);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">✅ CLOSE TRADE</button>'
+              +'<button onclick="ptToggleTrail('+t.id+')" title="Auto-ratchets your SL up to lock in profit as price runs toward target, and auto-closes on target/SL hit" style="padding:4px 12px;background:'+(t.trailSL!==false?'rgba(0,255,136,.08)':'rgba(255,255,255,.04)')+';border:1px solid '+(t.trailSL!==false?'rgba(0,255,136,.3)':'var(--border)')+';border-radius:4px;color:'+(t.trailSL!==false?'var(--g)':'var(--dim)')+';font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">'+(t.trailSL!==false?'🔒 TRAIL SL: ON':'🔓 TRAIL SL: OFF')+'</button>'
+              +'<button onclick="ptDeleteTrade('+t.id+')" style="padding:4px 12px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🗑 DELETE</button>'
+            +'</div>')
         +'</div>';
       }).join('');
     }
@@ -17636,7 +17638,7 @@ function ptRefreshUI() {
           +'<td style="padding:7px 10px;font-family:Orbitron;font-size:11px;color:'+pColor+'">'+(t.net>=0?'+':'')+'₹'+Math.round(t.net||0).toLocaleString('en-IN')+'</td>'
           +'<td style="padding:7px 10px;font-family:Share Tech Mono;color:'+pColor+'">'+(parseFloat(t.pnlPct||0)>=0?'+':'')+t.pnlPct+'%</td>'
           +'<td style="padding:7px 10px"><span style="background:'+rBg+';color:'+(t.result==='PROFIT'?'var(--g)':'var(--r)')+';font-size:8px;padding:2px 7px;border-radius:3px;font-family:Share Tech Mono">'+t.result+'</span></td>'
-          +'<td style="padding:7px 10px"><button onclick="ptDeleteTrade('+t.id+')" title="Permanently delete this trade from history" style="padding:3px 9px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:7px;cursor:pointer;letter-spacing:1px;white-space:nowrap">🗑 DELETE</button></td>'
+          +'<td style="padding:7px 10px">'+(t.cloudOwned ? '<span style="font-size:7px;color:#7a8db0">☁ cloud</span>' : '<button onclick="ptDeleteTrade('+t.id+')" title="Permanently delete this trade from history" style="padding:3px 9px;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.25);border-radius:4px;color:var(--r);font-family:Orbitron;font-size:7px;cursor:pointer;letter-spacing:1px;white-space:nowrap">🗑 DELETE</button>')+'</td>'
           +'</tr>';
       }).join('');
     }
@@ -25842,6 +25844,7 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
 </script>
 
 <script src="native-bridge.js"></script>
+<script src="cloud-bridge.js"></script>
 
 </body>
 </html>
