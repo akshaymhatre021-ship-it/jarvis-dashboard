@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>JARVIS — Engine Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#060c14;
+    --panel:#0d1620;
+    --panel-2:#0a121b;
+    --line:#1c2b3a;
+    --text:#cdd9e5;
+    --muted:#6f8298;
+    --cyan:#4fd6ff;
+    --green:#39ff88;
+    --amber:#ffb347;
+    --red:#ff5c5c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top, rgba(79,214,255,0.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+
+  /* ---- header ---- */
+  header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  .brand{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:20px;letter-spacing:0.06em;color:#fff;}
+  .brand span{color:var(--cyan);}
+  .sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;}
+  #refreshBtn{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.05em;
+    padding:7px 12px;border-radius:6px;cursor:pointer;text-transform:uppercase;
+    transition:border-color .15s,color .15s;
+  }
+  #refreshBtn:hover{border-color:var(--cyan);color:var(--cyan);}
+  #refreshBtn:active{transform:translateY(1px);}
+
+  /* ---- hero pulse ---- */
+  .hero{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 22px 18px;
+    margin-bottom:16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap;}
+  .status-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:0.06em;
+    padding:6px 12px;border-radius:999px;border:1px solid;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .status-pill.online{color:var(--green);border-color:rgba(57,255,136,.35);background:rgba(57,255,136,.06);}
+  .status-pill.online .dot{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .status-pill.degraded{color:var(--amber);border-color:rgba(255,179,71,.35);background:rgba(255,179,71,.06);}
+  .status-pill.degraded .dot{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+  .status-pill.offline{color:var(--red);border-color:rgba(255,92,92,.35);background:rgba(255,92,92,.06);}
+  .status-pill.offline .dot{background:var(--red);box-shadow:0 0 8px var(--red);}
+  .status-pill.unknown{color:var(--muted);border-color:var(--line);}
+
+  .age{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
+  .age b{color:var(--text);}
+
+  svg#pulse{display:block;width:100%;height:70px;margin-top:10px;}
+  .pulse-line{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .pulse-line.online{stroke:var(--green);filter:drop-shadow(0 0 4px rgba(57,255,136,.5));}
+  .pulse-line.degraded{stroke:var(--amber);filter:drop-shadow(0 0 4px rgba(255,179,71,.5));}
+  .pulse-line.offline{stroke:var(--red);}
+  .pulse-line.unknown{stroke:var(--line);}
+  .pulse-scroll{animation:scrollpulse 3.2s linear infinite;}
+  @keyframes scrollpulse{from{stroke-dashoffset:0;}to{stroke-dashoffset:-480;}}
+  @media (prefers-reduced-motion: reduce){.pulse-scroll{animation:none;}}
+
+  .hero-meta{display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .hero-meta b{color:var(--text);font-weight:500;}
+
+  /* ---- panels ---- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-bottom:16px;
+  }
+  .panel h2{
+    margin:0 0 14px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.09em;text-transform:uppercase;
+    color:var(--cyan);font-weight:600;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .panel h2 small{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;}
+
+  .snap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:14px;}
+  .snap-item .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;}
+  .snap-item .val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--text);}
+
+  table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  th{
+    text-align:left;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;
+    font-size:10px;padding:0 10px 8px 0;border-bottom:1px solid var(--line);
+  }
+  td{padding:8px 10px 8px 0;border-bottom:1px solid rgba(28,43,58,.5);color:var(--text);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .empty{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 0;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
+  .tag.success{color:var(--green);background:rgba(57,255,136,.1);}
+  .tag.fail{color:var(--red);background:rgba(255,92,92,.1);}
+  .tag.other{color:var(--muted);background:rgba(111,130,152,.1);}
+
+  footer{text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:24px;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand">JARVIS <span>// ENGINE STATUS</span></div>
+      <div class="sub">Live read-out — Oracle Cloud backend</div>
+    </div>
+    <button id="refreshBtn">↺ Refresh</button>
+  </header>
+
+  <div class="hero">
+    <div class="hero-top">
+      <span id="statusPill" class="status-pill unknown"><span class="dot"></span>CHECKING…</span>
+      <span class="age" id="ageText">—</span>
+    </div>
+    <svg id="pulse" viewBox="0 0 480 70" preserveAspectRatio="none">
+      <path id="pulsePathA" class="pulse-line unknown" d=""/>
+      <path id="pulsePathB" class="pulse-line unknown" d=""/>
+    </svg>
+    <div class="hero-meta">
+      <span>LAST HEARTBEAT <b id="mHeartbeat">—</b></span>
+      <span>LAST MARKET DATA <b id="mMarket">—</b></span>
+      <span>LAST SIGNAL <b id="mSignal">—</b></span>
+      <span>VERSION <b id="mVersion">—</b></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Latest NIFTY Tick <small id="tickTime">—</small></h2>
+    <div class="snap-grid">
+      <div class="snap-item"><div class="lbl">LTP</div><div class="val" id="tLtp">—</div></div>
+      <div class="snap-item"><div class="lbl">Open</div><div class="val" id="tOpen">—</div></div>
+      <div class="snap-item"><div class="lbl">High</div><div class="val" id="tHigh">—</div></div>
+      <div class="snap-item"><div class="lbl">Low</div><div class="val" id="tLow">—</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Cycles <small>strategy_runs</small></h2>
+    <div id="cyclesBox"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Signals <small>signals</small></h2>
+    <div id="signalsBox"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Paper Trades <small>paper_trades</small></h2>
+    <div id="tradesBox"><div class="empty">Loading…</div></div>
+  </div>
+
+  <footer>PAPER TRADING ONLY · LIVE TRADING DISABLED · DATA FROM SUPABASE</footer>
+</div>
+
+<script>
+const SUPABASE_URL = "https://kmrsqijzjixpmbgcjnxs.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnNxaWp6aml4cG1iZ2NqbnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MjcyNjQsImV4cCI6MjA5NjQwMzI2NH0.rkOZ0TpUJ5wKiJLhKxfnSZmtAljPKFAOlMDo70cp_88";
+
+async function sb(path){
+  const res = await fetch(SUPABASE_URL + path, {
+    headers:{ apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY }
+  });
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function fmtAge(iso){
+  if(!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if(ms < 0) return "just now";
+  const s = Math.floor(ms/1000);
+  if(s < 60) return s + "s ago";
+  const m = Math.floor(s/60);
+  if(m < 60) return m + "m ago";
+  const h = Math.floor(m/60);
+  return h + "h " + (m%60) + "m ago";
+}
+function fmtTime(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-IN", { hour:"2-digit", minute:"2-digit", second:"2-digit", day:"2-digit", month:"short", timeZone:"Asia/Kolkata" }) + " IST";
+}
+
+function buildPulsePath(kind){
+  // kind: 'alive' -> sharp EKG spikes, 'flat' -> flatline
+  if(kind === "flat"){
+    return "M0,35 L480,35";
+  }
+  let d = "M0,35 ";
+  const beatWidth = 60;
+  for(let x=0; x<480; x+=beatWidth){
+    d += `L${x+18},35 L${x+26},10 L${x+32},58 L${x+38},35 L${x+beatWidth},35 `;
+  }
+  return d;
+}
+
+function setPulse(state){
+  // state: online | degraded | offline | unknown
+  const pillEl = document.getElementById("statusPill");
+  const pathA = document.getElementById("pulsePathA");
+  const pathB = document.getElementById("pulsePathB");
+  pillEl.className = "status-pill " + state;
+  pathA.className.baseVal = "pulse-line " + state;
+  pathB.className.baseVal = "pulse-line " + state;
+
+  if(state === "online"){
+    pillEl.innerHTML = '<span class="dot"></span>ONLINE';
+    const d = buildPulsePath("alive");
+    pathA.setAttribute("d", d);
+    pathB.setAttribute("d", d);
+    pathB.setAttribute("transform","translate(480,0)");
+    pathA.setAttribute("stroke-dasharray","480");
+    pathB.setAttribute("stroke-dasharray","480");
+    pathA.classList.add("pulse-scroll");
+    pathB.classList.add("pulse-scroll");
+  } else if(state === "degraded"){
+    pillEl.innerHTML = '<span class="dot"></span>DEGRADED';
+    const d = buildPulsePath("alive");
+    pathA.setAttribute("d", d);
+    pathB.setAttribute("d", d);
+    pathB.setAttribute("transform","translate(480,0)");
+    pathA.setAttribute("stroke-dasharray","480");
+    pathB.setAttribute("stroke-dasharray","480");
+    pathA.classList.add("pulse-scroll");
+    pathB.classList.add("pulse-scroll");
+  } else if(state === "offline"){
+    pillEl.innerHTML = '<span class="dot"></span>OFFLINE';
+    const d = buildPulsePath("flat");
+    pathA.setAttribute("d", d);
+    pathB.setAttribute("d", "");
+    pathA.classList.remove("pulse-scroll");
+    pathB.classList.remove("pulse-scroll");
+  } else {
+    pillEl.innerHTML = '<span class="dot"></span>CHECKING…';
+    pathA.setAttribute("d","");
+    pathB.setAttribute("d","");
+  }
+}
+
+function renderGenericTable(container, rows, columns, emptyMsg){
+  if(!rows || rows.length === 0){
+    container.innerHTML = `<div class="empty">${emptyMsg}</div>`;
+    return;
+  }
+  let html = "<table><thead><tr>";
+  columns.forEach(c => html += `<th>${c.label}</th>`);
+  html += "</tr></thead><tbody>";
+  rows.forEach(row => {
+    html += "<tr>";
+    columns.forEach(c => {
+      html += `<td>${c.render ? c.render(row) : (row[c.key] ?? "—")}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+  container.innerHTML = html;
+}
+
+function statusTag(status){
+  if(!status) return `<span class="tag other">—</span>`;
+  const s = String(status).toUpperCase();
+  if(s.includes("SUCCESS") || s.includes("ONLINE") || s.includes("CLOSED") || s.includes("PROFIT")) return `<span class="tag success">${s}</span>`;
+  if(s.includes("FAIL") || s.includes("ERROR") || s.includes("OFFLINE") || s.includes("LOSS")) return `<span class="tag fail">${s}</span>`;
+  return `<span class="tag other">${s}</span>`;
+}
+
+async function loadAll(){
+  document.getElementById("refreshBtn").textContent = "↺ Refreshing…";
+
+  // Engine status
+  try{
+    const rows = await sb("/rest/v1/engine_status?select=*&id=eq.1");
+    const s = rows && rows[0];
+    if(!s){
+      setPulse("unknown");
+      document.getElementById("ageText").textContent = "no status row found";
+    } else {
+      const hbAge = s.last_heartbeat ? (Date.now() - new Date(s.last_heartbeat).getTime())/1000 : null;
+      let state = "offline";
+      if(s.status === "ONLINE" && hbAge !== null && hbAge < 180) state = "online";
+      else if(s.status === "DEGRADED") state = "degraded";
+      else if(s.status === "ONLINE" && (hbAge === null || hbAge >= 180)) state = "degraded";
+      else state = "offline";
+
+      setPulse(state);
+      document.getElementById("ageText").innerHTML = hbAge !== null ? `heartbeat <b>${fmtAge(s.last_heartbeat)}</b>` : "no heartbeat yet";
+      document.getElementById("mHeartbeat").textContent = s.last_heartbeat ? fmtAge(s.last_heartbeat) : "—";
+      document.getElementById("mMarket").textContent = s.last_market_data ? fmtAge(s.last_market_data) : "—";
+      document.getElementById("mSignal").textContent = s.last_signal ? fmtAge(s.last_signal) : "—";
+      document.getElementById("mVersion").textContent = s.version || "—";
+    }
+  } catch(e){
+    setPulse("unknown");
+    document.getElementById("ageText").textContent = "fetch failed";
+  }
+
+  // Latest market tick
+  try{
+    const rows = await sb("/rest/v1/market_data?select=*&order=ts.desc&limit=1");
+    const t = rows && rows[0];
+    if(t){
+      document.getElementById("tickTime").textContent = fmtTime(t.ts);
+      document.getElementById("tLtp").textContent = t.ltp ?? "—";
+      document.getElementById("tOpen").textContent = t.open ?? "—";
+      document.getElementById("tHigh").textContent = t.high ?? "—";
+      document.getElementById("tLow").textContent = t.low ?? "—";
+    }
+  } catch(e){}
+
+  // Recent cycles (strategy_runs)
+  try{
+    const rows = await sb("/rest/v1/strategy_runs?select=*&order=id.desc&limit=8");
+    renderGenericTable(document.getElementById("cyclesBox"), rows, [
+      { label:"Cycle", key:"run_key" },
+      { label:"Started", render:r => fmtTime(r.started_at) },
+      { label:"Status", render:r => statusTag(r.status) }
+    ], "No cycles recorded yet.");
+  } catch(e){
+    document.getElementById("cyclesBox").innerHTML = `<div class="empty">Could not load cycles.</div>`;
+  }
+
+  // Recent signals
+  try{
+    const rows = await sb("/rest/v1/signals?select=*&order=id.desc&limit=8");
+    if(!rows || rows.length === 0){
+      document.getElementById("signalsBox").innerHTML = `<div class="empty">No signals generated yet.</div>`;
+    } else {
+      const cols = Object.keys(rows[0]).filter(k => !["id"].includes(k)).slice(0,5);
+      renderGenericTable(document.getElementById("signalsBox"), rows, cols.map(k => ({
+        label: k.replace(/_/g," "),
+        render: r => (typeof r[k] === "string" && /^\d{4}-\d{2}-\d{2}T/.test(r[k])) ? fmtTime(r[k]) : (r[k] ?? "—")
+      })), "No signals generated yet.");
+    }
+  } catch(e){
+    document.getElementById("signalsBox").innerHTML = `<div class="empty">Could not load signals.</div>`;
+  }
+
+  // Recent paper trades
+  try{
+    const rows = await sb("/rest/v1/paper_trades?select=*&order=id.desc&limit=8");
+    if(!rows || rows.length === 0){
+      document.getElementById("tradesBox").innerHTML = `<div class="empty">No paper trades yet — the cloud engine hasn't opened a position.</div>`;
+    } else {
+      const cols = Object.keys(rows[0]).filter(k => !["id","user_id","signal_id"].includes(k)).slice(0,6);
+      renderGenericTable(document.getElementById("tradesBox"), rows, cols.map(k => ({
+        label: k.replace(/_/g," "),
+        render: r => (typeof r[k] === "string" && /^\d{4}-\d{2}-\d{2}T/.test(r[k])) ? fmtTime(r[k]) : (k === "status" ? statusTag(r[k]) : (r[k] ?? "—"))
+      })), "No paper trades yet.");
+    }
+  } catch(e){
+    document.getElementById("tradesBox").innerHTML = `<div class="empty">Could not load paper trades.</div>`;
+  }
+
+  document.getElementById("refreshBtn").textContent = "↺ Refresh";
+}
+
+document.getElementById("refreshBtn").addEventListener("click", loadAll);
+loadAll();
+setInterval(loadAll, 20000);
+</script>
+</body>
+</html>
