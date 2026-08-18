@@ -304,10 +304,12 @@ async function loadAll(){
       document.getElementById("ageText").textContent = "no status row found";
     } else {
       const hbAge = s.last_heartbeat ? (Date.now() - new Date(s.last_heartbeat).getTime())/1000 : null;
+      // Cycles run roughly every 5 min, so a heartbeat up to ~6.5 min old is normal,
+      // not degraded. Only flag degraded/offline once it's genuinely stale.
       let state = "offline";
-      if(s.status === "ONLINE" && hbAge !== null && hbAge < 180) state = "online";
-      else if(s.status === "DEGRADED") state = "degraded";
-      else if(s.status === "ONLINE" && (hbAge === null || hbAge >= 180)) state = "degraded";
+      if(s.status === "DEGRADED") state = "degraded";
+      else if(s.status === "ONLINE" && hbAge !== null && hbAge < 400) state = "online";
+      else if(s.status === "ONLINE" && hbAge !== null && hbAge < 900) state = "degraded";
       else state = "offline";
 
       setPulse(state);
