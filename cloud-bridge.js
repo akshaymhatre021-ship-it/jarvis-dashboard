@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 (function () {
+  var SUPA_URL = 'https://kmrsqijzjixpmbgcjnxs.supabase.co'; var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnNxaWp6aml4cG1
   var POLL_MS = 20000; // dashboard refresh cadence — this is a read-only display poll against Supabase's REST API (cheap), not Angel One, so no rate-limit concern here.
   var pillEl = null;
 
