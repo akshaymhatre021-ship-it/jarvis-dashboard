@@ -169,7 +169,16 @@
       <div class="brand">JARVIS <span>// ENGINE STATUS</span></div>
       <div class="sub">Live read-out — Oracle Cloud backend</div>
     </div>
-    <button id="refreshBtn">↺ Refresh</button>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div id="liveTradeToggleWrap" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px">
+        <span id="liveTradeLabel" style="color:var(--muted)">LIVE TRADING: OFF</span>
+        <button id="liveTradeToggle" aria-pressed="false" title="Placeholder switch — no real orders are placed yet"
+          style="width:40px;height:22px;border-radius:11px;border:1px solid #333;background:#1a1a1a;position:relative;cursor:pointer;padding:0;transition:background .15s">
+          <span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#666;transition:transform .15s"></span>
+        </button>
+      </div>
+      <button id="refreshBtn">↺ Refresh</button>
+    </div>
   </header>
 
   <div class="hero">
@@ -249,7 +258,7 @@
     <div id="historyBox" class="table-scroll"><div class="empty">Loading…</div></div>
   </div>
 
-  <footer>PAPER TRADING ONLY · LIVE TRADING DISABLED · DATA FROM SUPABASE</footer>
+  <footer id="footerNote">PAPER TRADING · DATA FROM SUPABASE</footer>
 </div>
 
 <script>
@@ -263,6 +272,73 @@ async function sb(path){
   if(!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
+
+// Calls the restricted toggle_live_trading(boolean) Postgres function —
+// this is the ONLY write this page is capable of, and it can only ever
+// flip that one column on the one engine_status row. Not a general
+// database write, even though it uses the public anon key.
+async function callToggleLiveTrading(newValue){
+  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/toggle_live_trading", {
+    method: "POST",
+    headers:{
+      apikey: ANON_KEY,
+      Authorization: "Bearer " + ANON_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ new_value: newValue })
+  });
+  if(!res.ok) throw new Error("HTTP " + res.status);
+}
+
+function renderLiveTradeToggle(isOn){
+  const btn = document.getElementById("liveTradeToggle");
+  const label = document.getElementById("liveTradeLabel");
+  const dot = btn.querySelector("span");
+  btn.setAttribute("aria-pressed", String(isOn));
+  btn.dataset.state = isOn ? "on" : "off";
+  if(isOn){
+    btn.style.background = "#3a1a1a";
+    btn.style.borderColor = "#ff3d5a";
+    dot.style.transform = "translateX(18px)";
+    dot.style.background = "#ff3d5a";
+    label.textContent = "LIVE TRADING: ON (placeholder — no real orders yet)";
+    label.style.color = "#ff3d5a";
+  } else {
+    btn.style.background = "#1a1a1a";
+    btn.style.borderColor = "#333";
+    dot.style.transform = "translateX(0)";
+    dot.style.background = "#666";
+    label.textContent = "LIVE TRADING: OFF";
+    label.style.color = "var(--muted)";
+  }
+}
+
+document.getElementById("liveTradeToggle").addEventListener("click", async () => {
+  const btn = document.getElementById("liveTradeToggle");
+  const currentlyOn = btn.dataset.state === "on";
+  const turningOn = !currentlyOn;
+
+  if(turningOn){
+    const confirmed = confirm(
+      "Turn LIVE TRADING on?\n\n" +
+      "Right now this is a placeholder — the backend has no real order-" +
+      "placement code yet, so flipping this ON will NOT place real trades " +
+      "or risk real money. It only sets a flag the engine logs against.\n\n" +
+      "Continue?"
+    );
+    if(!confirmed) return;
+  }
+
+  btn.disabled = true;
+  try{
+    await callToggleLiveTrading(turningOn);
+    renderLiveTradeToggle(turningOn);
+  } catch(e){
+    alert("Failed to update: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 function fmtAge(iso){
   if(!iso) return null;
@@ -572,6 +648,7 @@ async function loadAll(){
       document.getElementById("mMarket").textContent = s.last_market_data ? fmtAge(s.last_market_data) : "—";
       document.getElementById("mSignal").textContent = s.last_signal ? fmtAge(s.last_signal) : "—";
       document.getElementById("mVersion").textContent = s.version || "—";
+      renderLiveTradeToggle(!!s.live_trading_enabled);
     }
   } catch(e){
     setPulse("unknown");
