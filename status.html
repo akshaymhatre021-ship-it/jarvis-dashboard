@@ -677,7 +677,8 @@ function renderOpenPositions(rows){
   const box = document.getElementById("openPosBox");
   const countEl = document.getElementById("openCount");
   const n = rows ? rows.length : 0;
-  countEl.textContent = "paper_trades (open) — " + n + (n === 1 ? " position" : " positions");
+  const nowStr = new Date().toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", second:"2-digit", timeZone:"Asia/Kolkata" });
+  countEl.textContent = "paper_trades (open) — " + n + (n === 1 ? " position" : " positions") + " · refreshed " + nowStr + " IST";
   if(!n){
     box.innerHTML = `<div class="empty">No open positions.</div>`;
     return;
