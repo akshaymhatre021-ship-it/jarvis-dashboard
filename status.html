@@ -719,12 +719,18 @@ function renderOpenPositions(rows){
 // never a real strike — so the option name has to be built from the
 // linked signal's strike + CALL/PUT type instead (embedded above via
 // the signals join), the same way the backend's checkOpenTrades() does.
+// The date suffix is the contract's real expiry (market_context.expiry,
+// e.g. "1 Sep 2026") — NOT the day the trade was opened. Using opened_at
+// here was wrong: it made a trade taken on 26 Aug look like a "26 Aug"
+// contract, when NIFTY's weekly expiry that day had already passed and
+// the actual contract traded expires 1 Sep.
 function tradeInstrumentName(r){
   const sig = r.signals || null;
   const strike = sig && sig.market_context && sig.market_context.strike;
   if(strike == null) return r.symbol || "—";
   const optType = sig.signal_type === "PUT" ? "PE" : "CE";
-  return "NIFTY " + strike + optType + " " + fmtDate(r.opened_at);
+  const expiry = sig.market_context.expiry || fmtDate(r.opened_at);
+  return "NIFTY " + strike + optType + " " + expiry;
 }
 
 function tradeReturnPct(r){
