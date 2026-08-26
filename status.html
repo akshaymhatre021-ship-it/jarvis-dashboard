@@ -129,6 +129,17 @@
 
   .table-scroll{overflow-x:auto;}
 
+  .pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;font-family:'JetBrains Mono',monospace;}
+  .pager button{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.05em;
+    padding:6px 12px;border-radius:6px;cursor:pointer;text-transform:uppercase;
+    transition:border-color .15s,color .15s;
+  }
+  .pager button:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan);}
+  .pager button:disabled{opacity:.35;cursor:default;}
+  .pager .pageInfo{color:var(--muted);font-size:11px;letter-spacing:0.04em;}
+
   /* ---- strategy health cards ---- */
   .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
   .health-card{
@@ -256,6 +267,11 @@
   <div class="panel">
     <h2>Trade History <small id="histCount">paper_trades (closed)</small></h2>
     <div id="historyBox" class="table-scroll"><div class="empty">Loading…</div></div>
+    <div id="historyPager" class="pager" style="display:none">
+      <button id="histPrevBtn">← Prev</button>
+      <span class="pageInfo" id="histPageInfo">Page 1</span>
+      <button id="histNextBtn">Next →</button>
+    </div>
   </div>
 
   <footer id="footerNote">PAPER TRADING · DATA FROM SUPABASE</footer>
@@ -608,21 +624,70 @@ function renderDayBreakdown(stats){
   ], "No closed trades yet.");
 }
 
+// trade.symbol in paper_trades is always the literal string 'NIFTY' —
+// never a real strike — so the option name has to be built from the
+// linked signal's strike + CALL/PUT type instead (embedded above via
+// the signals join), the same way the backend's checkOpenTrades() does.
+function tradeInstrumentName(r){
+  const sig = r.signals || null;
+  const strike = sig && sig.market_context && sig.market_context.strike;
+  if(strike == null) return r.symbol || "—";
+  const optType = sig.signal_type === "PUT" ? "PE" : "CE";
+  return "NIFTY " + strike + optType + " " + fmtDate(r.opened_at);
+}
+
+function tradeReturnPct(r){
+  if(r.entry_price == null || r.exit_price == null || !r.entry_price) return null;
+  return ((r.exit_price - r.entry_price) / r.entry_price) * 100;
+}
+
+const HIST_PAGE_SIZE = 10;
+let HIST_ROWS = [];
+let HIST_PAGE = 0;
+
 function renderTradeHistory(rows){
   const countEl = document.getElementById("histCount");
-  const box = document.getElementById("historyBox");
   countEl.textContent = "paper_trades (closed) — " + rows.length + " total";
-  if(!rows || rows.length === 0){
+  HIST_ROWS = rows || [];
+  HIST_PAGE = 0;
+  renderTradeHistoryPage();
+}
+
+function renderTradeHistoryPage(){
+  const box = document.getElementById("historyBox");
+  const pager = document.getElementById("historyPager");
+  if(!HIST_ROWS.length){
     box.innerHTML = `<div class="empty">No closed trades yet.</div>`;
+    pager.style.display = "none";
     return;
   }
-  const displayRows = rows.slice(0, 60);
-  const cols = Object.keys(displayRows[0]).filter(k => !["id","user_id","signal_id"].includes(k));
-  renderGenericTable(box, displayRows, cols.map(k => ({
-    label: k.replace(/_/g," "),
-    render: r => fmtCell(k, r[k])
-  })), "No closed trades yet.");
+  const totalPages = Math.ceil(HIST_ROWS.length / HIST_PAGE_SIZE);
+  HIST_PAGE = Math.max(0, Math.min(HIST_PAGE, totalPages - 1));
+  const start = HIST_PAGE * HIST_PAGE_SIZE;
+  const pageRows = HIST_ROWS.slice(start, start + HIST_PAGE_SIZE);
+
+  renderGenericTable(box, pageRows, [
+    { label:"Instrument", render:r => tradeInstrumentName(r) },
+    { label:"Strategy",   render:r => r.strategy || "—" },
+    { label:"Date",       render:r => fmtDate(r.opened_at) },
+    { label:"Buy Time",   render:r => r.opened_at ? new Date(r.opened_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : "—" },
+    { label:"Exit Time",  render:r => r.closed_at ? new Date(r.closed_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : "—" },
+    { label:"Buy ₹",      render:r => r.entry_price ?? "—" },
+    { label:"Exit ₹",     render:r => r.exit_price ?? "—" },
+    { label:"Qty",        render:r => r.qty ?? "—" },
+    { label:"Net P&L ₹",  render:r => `<span class="${(r.net_pnl ?? 0) >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPnl(r.net_pnl)}</span>` },
+    { label:"Return %",   render:r => { const p = tradeReturnPct(r); return p == null ? "—" : `<span class="${p >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p >= 0 ? '+' : ''}${p.toFixed(2)}%</span>`; } },
+    { label:"Result",     render:r => statusTag(r.result || ((r.net_pnl ?? 0) >= 0 ? "PROFIT" : "LOSS")) }
+  ], "No closed trades yet.");
+
+  pager.style.display = totalPages > 1 ? "flex" : "none";
+  document.getElementById("histPageInfo").textContent = `Page ${HIST_PAGE + 1} of ${totalPages}`;
+  document.getElementById("histPrevBtn").disabled = HIST_PAGE === 0;
+  document.getElementById("histNextBtn").disabled = HIST_PAGE >= totalPages - 1;
 }
+
+document.getElementById("histPrevBtn").addEventListener("click", () => { HIST_PAGE--; renderTradeHistoryPage(); });
+document.getElementById("histNextBtn").addEventListener("click", () => { HIST_PAGE++; renderTradeHistoryPage(); });
 
 async function loadAll(){
   document.getElementById("refreshBtn").textContent = "↺ Refreshing…";
@@ -719,7 +784,7 @@ async function loadAll(){
 
   // Everything performance-related shares one fetch of ALL closed trades
   try{
-    const rows = await sb("/rest/v1/paper_trades?select=*&status=eq.CLOSED&order=id.desc&limit=500");
+    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.CLOSED&order=id.desc&limit=500");
     const stats = computeTradeStats(rows);
     renderPortfolioSummary(stats);
     renderStrategyHealth(stats);
