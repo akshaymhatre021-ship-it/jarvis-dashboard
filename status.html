@@ -140,6 +140,17 @@
   .pager button:disabled{opacity:.35;cursor:default;}
   .pager .pageInfo{color:var(--muted);font-size:11px;letter-spacing:0.04em;}
 
+  .pos-card{background:rgba(79,214,255,.03);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+  .pos-card:last-child{margin-bottom:0;}
+  .pos-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .pos-title{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:var(--cyan);flex-wrap:wrap;}
+  .pos-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex:none;}
+  .pos-strat{font-size:10px;color:var(--amber);text-transform:none;font-weight:500;}
+  .pos-time{font-size:10px;color:var(--muted);font-weight:500;}
+  .pos-pnl{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;}
+  .pos-detail{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text);display:flex;flex-wrap:wrap;gap:6px 16px;}
+  .pos-detail b{color:var(--muted);font-weight:500;}
+
   /* ---- strategy health cards ---- */
   .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
   .health-card{
@@ -260,8 +271,18 @@
   </div>
 
   <div class="panel">
+    <h2>Open Positions <small id="openCount">paper_trades (open)</small></h2>
+    <div id="openPosBox" class="table-scroll"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="panel">
     <h2>Day-wise Breakdown <small id="dayCount">—</small></h2>
     <div id="dayBreakdownBox" class="table-scroll"><div class="empty">Loading…</div></div>
+    <div id="dayPager" class="pager" style="display:none">
+      <button id="dayPrevBtn">← Prev</button>
+      <span class="pageInfo" id="dayPageInfo">Page 1</span>
+      <button id="dayNextBtn">Next →</button>
+    </div>
   </div>
 
   <div class="panel">
@@ -600,28 +621,98 @@ function renderDailyPnlChart(stats){
   box.innerHTML = cols;
 }
 
+const DAY_PAGE_SIZE = 10;
+let DAY_ROWS = [];
+let DAY_PAGE = 0;
+
 function renderDayBreakdown(stats){
-  const box = document.getElementById("dayBreakdownBox");
   const countEl = document.getElementById("dayCount");
   const dates = Object.keys(stats.byDate).sort().reverse();
   if(dates.length === 0){
-    box.innerHTML = `<div class="empty">No closed trades yet.</div>`;
+    document.getElementById("dayBreakdownBox").innerHTML = `<div class="empty">No closed trades yet.</div>`;
+    document.getElementById("dayPager").style.display = "none";
     countEl.textContent = "—";
     return;
   }
   countEl.textContent = dates.length + " trading days";
-  const rows = dates.map(d => {
+  DAY_ROWS = dates.map(d => {
     const s = stats.byDate[d];
     const winRate = s.trades ? Math.round((s.wins / s.trades) * 100) : 0;
     return { date: d, trades: s.trades, wins: s.wins, losses: s.losses, winRate, netPnl: s.netPnl };
   });
-  renderGenericTable(box, rows, [
+  DAY_PAGE = 0;
+  renderDayBreakdownPage();
+}
+
+function renderDayBreakdownPage(){
+  const box = document.getElementById("dayBreakdownBox");
+  const pager = document.getElementById("dayPager");
+  const totalPages = Math.ceil(DAY_ROWS.length / DAY_PAGE_SIZE);
+  DAY_PAGE = Math.max(0, Math.min(DAY_PAGE, totalPages - 1));
+  const start = DAY_PAGE * DAY_PAGE_SIZE;
+  const pageRows = DAY_ROWS.slice(start, start + DAY_PAGE_SIZE);
+
+  renderGenericTable(box, pageRows, [
     { label:"Date", render:r => fmtDate(r.date + "T00:00:00") },
     { label:"Trades", key:"trades" },
     { label:"W / L", render:r => r.wins + " / " + r.losses },
     { label:"Win Rate", render:r => r.winRate + "%" },
     { label:"Net P&L", render:r => `<span class="${r.netPnl>=0?'pnl-pos':'pnl-neg'}">${fmtPnl(r.netPnl)}</span>` }
   ], "No closed trades yet.");
+
+  pager.style.display = totalPages > 1 ? "flex" : "none";
+  document.getElementById("dayPageInfo").textContent = `Page ${DAY_PAGE + 1} of ${totalPages}`;
+  document.getElementById("dayPrevBtn").disabled = DAY_PAGE === 0;
+  document.getElementById("dayNextBtn").disabled = DAY_PAGE >= totalPages - 1;
+}
+
+document.getElementById("dayPrevBtn").addEventListener("click", () => { DAY_PAGE--; renderDayBreakdownPage(); });
+document.getElementById("dayNextBtn").addEventListener("click", () => { DAY_PAGE++; renderDayBreakdownPage(); });
+
+// Open positions card list — mirrors the main dashboard's Open Positions
+// card. Unrealized P&L/return% here are GROSS (no brokerage deducted),
+// matching how the main dashboard displays a running position, unlike
+// the Trade History table below which shows realized NET P&L.
+function renderOpenPositions(rows){
+  const box = document.getElementById("openPosBox");
+  const countEl = document.getElementById("openCount");
+  const n = rows ? rows.length : 0;
+  countEl.textContent = "paper_trades (open) — " + n + (n === 1 ? " position" : " positions");
+  if(!n){
+    box.innerHTML = `<div class="empty">No open positions.</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r => {
+    const name = tradeInstrumentName(r);
+    const buy = r.entry_price;
+    const live = r.live_price;
+    const hasLive = live != null && buy != null;
+    const gross = hasLive ? (live - buy) * (r.qty || 0) : null;
+    const retPct = hasLive && buy ? ((live - buy) / buy) * 100 : null;
+    const toTargetPct = (hasLive && r.target) ? ((r.target - live) / live) * 100 : null;
+    const toSlPct = (hasLive && r.stop_loss) ? ((live - r.stop_loss) / live) * 100 : null;
+    const pnlCls = gross == null ? "" : (gross >= 0 ? "pnl-pos" : "pnl-neg");
+    return `
+      <div class="pos-card">
+        <div class="pos-head">
+          <div class="pos-title">
+            <span class="pos-dot"></span>${name}
+            <span class="pos-strat">${r.strategy || "—"}</span>
+            <span class="pos-time">${r.opened_at ? new Date(r.opened_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : ""}</span>
+          </div>
+          <div class="pos-pnl ${pnlCls}">${gross == null ? "—" : fmtPnl(gross)}${retPct == null ? "" : ` (${retPct >= 0 ? "+" : ""}${retPct.toFixed(2)}%)`}</div>
+        </div>
+        <div class="pos-detail">
+          <span><b>Buy:</b> ₹${buy ?? "—"}</span>
+          <span><b>Live:</b> ${live == null ? "—" : "₹" + live}</span>
+          <span><b>Qty:</b> ${r.qty ?? "—"}</span>
+          <span><b>Target:</b> ${r.target != null ? "₹" + r.target : "—"}</span>
+          <span><b>SL:</b> ${r.stop_loss != null ? "₹" + r.stop_loss : "—"}</span>
+          <span><b>To Target:</b> ${toTargetPct == null ? "—" : toTargetPct.toFixed(1) + "%"}</span>
+          <span><b>To SL:</b> ${toSlPct == null ? "—" : toSlPct.toFixed(1) + "%"}</span>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 // trade.symbol in paper_trades is always the literal string 'NIFTY' —
@@ -780,6 +871,17 @@ async function loadAll(){
     }
   } catch(e){
     document.getElementById("tradesBox").innerHTML = `<div class="empty">Could not load paper trades.</div>`;
+  }
+
+  // Open positions — mirrors the "Open Positions" card on the main
+  // dashboard. live_price/live_price_at are written by the engine every
+  // cycle (checkOpenTrades in index.js), so this reflects the current
+  // option premium, not just the entry price.
+  try{
+    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.OPEN&order=id.desc");
+    renderOpenPositions(rows);
+  } catch(e){
+    document.getElementById("openPosBox").innerHTML = `<div class="empty">Could not load open positions.</div>`;
   }
 
   // Everything performance-related shares one fetch of ALL closed trades
