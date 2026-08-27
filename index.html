@@ -10068,6 +10068,29 @@ async function fetchCandlesTF(sym, tok, exchange) {
   // the handful of symbols ASE actually polls) so a new candle shows up to
   // the engine much closer to when it actually closes.
   if (cached && Date.now() - cached.ts < 30*1000) return cached.candles;
+
+  // Try the backend's Supabase candle cache first. The VM's own engine
+  // fetches this same 5-min data from Angel One every ~5 min regardless
+  // — reading its result here instead of the browser separately calling
+  // Angel One again is what stops the two of them sharing (and
+  // exhausting) one rate-limit budget under the single API key Angel
+  // One issues per account. Falls straight through to the existing
+  // Angel One path below if this token isn't cached there or has gone
+  // stale (backend down, restarted, etc.) — nothing else changes.
+  if (cfg.interval === 'FIVE_MINUTE' && window.supaFetch) {
+    try {
+      var cacheRes = await window.supaFetch('/rest/v1/candle_cache?token=eq.' + encodeURIComponent(String(tok)) + '&timeframe=eq.5min&select=candles,updated_at');
+      if (cacheRes && !cacheRes.error && cacheRes.data && cacheRes.data[0]) {
+        var cacheRow = cacheRes.data[0];
+        var cacheAgeMs = Date.now() - new Date(cacheRow.updated_at).getTime();
+        if (cacheAgeMs < 6 * 60 * 1000 && Array.isArray(cacheRow.candles) && cacheRow.candles.length >= 5) {
+          window.CANDLE_CACHE[cacheKey] = { ts: Date.now(), candles: cacheRow.candles };
+          return cacheRow.candles;
+        }
+      }
+    } catch (e) { /* fall through to Angel One below */ }
+  }
+
   if (!creds.jwt || !creds.connected) return null;
   try {
     var toDate = new Date();
