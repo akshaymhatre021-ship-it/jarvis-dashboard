@@ -146,6 +146,7 @@
   .pos-title{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:var(--cyan);flex-wrap:wrap;}
   .pos-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex:none;}
   .pos-strat{font-size:10px;color:var(--amber);text-transform:none;font-weight:500;}
+  .pos-trail{font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.03em;font-weight:600;}
   .pos-time{font-size:10px;color:var(--muted);font-weight:500;}
   .pos-pnl{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;}
   .pos-detail{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text);display:flex;flex-wrap:wrap;gap:6px 16px;}
@@ -693,12 +694,18 @@ function renderOpenPositions(rows){
     const toTargetPct = (hasLive && r.target) ? ((r.target - live) / live) * 100 : null;
     const toSlPct = (hasLive && r.stop_loss) ? ((live - r.stop_loss) / live) * 100 : null;
     const pnlCls = gross == null ? "" : (gross >= 0 ? "pnl-pos" : "pnl-neg");
+    // Trailing SL is unconditional in the backend — there's no per-trade
+    // toggle in paper_trades, evaluateOpenTrade() defaults it on for
+    // every position — so this badge is always accurate to show, unlike
+    // index.html where trailing can genuinely be off per trade.
+    const slTrailed = r.sl_original != null && r.stop_loss != null && Number(r.sl_original) !== Number(r.stop_loss);
     return `
       <div class="pos-card">
         <div class="pos-head">
           <div class="pos-title">
             <span class="pos-dot"></span>${name}
             <span class="pos-strat">${r.strategy || "—"}</span>
+            <span class="pos-trail">🔒 Trail SL: ON${slTrailed ? " · trailed from ₹" + r.sl_original : ""}</span>
             <span class="pos-time">${r.opened_at ? new Date(r.opened_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : ""}</span>
           </div>
           <div class="pos-pnl ${pnlCls}">${gross == null ? "—" : fmtPnl(gross)}${retPct == null ? "" : ` (${retPct >= 0 ? "+" : ""}${retPct.toFixed(2)}%)`}</div>
