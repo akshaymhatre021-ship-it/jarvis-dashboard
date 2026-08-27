@@ -893,7 +893,7 @@ async function loadAll(){
 
   // Everything performance-related shares one fetch of ALL closed trades
   try{
-    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.CLOSED&order=id.desc&limit=500");
+    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.CLOSED&order=opened_at.desc&limit=500");
     const stats = computeTradeStats(rows);
     renderPortfolioSummary(stats);
     renderStrategyHealth(stats);
