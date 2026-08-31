@@ -237,16 +237,6 @@
   </div>
 
   <div class="panel">
-    <h2>Recent Signals <small>signals</small></h2>
-    <div id="signalsBox"><div class="empty">Loading…</div></div>
-  </div>
-
-  <div class="panel">
-    <h2>Recent Paper Trades <small>paper_trades</small></h2>
-    <div id="tradesBox"><div class="empty">Loading…</div></div>
-  </div>
-
-  <div class="panel">
     <h2>Portfolio Summary <small>all closed trades</small></h2>
     <div class="snap-grid" id="summaryGrid">
       <div class="snap-item"><div class="lbl">Net P&amp;L</div><div class="val" id="sNetPnl">—</div></div>
@@ -848,43 +838,6 @@ async function loadAll(){
     ], "No cycles recorded yet.");
   } catch(e){
     document.getElementById("cyclesBox").innerHTML = `<div class="empty">Could not load cycles.</div>`;
-  }
-
-  // Recent signals
-  try{
-    const rows = await sb("/rest/v1/signals?select=*&order=id.desc&limit=8");
-    if(!rows || rows.length === 0){
-      document.getElementById("signalsBox").innerHTML = `<div class="empty">No signals generated yet.</div>`;
-    } else {
-      // Strategy: prefer a real `strategy` column if the signals table has one;
-      // otherwise derive it from dedupe_key, which already encodes it as the
-      // 2nd pipe-separated segment (e.g. "NIFTY|jarvis|CALL|24200|2026-08-20-127" -> "jarvis").
-      const stratOf = r => r.strategy || (typeof r.dedupe_key === "string" ? r.dedupe_key.split("|")[1] : null) || "—";
-      const cols = Object.keys(rows[0]).filter(k => !["id","strategy"].includes(k)).slice(0,5);
-      const columns = [
-        { label:"Strategy", render:r => stratOf(r) },
-        ...cols.map(k => ({ label:k.replace(/_/g," "), render:r => fmtCell(k, r[k]) }))
-      ];
-      renderGenericTable(document.getElementById("signalsBox"), rows, columns, "No signals generated yet.");
-    }
-  } catch(e){
-    document.getElementById("signalsBox").innerHTML = `<div class="empty">Could not load signals.</div>`;
-  }
-
-  // Recent paper trades (last 8, any status — quick glance)
-  try{
-    const rows = await sb("/rest/v1/paper_trades?select=*&order=id.desc&limit=8");
-    if(!rows || rows.length === 0){
-      document.getElementById("tradesBox").innerHTML = `<div class="empty">No paper trades yet — the cloud engine hasn't opened a position.</div>`;
-    } else {
-      const cols = Object.keys(rows[0]).filter(k => !["id","user_id","signal_id"].includes(k)).slice(0,6);
-      renderGenericTable(document.getElementById("tradesBox"), rows, cols.map(k => ({
-        label: k.replace(/_/g," "),
-        render: r => fmtCell(k, r[k])
-      })), "No paper trades yet.");
-    }
-  } catch(e){
-    document.getElementById("tradesBox").innerHTML = `<div class="empty">Could not load paper trades.</div>`;
   }
 
   // Open positions — mirrors the "Open Positions" card on the main
