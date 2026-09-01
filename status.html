@@ -723,6 +723,7 @@ function renderOpenPositions(rows){
 // contract, when NIFTY's weekly expiry that day had already passed and
 // the actual contract traded expires 1 Sep.
 function tradeInstrumentName(r){
+  if(r.instrument_label) return r.instrument_label; // legacy/backfilled rows — no linked signal to derive from
   const sig = r.signals || null;
   const strike = sig && sig.market_context && sig.market_context.strike;
   if(strike == null) return r.symbol || "—";
