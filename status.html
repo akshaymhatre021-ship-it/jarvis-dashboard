@@ -395,6 +395,28 @@ function fmtDate(iso){
   const d = new Date(iso);
   return d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric", timeZone:"Asia/Kolkata" });
 }
+// Returns the Asia/Kolkata calendar date as "YYYY-MM-DD", for grouping
+// (Day-wise Breakdown, Daily P&L). BUG FIX: this used to be a raw
+// r.closed_at.slice(0,10) — the UTC calendar date, not IST. That
+// happened to match IST during normal 9:15am-3:40pm market hours (the
+// UTC offset never crosses midnight in that window), but was silently
+// wrong in principle and inconsistent with every other date on this
+// page, which is always Asia/Kolkata. en-CA locale reliably gives
+// YYYY-MM-DD, so this needs no manual string surgery afterward.
+function istDateKey(iso){
+  if(!iso) return "";
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone:"Asia/Kolkata" });
+}
+// Formats an already-computed "YYYY-MM-DD" IST date key for display,
+// without re-parsing it through new Date() (which would interpret a
+// bare "YYYY-MM-DDT00:00:00" as the BROWSER's local midnight, not IST
+// midnight — wrong for anyone viewing this dashboard outside IST).
+function fmtDateKey(key){
+  if(!key) return "—";
+  const [y,m,d] = key.split("-");
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return d + " " + MONTHS[Number(m)-1] + " " + y;
+}
 function fmtPnl(v){
   if(v == null || isNaN(v)) return "—";
   const n = Number(v);
@@ -511,7 +533,7 @@ function computeTradeStats(rows){
     if(best === null || pnl > best) best = pnl;
     if(worst === null || pnl < worst) worst = pnl;
 
-    const dateKey = (r.closed_at || r.created_at || "").slice(0,10);
+    const dateKey = istDateKey(r.closed_at || r.created_at);
     if(!byDate[dateKey]) byDate[dateKey] = { trades:0, wins:0, losses:0, netPnl:0 };
     byDate[dateKey].trades++;
     byDate[dateKey].netPnl += pnl;
@@ -650,7 +672,7 @@ function renderDayBreakdownPage(){
   const pageRows = DAY_ROWS.slice(start, start + DAY_PAGE_SIZE);
 
   renderGenericTable(box, pageRows, [
-    { label:"Date", render:r => fmtDate(r.date + "T00:00:00") },
+    { label:"Date (exit)", render:r => fmtDateKey(r.date) },
     { label:"Trades", key:"trades" },
     { label:"W / L", render:r => r.wins + " / " + r.losses },
     { label:"Win Rate", render:r => r.winRate + "%" },
@@ -771,7 +793,7 @@ function renderTradeHistoryPage(){
   renderGenericTable(box, pageRows, [
     { label:"Instrument", render:r => tradeInstrumentName(r) },
     { label:"Strategy",   render:r => r.strategy || "—" },
-    { label:"Date",       render:r => fmtDate(r.opened_at) },
+    { label:"Date (entry)", render:r => fmtDate(r.opened_at) },
     { label:"Buy Time",   render:r => r.opened_at ? new Date(r.opened_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : "—" },
     { label:"Exit Time",  render:r => r.closed_at ? new Date(r.closed_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : "—" },
     { label:"Buy ₹",      render:r => r.entry_price ?? "—" },
@@ -852,7 +874,7 @@ async function loadAll(){
   // cycle (checkOpenTrades in index.js), so this reflects the current
   // option premium, not just the entry price.
   try{
-    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.OPEN&order=id.desc");
+    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.OPEN&portfolio=eq.options&order=id.desc");
     renderOpenPositions(rows);
   } catch(e){
     document.getElementById("openPosBox").innerHTML = `<div class="empty">Could not load open positions.</div>`;
@@ -860,7 +882,7 @@ async function loadAll(){
 
   // Everything performance-related shares one fetch of ALL closed trades
   try{
-    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.CLOSED&order=opened_at.desc&limit=500");
+    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.CLOSED&portfolio=eq.options&order=opened_at.desc&limit=500");
     const stats = computeTradeStats(rows);
     renderPortfolioSummary(stats);
     renderStrategyHealth(stats);
