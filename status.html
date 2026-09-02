@@ -193,13 +193,7 @@
       <div class="sub">Live read-out — Oracle Cloud backend</div>
     </div>
     <div style="display:flex;align-items:center;gap:14px">
-      <div id="liveTradeToggleWrap" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px">
-        <span id="liveTradeLabel" style="color:var(--muted)">LIVE TRADING: OFF</span>
-        <button id="liveTradeToggle" aria-pressed="false" title="Placeholder switch — no real orders are placed yet"
-          style="width:40px;height:22px;border-radius:11px;border:1px solid #333;background:#1a1a1a;position:relative;cursor:pointer;padding:0;transition:background .15s">
-          <span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#666;transition:transform .15s"></span>
-        </button>
-      </div>
+      <span id="liveEngineBadge" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">LIVE ENGINE: —</span>
       <button id="refreshBtn">↺ Refresh</button>
     </div>
   </header>
@@ -219,6 +213,42 @@
       <span>LAST SIGNAL <b id="mSignal">—</b></span>
       <span>VERSION <b id="mVersion">—</b></span>
     </div>
+  </div>
+
+  <div class="panel" id="liveConfigPanel">
+    <h2>Live Trading Settings <small id="liveConfigMeta">—</small></h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
+      Only strategies selected here can place real orders (and only when
+      the VM's <code>LIVE_TRADING_ENABLED</code> is also on). Everything
+      else stays paper-trade only. Changes apply on the engine's next
+      signal — no restart needed.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:220px">
+        <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px">STRATEGIES ELIGIBLE FOR LIVE TRADING</label>
+        <select id="liveStrategySelect" multiple size="5" style="width:100%;background:var(--bg2,#0d1117);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:6px;padding:6px;font-family:'JetBrains Mono',monospace;font-size:12px">
+          <option value="nifty_pro_v2">nifty_pro_v2</option>
+          <option value="nifty_pro_v15">nifty_pro_v15</option>
+          <option value="orb_vwap">orb_vwap</option>
+          <option value="trendline">trendline</option>
+          <option value="quality_breakout">quality_breakout</option>
+        </select>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px">Ctrl/Cmd-click (or tap on mobile) to select more than one</div>
+      </div>
+      <div style="min-width:140px">
+        <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px">LOT SIZE</label>
+        <select id="liveLotSelect" style="width:100%;background:var(--bg2,#0d1117);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:6px;padding:8px;font-family:'JetBrains Mono',monospace;font-size:12px">
+          <option value="1">1 lot (65 qty)</option>
+          <option value="2">2 lots (130 qty)</option>
+          <option value="3">3 lots (195 qty)</option>
+          <option value="4">4 lots (260 qty)</option>
+        </select>
+      </div>
+      <div>
+        <button id="liveConfigSaveBtn" style="padding:9px 18px">Save</button>
+      </div>
+    </div>
+    <div id="liveConfigMsg" style="font-size:11.5px;margin-top:10px;color:var(--muted)"></div>
   </div>
 
   <div class="panel">
@@ -301,72 +331,48 @@ async function sb(path){
   return res.json();
 }
 
-// Calls the restricted toggle_live_trading(boolean) Postgres function —
-// this is the ONLY write this page is capable of, and it can only ever
-// flip that one column on the one engine_status row. Not a general
+// Generic POST to a Postgres RPC function via the anon key. Used by the
+// Live Trading Settings panel below to call set_live_trading_config(),
+// which is the ONLY write this page can make — a SECURITY DEFINER
+// function that validates strategy names and clamps lot_multiplier to
+// 1-4 server-side before touching live_trading_config. Not a general
 // database write, even though it uses the public anon key.
-async function callToggleLiveTrading(newValue){
-  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/toggle_live_trading", {
+async function sbRpc(fn, args){
+  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + fn, {
     method: "POST",
     headers:{
       apikey: ANON_KEY,
       Authorization: "Bearer " + ANON_KEY,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ new_value: newValue })
+    body: JSON.stringify(args)
   });
   if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
 }
 
-function renderLiveTradeToggle(isOn){
-  const btn = document.getElementById("liveTradeToggle");
-  const label = document.getElementById("liveTradeLabel");
-  const dot = btn.querySelector("span");
-  btn.setAttribute("aria-pressed", String(isOn));
-  btn.dataset.state = isOn ? "on" : "off";
-  if(isOn){
-    btn.style.background = "#3a1a1a";
-    btn.style.borderColor = "#ff3d5a";
-    dot.style.transform = "translateX(18px)";
-    dot.style.background = "#ff3d5a";
-    label.textContent = "LIVE TRADING: ON (placeholder — no real orders yet)";
-    label.style.color = "#ff3d5a";
+// Shows the REAL live-trading state written by liveTrading.js on the
+// engine itself (Phase 10) — read-only, since this page can no longer
+// set live_trading_enabled directly (that flag was a dead placeholder
+// nothing read; see Live Trading Settings panel below for the actual
+// control, which is strategy+lot selection, not an on/off switch —
+// live trading is armed by LIVE_TRADING_ENABLED in the VM's .env).
+function renderLiveEngineStatus(status, pauseReason){
+  const el = document.getElementById("liveEngineBadge");
+  if(status === "ACTIVE"){
+    el.textContent = "LIVE ENGINE: ACTIVE";
+    el.style.color = "#ff3d5a";
+    el.title = "";
+  } else if(status === "PAUSED"){
+    el.textContent = "LIVE ENGINE: PAUSED";
+    el.style.color = "#ffb020";
+    el.title = pauseReason || "";
   } else {
-    btn.style.background = "#1a1a1a";
-    btn.style.borderColor = "#333";
-    dot.style.transform = "translateX(0)";
-    dot.style.background = "#666";
-    label.textContent = "LIVE TRADING: OFF";
-    label.style.color = "var(--muted)";
+    el.textContent = "LIVE ENGINE: —";
+    el.style.color = "var(--muted)";
+    el.title = "";
   }
 }
-
-document.getElementById("liveTradeToggle").addEventListener("click", async () => {
-  const btn = document.getElementById("liveTradeToggle");
-  const currentlyOn = btn.dataset.state === "on";
-  const turningOn = !currentlyOn;
-
-  if(turningOn){
-    const confirmed = confirm(
-      "Turn LIVE TRADING on?\n\n" +
-      "Right now this is a placeholder — the backend has no real order-" +
-      "placement code yet, so flipping this ON will NOT place real trades " +
-      "or risk real money. It only sets a flag the engine logs against.\n\n" +
-      "Continue?"
-    );
-    if(!confirmed) return;
-  }
-
-  btn.disabled = true;
-  try{
-    await callToggleLiveTrading(turningOn);
-    renderLiveTradeToggle(turningOn);
-  } catch(e){
-    alert("Failed to update: " + e.message);
-  } finally {
-    btn.disabled = false;
-  }
-});
 
 function fmtAge(iso){
   if(!iso) return null;
@@ -737,13 +743,6 @@ function tradeReturnPct(r){
   return ((r.exit_price - r.entry_price) / r.entry_price) * 100;
 }
 
-// Trade History is intentionally static, sourced from the Jarvis backup
-// export (jarvis_pt_portfolio, exported 2026-09-02T06:24:36.803Z) rather
-// than a live Supabase fetch. All other panels on this page (heartbeat,
-// portfolio summary, strategy health, daily P&L, open positions, day-wise
-// breakdown) remain live.
-const STATIC_TRADE_HISTORY = [{"instrument": "NIFTY 23850CE 8 Sep 2026", "strategy": "orb_vwap", "date": "02 Sept 2026", "buyTime": "10:31 am", "exitTime": "10:54 am", "buy": 172.9, "exit": 156.1, "qty": 65, "net": -1128.0000000000007, "pnlPct": "-9.72", "result": "LOSS", "closedAt": "2026-09-02"}, {"instrument": "NIFTY 24100CE 1 Sep 2026", "strategy": "nifty_pro_v15", "date": "01 Sept 2026", "buyTime": "11:16 am", "exitTime": "11:16 am", "buy": 46, "exit": 55.7, "qty": 65, "net": 594.5000000000002, "pnlPct": "21.09", "result": "PROFIT", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100CE 1 Sep 2026", "strategy": "nifty_pro_v2", "date": "01 Sept 2026", "buyTime": "11:16 am", "exitTime": "11:16 am", "buy": 46, "exit": 55.7, "qty": 65, "net": 594.5000000000002, "pnlPct": "21.09", "result": "PROFIT", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100CE 1 Sep 2026", "strategy": "trendline", "date": "01 Sept 2026", "buyTime": "11:00 am", "exitTime": "11:05 am", "buy": 31.7, "exit": 29.6, "qty": 65, "net": -172.49999999999986, "pnlPct": "-6.62", "result": "LOSS", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "trendline", "date": "01 Sept 2026", "buyTime": "10:25 am", "exitTime": "10:31 am", "buy": 62, "exit": 53.7, "qty": 65, "net": -575.4999999999998, "pnlPct": "-13.39", "result": "LOSS", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "orb_vwap", "date": "01 Sept 2026", "buyTime": "09:50 am", "exitTime": "09:50 am", "buy": 81.2, "exit": 85.4, "qty": 65, "net": 237.00000000000017, "pnlPct": "5.17", "result": "PROFIT", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "trendline", "date": "01 Sept 2026", "buyTime": "09:16 am", "exitTime": "09:28 am", "buy": 62.7, "exit": 69.1, "qty": 65, "net": 379.99999999999943, "pnlPct": "10.21", "result": "PROFIT", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "trendline_confirmed", "date": "01 Sept 2026", "buyTime": "09:16 am", "exitTime": "09:28 am", "buy": 62.7, "exit": 69.1, "qty": 65, "net": 379.99999999999943, "pnlPct": "10.21", "result": "PROFIT", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "quality_breakout", "date": "01 Sept 2026", "buyTime": "09:16 am", "exitTime": "09:16 am", "buy": 62.7, "exit": 77.8, "qty": 65, "net": 945.4999999999997, "pnlPct": "24.08", "result": "PROFIT", "closedAt": "2026-09-01"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "orb_vwap", "date": "31 Aug 2026", "buyTime": "09:46 am", "exitTime": "09:53 am", "buy": 95.5, "exit": 97.9, "qty": 65, "net": 120.00000000000037, "pnlPct": "2.51", "result": "PROFIT", "closedAt": "2026-08-31"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "nifty_pro_v15", "date": "31 Aug 2026", "buyTime": "09:40 am", "exitTime": "10:04 am", "buy": 95.2, "exit": 98, "qty": 65, "net": 145.99999999999983, "pnlPct": "2.94", "result": "PROFIT", "closedAt": "2026-08-31"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "nifty_pro_v2", "date": "31 Aug 2026", "buyTime": "09:40 am", "exitTime": "10:04 am", "buy": 95.2, "exit": 98, "qty": 65, "net": 145.99999999999983, "pnlPct": "2.94", "result": "PROFIT", "closedAt": "2026-08-31"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "trendline", "date": "31 Aug 2026", "buyTime": "09:21 am", "exitTime": "09:32 am", "buy": 79.9, "exit": 90.7, "qty": 65, "net": 665.9999999999998, "pnlPct": "13.52", "result": "PROFIT", "closedAt": "2026-08-31"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "trendline_confirmed", "date": "31 Aug 2026", "buyTime": "09:21 am", "exitTime": "09:32 am", "buy": 79.9, "exit": 90.7, "qty": 65, "net": 665.9999999999998, "pnlPct": "13.52", "result": "PROFIT", "closedAt": "2026-08-31"}, {"instrument": "NIFTY 24100PE 1 Sep 2026", "strategy": "quality_breakout", "date": "31 Aug 2026", "buyTime": "09:21 am", "exitTime": "09:26 am", "buy": 79.9, "exit": 95.3, "qty": 65, "net": 964.9999999999994, "pnlPct": "19.27", "result": "PROFIT", "closedAt": "2026-08-31"}, {"instrument": "NIFTY 24150CE 1 Sep 2026", "strategy": "orb_vwap", "date": "28 Aug 2026", "buyTime": "10:15 am", "exitTime": "10:17 am", "buy": 157.1, "exit": 164.3, "qty": 65, "net": 432.00000000000114, "pnlPct": "4.58", "result": "PROFIT", "closedAt": "2026-08-28"}, {"instrument": "NIFTY 24300PE 1 Sep 2026", "strategy": "nifty_pro_v15", "date": "27 Aug 2026", "buyTime": "09:51 am", "exitTime": "10:06 am", "buy": 118.5, "exit": 140.8, "qty": 65, "net": 1413.5000000000007, "pnlPct": "18.82", "result": "PROFIT", "closedAt": "2026-08-27"}, {"instrument": "NIFTY 24300PE 1 Sep 2026", "strategy": "nifty_pro_v2", "date": "27 Aug 2026", "buyTime": "09:51 am", "exitTime": "10:06 am", "buy": 118.5, "exit": 140.8, "qty": 65, "net": 1413.5000000000007, "pnlPct": "18.82", "result": "PROFIT", "closedAt": "2026-08-27"}, {"instrument": "NIFTY 24300PE 1 Sep 2026", "strategy": "orb_vwap", "date": "27 Aug 2026", "buyTime": "09:40 am", "exitTime": "09:47 am", "buy": 126.3, "exit": 114.5, "qty": 65, "net": -802.9999999999998, "pnlPct": "-9.34", "result": "LOSS", "closedAt": "2026-08-27"}, {"instrument": "NIFTY 24300PE 1 Sep 2026", "strategy": "trendline", "date": "27 Aug 2026", "buyTime": "09:15 am", "exitTime": "09:15 am", "buy": 48.1, "exit": 101, "qty": 65, "net": 3402.5, "pnlPct": "109.98", "result": "PROFIT", "closedAt": "2026-08-27"}, {"instrument": "NIFTY 24300PE 1 Sep 2026", "strategy": "trendline_confirmed", "date": "27 Aug 2026", "buyTime": "09:15 am", "exitTime": "09:15 am", "buy": 48.1, "exit": 101, "qty": 65, "net": 3402.5, "pnlPct": "109.98", "result": "PROFIT", "closedAt": "2026-08-27"}, {"instrument": "NIFTY 24350CE 1 Sep 2026", "strategy": "orb_vwap", "date": "26 Aug 2026", "buyTime": "09:46 am", "exitTime": "10:02 am", "buy": 174.2, "exit": 159.5, "qty": 65, "net": -991.4999999999993, "pnlPct": "-8.44", "result": "LOSS", "closedAt": "2026-08-26"}, {"instrument": "NIFTY 24350CE 1 Sep 2026", "strategy": "nifty_pro_v15", "date": "26 Aug 2026", "buyTime": "09:40 am", "exitTime": "10:07 am", "buy": 165.4, "exit": 148.1, "qty": 65, "net": -1160.5000000000007, "pnlPct": "-10.46", "result": "LOSS", "closedAt": "2026-08-26"}, {"instrument": "NIFTY 24350CE 1 Sep 2026", "strategy": "nifty_pro_v2", "date": "26 Aug 2026", "buyTime": "09:40 am", "exitTime": "10:07 am", "buy": 165.4, "exit": 148.1, "qty": 65, "net": -1160.5000000000007, "pnlPct": "-10.46", "result": "LOSS", "closedAt": "2026-08-26"}, {"instrument": "NIFTY 24150PE 25 Aug 2026", "strategy": "orb_vwap", "date": "25 Aug 2026", "buyTime": "10:25 am", "exitTime": "10:27 am", "buy": 40.9, "exit": 39.6, "qty": 65, "net": -120.49999999999982, "pnlPct": "-3.18", "result": "LOSS", "closedAt": "2026-08-25"}, {"instrument": "NIFTY 24300PE 25 Aug 2026", "strategy": "trendline_confirmed", "date": "24 Aug 2026", "buyTime": "12:50 pm", "exitTime": "02:31 pm", "buy": 122.6, "exit": 114.5, "qty": 65, "net": -562.4999999999997, "pnlPct": "-6.61", "result": "LOSS", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24300PE 25 Aug 2026", "strategy": "quality_breakout", "date": "24 Aug 2026", "buyTime": "12:50 pm", "exitTime": "01:06 pm", "buy": 122.6, "exit": 145.6, "qty": 65, "net": 1459, "pnlPct": "18.76", "result": "PROFIT", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24300PE 25 Aug 2026", "strategy": "nifty_pro_v15", "date": "24 Aug 2026", "buyTime": "11:31 am", "exitTime": "11:31 am", "buy": 106.7, "exit": 130.6, "qty": 65, "net": 1517.4999999999995, "pnlPct": "22.40", "result": "PROFIT", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24300PE 25 Aug 2026", "strategy": "nifty_pro_v2", "date": "24 Aug 2026", "buyTime": "11:31 am", "exitTime": "11:31 am", "buy": 106.7, "exit": 130.6, "qty": 65, "net": 1517.4999999999995, "pnlPct": "22.40", "result": "PROFIT", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24300PE 25 Aug 2026", "strategy": "orb_vwap", "date": "24 Aug 2026", "buyTime": "10:51 am", "exitTime": "10:51 am", "buy": 50.7, "exit": 56.9, "qty": 65, "net": 366.9999999999997, "pnlPct": "12.23", "result": "PROFIT", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24300PE 25 Aug 2026", "strategy": "trendline", "date": "24 Aug 2026", "buyTime": "09:30 am", "exitTime": "11:04 am", "buy": 48.1, "exit": 89.1, "qty": 65, "net": 2628.9999999999995, "pnlPct": "85.24", "result": "PROFIT", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24300CE 25 Aug 2026", "strategy": "trendline", "date": "24 Aug 2026", "buyTime": "09:15 am", "exitTime": "09:41 am", "buy": 72.6, "exit": 65, "qty": 65, "net": -529.9999999999997, "pnlPct": "-10.47", "result": "LOSS", "closedAt": "2026-08-24"}, {"instrument": "NIFTY 24250CE 25 Aug 2026", "strategy": "nifty_pro_v15", "date": "21 Aug 2026", "buyTime": "10:22 am", "exitTime": "10:47 am", "buy": 103.9, "exit": 111, "qty": 65, "net": 425.49999999999966, "pnlPct": "6.83", "result": "PROFIT", "closedAt": "2026-08-21"}, {"instrument": "NIFTY 24250CE 25 Aug 2026", "strategy": "nifty_pro_v2", "date": "21 Aug 2026", "buyTime": "10:22 am", "exitTime": "10:47 am", "buy": 103.9, "exit": 111, "qty": 65, "net": 425.49999999999966, "pnlPct": "6.83", "result": "PROFIT", "closedAt": "2026-08-21"}, {"instrument": "NIFTY 24250PE 25 Aug 2026", "strategy": "orb_vwap", "date": "21 Aug 2026", "buyTime": "09:35 am", "exitTime": "09:41 am", "buy": 84, "exit": 74.9, "qty": 65, "net": -627.4999999999997, "pnlPct": "-10.83", "result": "LOSS", "closedAt": "2026-08-21"}, {"instrument": "NIFTY 24250CE 25 Aug 2026", "strategy": "trendline", "date": "21 Aug 2026", "buyTime": "09:17 am", "exitTime": "09:17 am", "buy": 130.3, "exit": 114.2, "qty": 65, "net": -1082.5000000000005, "pnlPct": "-12.36", "result": "LOSS", "closedAt": "2026-08-21"}, {"instrument": "NIFTY 24250CE 25 Aug 2026", "strategy": "trendline_confirmed", "date": "21 Aug 2026", "buyTime": "09:17 am", "exitTime": "09:17 am", "buy": 130.3, "exit": 114.2, "qty": 65, "net": -1082.5000000000005, "pnlPct": "-12.36", "result": "LOSS", "closedAt": "2026-08-21"}, {"instrument": "NIFTY 24250CE 25 Aug 2026", "strategy": "trendline", "date": "21 Aug 2026", "buyTime": "01:10 pm", "exitTime": "02:09 pm", "buy": 110.7, "exit": 94.7, "qty": 65, "net": -1076, "pnlPct": "-14.45", "result": "LOSS", "closedAt": "2026-08-21"}, {"instrument": "NIFTY 24050PE 25 Aug 2026", "strategy": "nifty_pro_v15", "date": "19 Aug 2026", "buyTime": "10:24 am", "exitTime": "11:08 am", "buy": 92.7, "exit": 101, "qty": 65, "net": 503.4999999999998, "pnlPct": "8.95", "result": "PROFIT", "closedAt": "2026-08-19"}, {"instrument": "NIFTY 24050PE 25 Aug 2026", "strategy": "nifty_pro_v2", "date": "19 Aug 2026", "buyTime": "10:24 am", "exitTime": "11:08 am", "buy": 92.7, "exit": 101, "qty": 65, "net": 503.4999999999998, "pnlPct": "8.95", "result": "PROFIT", "closedAt": "2026-08-19"}, {"instrument": "NIFTY 24050PE 25 Aug 2026", "strategy": "orb_vwap", "date": "19 Aug 2026", "buyTime": "10:24 am", "exitTime": "10:42 am", "buy": 92.7, "exit": 96, "qty": 65, "net": 178.49999999999983, "pnlPct": "3.56", "result": "PROFIT", "closedAt": "2026-08-19"}, {"instrument": "NIFTY 24250PE 18 Aug 2026", "strategy": "nifty_pro_v15", "date": "18 Aug 2026", "buyTime": "09:45 am", "exitTime": "09:45 am", "buy": 43.6, "exit": 53.9, "qty": 65, "net": 633.4999999999998, "pnlPct": "23.62", "result": "PROFIT", "closedAt": "2026-08-18"}, {"instrument": "NIFTY 24250PE 18 Aug 2026", "strategy": "nifty_pro_v2", "date": "18 Aug 2026", "buyTime": "09:45 am", "exitTime": "09:45 am", "buy": 43.6, "exit": 53.9, "qty": 65, "net": 633.4999999999998, "pnlPct": "23.62", "result": "PROFIT", "closedAt": "2026-08-18"}, {"instrument": "NIFTY 24300PE 18 Aug 2026", "strategy": "orb_vwap", "date": "17 Aug 2026", "buyTime": "10:16 am", "exitTime": "10:18 am", "buy": 62.4, "exit": 76.7, "qty": 65, "net": 893.5000000000002, "pnlPct": "22.92", "result": "PROFIT", "closedAt": "2026-08-17"}, {"instrument": "NIFTY 24300PE 18 Aug 2026", "strategy": "nifty_pro_v15", "date": "17 Aug 2026", "buyTime": "09:56 am", "exitTime": "10:18 am", "buy": 54, "exit": 76.7, "qty": 65, "net": 1439.5000000000002, "pnlPct": "42.04", "result": "PROFIT", "closedAt": "2026-08-17"}, {"instrument": "NIFTY 24300PE 18 Aug 2026", "strategy": "nifty_pro_v2", "date": "17 Aug 2026", "buyTime": "09:56 am", "exitTime": "10:18 am", "buy": 54, "exit": 76.7, "qty": 65, "net": 1439.5000000000002, "pnlPct": "42.04", "result": "PROFIT", "closedAt": "2026-08-17"}, {"instrument": "NIFTY 24350CE 18 Aug 2026", "strategy": "orb_vwap", "date": "14 Aug 2026", "buyTime": "01:50 pm", "exitTime": "02:18 pm", "buy": 139.3, "exit": 124.1, "qty": 65, "net": -1024.0000000000011, "pnlPct": "-10.91", "result": "LOSS", "closedAt": "2026-08-14"}, {"instrument": "NIFTY 24350CE 18 Aug 2026", "strategy": "trendline", "date": "13 Aug 2026", "buyTime": "12:30 pm", "exitTime": "01:49 pm", "buy": 165.1, "exit": 132.5, "qty": 65, "net": -2154.9999999999995, "pnlPct": "-19.75", "result": "LOSS", "closedAt": "2026-08-13"}, {"instrument": "NIFTY 24350PE 18 Aug 2026", "strategy": "orb_vwap", "date": "13 Aug 2026", "buyTime": "10:30 am", "exitTime": "10:42 am", "buy": 104.1, "exit": 95, "qty": 65, "net": -627.4999999999997, "pnlPct": "-8.74", "result": "LOSS", "closedAt": "2026-08-13"}, {"instrument": "NIFTY 24400PE 18 Aug 2026", "strategy": "orb_vwap", "date": "12 Aug 2026", "buyTime": "10:00 am", "exitTime": "10:03 am", "buy": 122.2, "exit": 128, "qty": 65, "net": 340.99999999999983, "pnlPct": "4.75", "result": "PROFIT", "closedAt": "2026-08-12"}, {"instrument": "NIFTY 24400PE 18 Aug 2026", "strategy": "nifty_pro_v15", "date": "12 Aug 2026", "buyTime": "09:46 am", "exitTime": "09:48 am", "buy": 101.4, "exit": 107.1, "qty": 65, "net": 334.49999999999926, "pnlPct": "5.62", "result": "PROFIT", "closedAt": "2026-08-12"}, {"instrument": "NIFTY 24400PE 18 Aug 2026", "strategy": "nifty_pro_v2", "date": "12 Aug 2026", "buyTime": "09:46 am", "exitTime": "09:48 am", "buy": 101.4, "exit": 107.1, "qty": 65, "net": 334.49999999999926, "pnlPct": "5.62", "result": "PROFIT", "closedAt": "2026-08-12"}, {"instrument": "NIFTY 24400CE 18 Aug 2026", "strategy": "trendline", "date": "12 Aug 2026", "buyTime": "09:40 am", "exitTime": "09:50 am", "buy": 180, "exit": 154.6, "qty": 65, "net": -1687.0000000000005, "pnlPct": "-14.11", "result": "LOSS", "closedAt": "2026-08-12"}, {"instrument": "NIFTY 24450PE 18 Aug 2026", "strategy": "trendline", "date": "12 Aug 2026", "buyTime": "09:16 am", "exitTime": "09:27 am", "buy": 125.2, "exit": 105, "qty": 65, "net": -1349.0000000000002, "pnlPct": "-16.13", "result": "LOSS", "closedAt": "2026-08-12"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "nifty_pro_v15", "date": "11 Aug 2026", "buyTime": "09:41 am", "exitTime": "09:48 am", "buy": 132.6, "exit": 141.3, "qty": 65, "net": 529.5000000000011, "pnlPct": "6.56", "result": "PROFIT", "closedAt": "2026-08-11"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "nifty_pro_v2", "date": "11 Aug 2026", "buyTime": "09:41 am", "exitTime": "09:48 am", "buy": 132.6, "exit": 141.3, "qty": 65, "net": 529.5000000000011, "pnlPct": "6.56", "result": "PROFIT", "closedAt": "2026-08-11"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "orb_vwap", "date": "11 Aug 2026", "buyTime": "09:37 am", "exitTime": "09:48 am", "buy": 135.8, "exit": 142.5, "qty": 65, "net": 399.49999999999926, "pnlPct": "4.93", "result": "PROFIT", "closedAt": "2026-08-11"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "trendline", "date": "11 Aug 2026", "buyTime": "02:25 pm", "exitTime": "02:58 pm", "buy": 139.6, "exit": 119.8, "qty": 65, "net": -1322.9999999999998, "pnlPct": "-14.18", "result": "LOSS", "closedAt": "2026-08-11"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "trendline_confirmed", "date": "11 Aug 2026", "buyTime": "02:25 pm", "exitTime": "02:53 pm", "buy": 139.6, "exit": 127.7, "qty": 65, "net": -809.4999999999994, "pnlPct": "-8.52", "result": "LOSS", "closedAt": "2026-08-11"}, {"instrument": "NIFTY 24600CE 11 Aug 2026", "strategy": "nifty_pro_v15", "date": "10 Aug 2026", "buyTime": "10:45 am", "exitTime": "10:52 am", "buy": 103, "exit": 94.5, "qty": 65, "net": -588.5, "pnlPct": "-8.25", "result": "LOSS", "closedAt": "2026-08-10"}, {"instrument": "NIFTY 24600CE 11 Aug 2026", "strategy": "nifty_pro_v2", "date": "10 Aug 2026", "buyTime": "10:45 am", "exitTime": "10:52 am", "buy": 103, "exit": 94.5, "qty": 65, "net": -588.5, "pnlPct": "-8.25", "result": "LOSS", "closedAt": "2026-08-10"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "orb_vwap", "date": "10 Aug 2026", "buyTime": "09:46 am", "exitTime": "10:02 am", "buy": 124.4, "exit": 109.1, "qty": 65, "net": -1030.5000000000007, "pnlPct": "-12.30", "result": "LOSS", "closedAt": "2026-08-10"}, {"instrument": "NIFTY 24600PE 11 Aug 2026", "strategy": "trendline", "date": "10 Aug 2026", "buyTime": "09:31 am", "exitTime": "09:38 am", "buy": 105.1, "exit": 117.4, "qty": 65, "net": 763.5000000000007, "pnlPct": "11.70", "result": "PROFIT", "closedAt": "2026-08-10"}, {"instrument": "NIFTY 24600CE 11 Aug 2026", "strategy": "trendline", "date": "10 Aug 2026", "buyTime": "01:25 pm", "exitTime": "02:35 pm", "buy": 87.9, "exit": 74.9, "qty": 65, "net": -881, "pnlPct": "-14.79", "result": "LOSS", "closedAt": "2026-08-10"}, {"instrument": "NIFTY 24600CE 11 Aug 2026", "strategy": "trendline_confirmed", "date": "10 Aug 2026", "buyTime": "01:25 pm", "exitTime": "02:23 pm", "buy": 87.9, "exit": 79.9, "qty": 65, "net": -556, "pnlPct": "-9.10", "result": "LOSS", "closedAt": "2026-08-10"}, {"instrument": "NIFTY 24550PE 11 Aug 2026", "strategy": "trendline", "date": "07 Aug 2026", "buyTime": "12:50 pm", "exitTime": "02:15 pm", "buy": 104.9, "exit": 117.2, "qty": 65, "net": 763.4999999999998, "pnlPct": "11.73", "result": "PROFIT", "closedAt": "2026-08-07"}, {"instrument": "NIFTY 24550PE 11 Aug 2026", "strategy": "nifty_pro_v15", "date": "07 Aug 2026", "buyTime": "10:11 am", "exitTime": "10:35 am", "buy": 94, "exit": 108.1, "qty": 65, "net": 880.4999999999997, "pnlPct": "15.00", "result": "PROFIT", "closedAt": "2026-08-07"}, {"instrument": "NIFTY 24550PE 11 Aug 2026", "strategy": "nifty_pro_v2", "date": "07 Aug 2026", "buyTime": "10:11 am", "exitTime": "10:35 am", "buy": 94, "exit": 108.1, "qty": 65, "net": 880.4999999999997, "pnlPct": "15.00", "result": "PROFIT", "closedAt": "2026-08-07"}, {"instrument": "NIFTY 24550PE 11 Aug 2026", "strategy": "trendline", "date": "07 Aug 2026", "buyTime": "09:16 am", "exitTime": "10:35 am", "buy": 95.5, "exit": 108.1, "qty": 65, "net": 782.9999999999997, "pnlPct": "13.19", "result": "PROFIT", "closedAt": "2026-08-07"}, {"instrument": "NIFTY 24550PE 11 Aug 2026", "strategy": "orb_vwap", "date": "07 Aug 2026", "buyTime": "02:15 pm", "exitTime": "02:45 pm", "buy": 117.4, "exit": 103.7, "qty": 65, "net": -926.5000000000002, "pnlPct": "-11.67", "result": "LOSS", "closedAt": "2026-08-07"}, {"instrument": "NIFTY 24650CE 11 Aug 2026", "strategy": "orb_vwap", "date": "06 Aug 2026", "buyTime": "09:50 am", "exitTime": "10:00 am", "buy": 160.8, "exit": 144.8, "qty": 65, "net": -1076, "pnlPct": "-9.95", "result": "LOSS", "closedAt": "2026-08-06"}, {"instrument": "NIFTY 24650CE 11 Aug 2026", "strategy": "nifty_pro_v15", "date": "06 Aug 2026", "buyTime": "09:31 am", "exitTime": "09:51 am", "buy": 148.8, "exit": 159.5, "qty": 65, "net": 659.4999999999993, "pnlPct": "7.19", "result": "PROFIT", "closedAt": "2026-08-06"}, {"instrument": "NIFTY 24650CE 11 Aug 2026", "strategy": "nifty_pro_v2", "date": "06 Aug 2026", "buyTime": "09:31 am", "exitTime": "09:51 am", "buy": 148.8, "exit": 159.5, "qty": 65, "net": 659.4999999999993, "pnlPct": "7.19", "result": "PROFIT", "closedAt": "2026-08-06"}, {"instrument": "NIFTY 24650CE 11 Aug 2026", "strategy": "trendline", "date": "06 Aug 2026", "buyTime": "09:15 am", "exitTime": "09:56 am", "buy": 129.2, "exit": 155.2, "qty": 65, "net": 1654, "pnlPct": "20.12", "result": "PROFIT", "closedAt": "2026-08-06"}, {"instrument": "NIFTY 24650PE 11 Aug 2026", "strategy": "trendline", "date": "05 Aug 2026", "buyTime": "11:50 am", "exitTime": "12:40 pm", "buy": 163, "exit": 192.7, "qty": 65, "net": 1894.4999999999993, "pnlPct": "18.22", "result": "PROFIT", "closedAt": "2026-08-05"}, {"instrument": "NIFTY 24650CE 11 Aug 2026", "strategy": "trendline", "date": "05 Aug 2026", "buyTime": "11:00 am", "exitTime": "11:29 am", "buy": 158.7, "exit": 134.9, "qty": 65, "net": -1582.9999999999989, "pnlPct": "-15.00", "result": "LOSS", "closedAt": "2026-08-05"}, {"instrument": "NIFTY 24650PE 11 Aug 2026", "strategy": "orb_vwap", "date": "05 Aug 2026", "buyTime": "10:30 am", "exitTime": "10:32 am", "buy": 162.2, "exit": 172.6, "qty": 65, "net": 640.0000000000003, "pnlPct": "6.41", "result": "PROFIT", "closedAt": "2026-08-05"}, {"instrument": "NIFTY 24700CE 11 Aug 2026", "strategy": "nifty_pro_v15", "date": "05 Aug 2026", "buyTime": "09:30 am", "exitTime": "10:30 am", "buy": 114.4, "exit": 104.9, "qty": 65, "net": -653.5, "pnlPct": "-8.30", "result": "LOSS", "closedAt": "2026-08-05"}, {"instrument": "NIFTY 24600PE 4 Aug 2026", "strategy": "orb_vwap", "date": "04 Aug 2026", "buyTime": "10:35 am", "exitTime": "10:39 am", "buy": 48.5, "exit": 45, "qty": 65, "net": -263.5, "pnlPct": "-7.22", "result": "LOSS", "closedAt": "2026-08-04"}, {"instrument": "NIFTY 24600CE 4 Aug 2026", "strategy": "nifty_pro_v15", "date": "04 Aug 2026", "buyTime": "09:40 am", "exitTime": "09:44 am", "buy": 48.2, "exit": 52.1, "qty": 65, "net": 217.49999999999991, "pnlPct": "8.09", "result": "PROFIT", "closedAt": "2026-08-04"}, {"instrument": "NIFTY 24600CE 4 Aug 2026", "strategy": "nifty_pro_v2", "date": "04 Aug 2026", "buyTime": "09:40 am", "exitTime": "09:44 am", "buy": 48.2, "exit": 52.1, "qty": 65, "net": 217.49999999999991, "pnlPct": "8.09", "result": "PROFIT", "closedAt": "2026-08-04"}, {"instrument": "NIFTY 24550CE 4 Aug 2026", "strategy": "orb_vwap", "date": "03 Aug 2026", "buyTime": "10:15 am", "exitTime": "10:16 am", "buy": 80, "exit": 81.3, "qty": 65, "net": 48.499999999999815, "pnlPct": "1.62", "result": "PROFIT", "closedAt": "2026-08-03"}, {"instrument": "NIFTY 24550CE 4 Aug 2026", "strategy": "nifty_pro_v15", "date": "03 Aug 2026", "buyTime": "09:30 am", "exitTime": "10:03 am", "buy": 69.4, "exit": 73, "qty": 65, "net": 197.99999999999963, "pnlPct": "5.19", "result": "PROFIT", "closedAt": "2026-08-03"}, {"instrument": "NIFTY 24550CE 4 Aug 2026", "strategy": "nifty_pro_v2", "date": "03 Aug 2026", "buyTime": "09:30 am", "exitTime": "10:03 am", "buy": 69.4, "exit": 73, "qty": 65, "net": 197.99999999999963, "pnlPct": "5.19", "result": "PROFIT", "closedAt": "2026-08-03"}, {"instrument": "NIFTY 24550CE 4 Aug 2026", "strategy": "trendline", "date": "03 Aug 2026", "buyTime": "09:17 am", "exitTime": "09:23 am", "buy": 72.4, "exit": 59.5, "qty": 65, "net": -874.5000000000003, "pnlPct": "-17.82", "result": "LOSS", "closedAt": "2026-08-03"}, {"instrument": "NIFTY 24600CE 4 Aug 2026", "strategy": "trendline", "date": "03 Aug 2026", "buyTime": "03:29 pm", "exitTime": "03:31 pm", "buy": 39.5, "exit": 45.3, "qty": 65, "net": 340.99999999999983, "pnlPct": "14.68", "result": "PROFIT", "closedAt": "2026-08-03"}, {"instrument": "NIFTY 24600CE 4 Aug 2026", "strategy": "trendline", "date": "03 Aug 2026", "buyTime": "02:30 pm", "exitTime": "02:41 pm", "buy": 48.7, "exit": 52.4, "qty": 65, "net": 204.49999999999972, "pnlPct": "7.60", "result": "PROFIT", "closedAt": "2026-08-03"}, {"instrument": "NIFTY 24350CE 4 Aug 2026", "strategy": "orb_vwap", "date": "31 Jul 2026", "buyTime": "12:30 pm", "exitTime": "12:35 pm", "buy": 109.6, "exit": 112.1, "qty": 65, "net": 126.5, "pnlPct": "2.28", "result": "PROFIT", "closedAt": "2026-07-31"}, {"instrument": "NIFTY 24350CE 4 Aug 2026", "strategy": "nifty_pro_v15", "date": "31 Jul 2026", "buyTime": "11:15 am", "exitTime": "12:18 pm", "buy": 100, "exit": 105.2, "qty": 65, "net": 302.00000000000017, "pnlPct": "5.20", "result": "PROFIT", "closedAt": "2026-07-31"}, {"instrument": "NIFTY 24350CE 4 Aug 2026", "strategy": "trendline", "date": "31 Jul 2026", "buyTime": "10:40 am", "exitTime": "12:30 pm", "buy": 98.7, "exit": 107.7, "qty": 65, "net": 549, "pnlPct": "9.12", "result": "PROFIT", "closedAt": "2026-07-31"}, {"instrument": "NIFTY 24300PE 4 Aug 2026", "strategy": "trendline", "date": "30 Jul 2026", "buyTime": "10:00 am", "exitTime": "10:15 am", "buy": 139, "exit": 157.6, "qty": 65, "net": 1172.9999999999995, "pnlPct": "13.38", "result": "PROFIT", "closedAt": "2026-07-30"}, {"instrument": "NIFTY 24250PE 4 Aug 2026", "strategy": "trendline", "date": "30 Jul 2026", "buyTime": "09:16 am", "exitTime": "09:27 am", "buy": 133.3, "exit": 115, "qty": 65, "net": -1225.5000000000007, "pnlPct": "-13.73", "result": "LOSS", "closedAt": "2026-07-30"}, {"instrument": "NIFTY 24250PE 4 Aug 2026", "strategy": "trendline_confirmed", "date": "30 Jul 2026", "buyTime": "09:16 am", "exitTime": "09:18 am", "buy": 133.3, "exit": 122, "qty": 65, "net": -770.5000000000007, "pnlPct": "-8.48", "result": "LOSS", "closedAt": "2026-07-30"}, {"instrument": "NIFTY 24250PE 4 Aug 2026", "strategy": "trendline", "date": "30 Jul 2026", "buyTime": "02:05 pm", "exitTime": "02:32 pm", "buy": 99.7, "exit": 112.5, "qty": 65, "net": 795.9999999999998, "pnlPct": "12.84", "result": "PROFIT", "closedAt": "2026-07-30"}, {"instrument": "NIFTY 24200CE 4 Aug 2026", "strategy": "nifty_pro_v15", "date": "29 Jul 2026", "buyTime": "09:40 am", "exitTime": "09:59 am", "buy": 152, "exit": 135, "qty": 65, "net": -1141, "pnlPct": "-11.18", "result": "LOSS", "closedAt": "2026-07-29"}, {"instrument": "NIFTY 24200CE 4 Aug 2026", "strategy": "nifty_pro_v2", "date": "29 Jul 2026", "buyTime": "09:40 am", "exitTime": "09:59 am", "buy": 152, "exit": 135, "qty": 65, "net": -1141, "pnlPct": "-11.18", "result": "LOSS", "closedAt": "2026-07-29"}, {"instrument": "NIFTY 24050CE 28 Jul 2026", "strategy": "nifty_pro_v15", "date": "28 Jul 2026", "buyTime": "09:40 am", "exitTime": "09:45 am", "buy": 27.9, "exit": 23.9, "qty": 65, "net": -296, "pnlPct": "-14.34", "result": "LOSS", "closedAt": "2026-07-28"}, {"instrument": "NIFTY 24050CE 28 Jul 2026", "strategy": "nifty_pro_v2", "date": "28 Jul 2026", "buyTime": "09:40 am", "exitTime": "09:45 am", "buy": 27.9, "exit": 23.9, "qty": 65, "net": -296, "pnlPct": "-14.34", "result": "LOSS", "closedAt": "2026-07-28"}, {"instrument": "NIFTY 24050CE 28 Jul 2026", "strategy": "trendline", "date": "28 Jul 2026", "buyTime": "01:55 pm", "exitTime": "01:57 pm", "buy": 6.8, "exit": 5, "qty": 65, "net": -153, "pnlPct": "-26.47", "result": "LOSS", "closedAt": "2026-07-28"}, {"instrument": "NIFTY 24050CE 28 Jul 2026", "strategy": "quality_breakout", "date": "28 Jul 2026", "buyTime": "01:55 pm", "exitTime": "01:57 pm", "buy": 6.8, "exit": 5, "qty": 65, "net": -153, "pnlPct": "-26.47", "result": "LOSS", "closedAt": "2026-07-28"}, {"instrument": "NIFTY 23950CE 28 Jul 2026", "strategy": "nifty_pro_v15", "date": "27 Jul 2026", "buyTime": "09:30 am", "exitTime": "09:39 am", "buy": 83.4, "exit": 82.2, "qty": 65, "net": -114.00000000000018, "pnlPct": "-1.44", "result": "LOSS", "closedAt": "2026-07-27"}, {"instrument": "NIFTY 23950CE 28 Jul 2026", "strategy": "nifty_pro_v2", "date": "27 Jul 2026", "buyTime": "09:30 am", "exitTime": "09:39 am", "buy": 83.4, "exit": 82.2, "qty": 65, "net": -114.00000000000018, "pnlPct": "-1.44", "result": "LOSS", "closedAt": "2026-07-27"}, {"instrument": "NIFTY 23750PE 28 Jul 2026", "strategy": "nifty_pro_v15", "date": "24 Jul 2026", "buyTime": "09:50 am", "exitTime": "09:57 am", "buy": 177.2, "exit": 159.8, "qty": 65, "net": -1166.9999999999986, "pnlPct": "-9.82", "result": "LOSS", "closedAt": "2026-07-24"}, {"instrument": "NIFTY 23750PE 28 Jul 2026", "strategy": "nifty_pro_v2", "date": "24 Jul 2026", "buyTime": "09:50 am", "exitTime": "09:57 am", "buy": 177.2, "exit": 159.8, "qty": 65, "net": -1166.9999999999986, "pnlPct": "-9.82", "result": "LOSS", "closedAt": "2026-07-24"}, {"instrument": "NIFTY 23700PE 28 Jul 2026", "strategy": "trendline", "date": "24 Jul 2026", "buyTime": "09:16 am", "exitTime": "09:19 am", "buy": 118.8, "exit": 99.6, "qty": 65, "net": -1284.0000000000002, "pnlPct": "-16.16", "result": "LOSS", "closedAt": "2026-07-24"}, {"instrument": "NIFTY 23750CE 28 Jul 2026", "strategy": "trendline_confirmed", "date": "24 Jul 2026", "buyTime": "03:15 pm", "exitTime": "03:17 pm", "buy": 165.4, "exit": 149.5, "qty": 65, "net": -1069.5000000000005, "pnlPct": "-9.61", "result": "LOSS", "closedAt": "2026-07-24"}, {"instrument": "NIFTY 23750PE 28 Jul 2026", "strategy": "trendline", "date": "24 Jul 2026", "buyTime": "03:01 pm", "exitTime": "03:15 pm", "buy": 93.6, "exit": 75.2, "qty": 65, "net": -1231.9999999999995, "pnlPct": "-19.66", "result": "LOSS", "closedAt": "2026-07-24"}, {"instrument": "NIFTY 23950PE 28 Jul 2026", "strategy": "nifty_pro_v15", "date": "23 Jul 2026", "buyTime": "09:31 am", "exitTime": "09:38 am", "buy": 154.6, "exit": 161.4, "qty": 65, "net": 406.00000000000074, "pnlPct": "4.40", "result": "PROFIT", "closedAt": "2026-07-23"}, {"instrument": "NIFTY 23950PE 28 Jul 2026", "strategy": "nifty_pro_v2", "date": "23 Jul 2026", "buyTime": "09:31 am", "exitTime": "09:38 am", "buy": 154.6, "exit": 161.4, "qty": 65, "net": 406.00000000000074, "pnlPct": "4.40", "result": "PROFIT", "closedAt": "2026-07-23"}, {"instrument": "NIFTY 24050PE 28 Jul 2026", "strategy": "nifty_pro_v15", "date": "22 Jul 2026", "buyTime": "10:16 am", "exitTime": "10:26 am", "buy": 170.8, "exit": 206.3, "qty": 65, "net": 2271.5, "pnlPct": "20.78", "result": "PROFIT", "closedAt": "2026-07-22"}, {"instrument": "NIFTY 24050PE 28 Jul 2026", "strategy": "nifty_pro_v2", "date": "22 Jul 2026", "buyTime": "10:16 am", "exitTime": "10:26 am", "buy": 170.8, "exit": 206.3, "qty": 65, "net": 2271.5, "pnlPct": "20.78", "result": "PROFIT", "closedAt": "2026-07-22"}, {"instrument": "NIFTY 24200PE 21 Jul 2026", "strategy": "nifty_pro_v15", "date": "21 Jul 2026", "buyTime": "10:51 am", "exitTime": "10:56 am", "buy": 58, "exit": 47.3, "qty": 65, "net": -731.5000000000002, "pnlPct": "-18.45", "result": "LOSS", "closedAt": "2026-07-21"}, {"instrument": "NIFTY 24200PE 21 Jul 2026", "strategy": "nifty_pro_v2", "date": "21 Jul 2026", "buyTime": "10:51 am", "exitTime": "10:56 am", "buy": 58, "exit": 47.3, "qty": 65, "net": -731.5000000000002, "pnlPct": "-18.45", "result": "LOSS", "closedAt": "2026-07-21"}, {"instrument": "NIFTY 24200PE 21 Jul 2026", "strategy": "nifty_pro_v15", "date": "20 Jul 2026", "buyTime": "09:31 am", "exitTime": "09:43 am", "buy": 112.7, "exit": 117.6, "qty": 65, "net": 282.49999999999943, "pnlPct": "4.35", "result": "PROFIT", "closedAt": "2026-07-20"}, {"instrument": "NIFTY 24200PE 21 Jul 2026", "strategy": "nifty_pro_v2", "date": "20 Jul 2026", "buyTime": "09:31 am", "exitTime": "09:43 am", "buy": 112.7, "exit": 117.6, "qty": 65, "net": 282.49999999999943, "pnlPct": "4.35", "result": "PROFIT", "closedAt": "2026-07-20"}, {"instrument": "NIFTY 24200PE 21 Jul 2026", "strategy": "trendline", "date": "20 Jul 2026", "buyTime": "09:16 am", "exitTime": "09:19 am", "buy": 94.1, "exit": 99.2, "qty": 65, "net": 295.50000000000057, "pnlPct": "5.42", "result": "PROFIT", "closedAt": "2026-07-20"}, {"instrument": "NIFTY 24100CE 21 Jul 2026", "strategy": "nifty_pro_v15", "date": "17 Jul 2026", "buyTime": "09:30 am", "exitTime": "09:44 am", "buy": 182.5, "exit": 184.4, "qty": 65, "net": 87.50000000000037, "pnlPct": "1.04", "result": "PROFIT", "closedAt": "2026-07-17"}, {"instrument": "NIFTY 24100CE 21 Jul 2026", "strategy": "trendline", "date": "17 Jul 2026", "buyTime": "09:16 am", "exitTime": "09:24 am", "buy": 151.6, "exit": 164.8, "qty": 65, "net": 822.0000000000011, "pnlPct": "8.71", "result": "PROFIT", "closedAt": "2026-07-17"}, {"instrument": "NIFTY 24150CE 21 Jul 2026", "strategy": "nifty_pro_v15", "date": "16 Jul 2026", "buyTime": "10:57 am", "exitTime": "11:03 am", "buy": 147.5, "exit": 156.2, "qty": 65, "net": 529.4999999999993, "pnlPct": "5.90", "result": "PROFIT", "closedAt": "2026-07-16"}, {"instrument": "NIFTY 24150CE 21 Jul 2026", "strategy": "nifty_pro_v2", "date": "16 Jul 2026", "buyTime": "10:57 am", "exitTime": "11:03 am", "buy": 147.5, "exit": 156.2, "qty": 65, "net": 529.4999999999993, "pnlPct": "5.90", "result": "PROFIT", "closedAt": "2026-07-16"}, {"instrument": "NIFTY 24050PE 14 Jul 2026", "strategy": "nifty_pro_v15", "date": "14 Jul 2026", "buyTime": "09:37 am", "exitTime": "09:37 am", "buy": 36.6, "exit": 35, "qty": 65, "net": -140.00000000000009, "pnlPct": "-4.37", "result": "LOSS", "closedAt": "2026-07-14"}, {"instrument": "NIFTY 24200CE 14 Jul 2026", "strategy": "nifty_pro_v15", "date": "10 Jul 2026", "buyTime": "09:41 am", "exitTime": "10:01 am", "buy": 117.4, "exit": 123, "qty": 65, "net": 327.99999999999966, "pnlPct": "4.77", "result": "PROFIT", "closedAt": "2026-07-10"}, {"instrument": "NIFTY 24000PE 14 Jul 2026", "strategy": "nifty_pro_v15", "date": "09 Jul 2026", "buyTime": "11:00 am", "exitTime": "11:02 am", "buy": 139.8, "exit": 144.1, "qty": 65, "net": 243.49999999999886, "pnlPct": "3.08", "result": "PROFIT", "closedAt": "2026-07-09"}, {"instrument": "NIFTY 24250PE 14 Jul 2026", "strategy": "nifty_pro_v15", "date": "08 Jul 2026", "buyTime": "09:31 am", "exitTime": "09:49 am", "buy": 176.2, "exit": 159.9, "qty": 65, "net": -1095.4999999999989, "pnlPct": "-9.25", "result": "LOSS", "closedAt": "2026-07-08"}, {"instrument": "NIFTY 24450CE 7 Jul 2026", "strategy": "nifty_pro_v15", "date": "07 Jul 2026", "buyTime": "10:00 am", "exitTime": "10:02 am", "buy": 48.1, "exit": 49.9, "qty": 65, "net": 80.99999999999982, "pnlPct": "3.74", "result": "PROFIT", "closedAt": "2026-07-07"}, {"instrument": "NIFTY 24350CE 7 Jul 2026", "strategy": "nifty_pro_v15", "date": "06 Jul 2026", "buyTime": "09:46 am", "exitTime": "10:20 am", "buy": 89.9, "exit": 93.1, "qty": 65, "net": 171.99999999999926, "pnlPct": "3.56", "result": "PROFIT", "closedAt": "2026-07-06"}, {"instrument": "NIFTY 24400CE 7 Jul 2026", "strategy": "nifty_pro_v15", "date": "03 Jul 2026", "buyTime": "09:32 am", "exitTime": "09:33 am", "buy": 67.9, "exit": 90, "qty": 65, "net": 1400.4999999999995, "pnlPct": "32.55", "result": "PROFIT", "closedAt": "2026-07-03"}, {"instrument": "NIFTY 24100CE 7 Jul 2026", "strategy": "AUTO SIGNAL", "date": "02 Jul 2026", "buyTime": "09:38 am", "exitTime": "", "buy": 152.3, "exit": 146, "qty": 65, "net": -445.50000000000074, "pnlPct": "-4.14", "result": "LOSS", "closedAt": "2026-07-02"}, {"instrument": "NIFTY 23950CE 7 Jul 2026", "strategy": "AUTO SIGNAL", "date": "01 Jul 2026", "buyTime": "09:56 am", "exitTime": "", "buy": 179.6, "exit": 230, "qty": 65, "net": 3240.0000000000005, "pnlPct": "28.06", "result": "PROFIT", "closedAt": "2026-07-01"}];
-
 const HIST_PAGE_SIZE = 10;
 let HIST_ROWS = [];
 let HIST_PAGE = 0;
@@ -770,17 +769,17 @@ function renderTradeHistoryPage(){
   const pageRows = HIST_ROWS.slice(start, start + HIST_PAGE_SIZE);
 
   renderGenericTable(box, pageRows, [
-    { label:"Instrument", render:r => r.instrument },
+    { label:"Instrument", render:r => tradeInstrumentName(r) },
     { label:"Strategy",   render:r => r.strategy || "—" },
-    { label:"Date",       render:r => r.date },
-    { label:"Buy Time",   render:r => r.buyTime || "—" },
-    { label:"Exit Time",  render:r => r.exitTime || "—" },
-    { label:"Buy ₹",      render:r => r.buy ?? "—" },
-    { label:"Exit ₹",     render:r => r.exit ?? "—" },
+    { label:"Date",       render:r => fmtDate(r.opened_at) },
+    { label:"Buy Time",   render:r => r.opened_at ? new Date(r.opened_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : "—" },
+    { label:"Exit Time",  render:r => r.closed_at ? new Date(r.closed_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : "—" },
+    { label:"Buy ₹",      render:r => r.entry_price ?? "—" },
+    { label:"Exit ₹",     render:r => r.exit_price ?? "—" },
     { label:"Qty",        render:r => r.qty ?? "—" },
-    { label:"Net P&L ₹",  render:r => `<span class="${(r.net ?? 0) >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPnl(r.net)}</span>` },
-    { label:"Return %",   render:r => { const p = Number(r.pnlPct); return isNaN(p) ? "—" : `<span class="${p >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p >= 0 ? '+' : ''}${p.toFixed(2)}%</span>`; } },
-    { label:"Result",     render:r => statusTag(r.result) }
+    { label:"Net P&L ₹",  render:r => `<span class="${(r.net_pnl ?? 0) >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPnl(r.net_pnl)}</span>` },
+    { label:"Return %",   render:r => { const p = tradeReturnPct(r); return p == null ? "—" : `<span class="${p >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p >= 0 ? '+' : ''}${p.toFixed(2)}%</span>`; } },
+    { label:"Result",     render:r => statusTag(r.result || ((r.net_pnl ?? 0) >= 0 ? "PROFIT" : "LOSS")) }
   ], "No closed trades yet.");
 
   pager.style.display = totalPages > 1 ? "flex" : "none";
@@ -816,7 +815,7 @@ async function loadAll(){
       document.getElementById("mMarket").textContent = s.last_market_data ? fmtAge(s.last_market_data) : "—";
       document.getElementById("mSignal").textContent = s.last_signal ? fmtAge(s.last_signal) : "—";
       document.getElementById("mVersion").textContent = s.version || "—";
-      renderLiveTradeToggle(!!s.live_trading_enabled);
+      renderLiveEngineStatus(s.live_trading_status, s.live_trading_pause_reason);
     }
   } catch(e){
     setPulse("unknown");
@@ -859,22 +858,17 @@ async function loadAll(){
     document.getElementById("openPosBox").innerHTML = `<div class="empty">Could not load open positions.</div>`;
   }
 
-  // Everything performance-related — Portfolio Summary, Strategy Health,
-  // Daily P&L, Day-wise Breakdown — is derived from the same static
-  // STATIC_TRADE_HISTORY as the Trade History table below, so all of
-  // these panels always agree with each other. No live fetch here.
+  // Everything performance-related shares one fetch of ALL closed trades
   try{
-    const statRows = STATIC_TRADE_HISTORY.map(r => ({
-      net_pnl: r.net,
-      closed_at: r.closedAt,
-      strategy: r.strategy
-    }));
-    const stats = computeTradeStats(statRows);
+    const rows = await sb("/rest/v1/paper_trades?select=*,signals(signal_type,market_context)&status=eq.CLOSED&order=opened_at.desc&limit=500");
+    const stats = computeTradeStats(rows);
     renderPortfolioSummary(stats);
     renderStrategyHealth(stats);
     renderDailyPnlChart(stats);
     renderDayBreakdown(stats);
+    renderTradeHistory(rows);
   } catch(e){
+    document.getElementById("historyBox").innerHTML = `<div class="empty">Could not load trade history.</div>`;
     document.getElementById("healthGrid").innerHTML = `<div class="empty">Could not load strategy health.</div>`;
     document.getElementById("barChart").innerHTML = `<div class="empty">Could not load daily P&amp;L.</div>`;
     document.getElementById("dayBreakdownBox").innerHTML = `<div class="empty">Could not load day-wise breakdown.</div>`;
@@ -883,8 +877,61 @@ async function loadAll(){
   document.getElementById("refreshBtn").textContent = "↺ Refresh";
 }
 
+// Live Trading Settings panel — loads current config (read via anon
+// SELECT, allowed by RLS) and saves via the validating RPC (the only
+// write this page can make; see set_live_trading_config in
+// phase11_migration.sql).
+async function loadLiveConfig(){
+  const meta = document.getElementById("liveConfigMeta");
+  try{
+    const rows = await sb("/rest/v1/live_trading_config?select=*&id=eq.1");
+    const cfg = rows && rows[0];
+    if(!cfg){ meta.textContent = "not configured yet"; return; }
+    const enabled = new Set(cfg.enabled_strategies || []);
+    document.querySelectorAll("#liveStrategySelect option").forEach(o => {
+      o.selected = enabled.has(o.value);
+    });
+    document.getElementById("liveLotSelect").value = String(cfg.lot_multiplier || 1);
+    meta.textContent = enabled.size
+      ? enabled.size + " strategy" + (enabled.size === 1 ? "" : "ies") + " live · " + (cfg.lot_multiplier || 1) + " lot" + (cfg.lot_multiplier === 1 ? "" : "s")
+      : "no strategies live yet";
+  } catch(e){
+    meta.textContent = "could not load";
+  }
+}
+
+document.getElementById("liveConfigSaveBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("liveConfigSaveBtn");
+  const msg = document.getElementById("liveConfigMsg");
+  const selected = Array.from(document.getElementById("liveStrategySelect").selectedOptions).map(o => o.value);
+  const lots = Number(document.getElementById("liveLotSelect").value);
+
+  const confirmed = confirm(
+    (selected.length
+      ? "Enable LIVE trading (real money) for: " + selected.join(", ") + "\nLot size: " + lots + " (" + (lots*65) + " qty)"
+      : "Disable live trading for ALL strategies — everything will be paper-trade only.") +
+    "\n\nThis takes effect on the engine's next signal. Continue?"
+  );
+  if(!confirmed) return;
+
+  btn.disabled = true;
+  msg.textContent = "Saving…";
+  msg.style.color = "var(--muted)";
+  try{
+    await sbRpc("set_live_trading_config", { p_strategies: selected, p_lot_multiplier: lots });
+    msg.textContent = "Saved.";
+    msg.style.color = "#3ddc84";
+    await loadLiveConfig();
+  } catch(e){
+    msg.textContent = "Failed to save: " + e.message;
+    msg.style.color = "#ff3d5a";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+loadLiveConfig();
 document.getElementById("refreshBtn").addEventListener("click", loadAll);
-renderTradeHistory(STATIC_TRADE_HISTORY);
 loadAll();
 setInterval(loadAll, 10000);
 </script>
