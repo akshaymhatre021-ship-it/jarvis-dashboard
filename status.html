@@ -244,6 +244,12 @@
           <option value="4">4 lots (260 qty)</option>
         </select>
       </div>
+      <div style="min-width:150px">
+        <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:6px">DAILY LOSS LIMIT (₹)</label>
+        <input id="liveLossLimitInput" type="number" min="500" max="200000" step="500" value="5000"
+          style="width:100%;background:var(--bg2,#0d1117);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);border-radius:6px;padding:8px;font-family:'JetBrains Mono',monospace;font-size:12px">
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px">Live trading auto-pauses for the rest of the day past this</div>
+      </div>
       <div>
         <button id="liveConfigSaveBtn" style="padding:9px 18px">Save</button>
       </div>
@@ -267,7 +273,7 @@
   </div>
 
   <div class="panel">
-    <h2>Portfolio Summary <small>all closed trades</small></h2>
+    <h2>Portfolio Summary <small>all closed trades — cloud engine + imported browser history</small></h2>
     <div class="snap-grid" id="summaryGrid">
       <div class="snap-item"><div class="lbl">Net P&amp;L</div><div class="val" id="sNetPnl">—</div></div>
       <div class="snap-item"><div class="lbl">Win Rate</div><div class="val" id="sWinRate">—</div></div>
@@ -801,7 +807,8 @@ function renderTradeHistoryPage(){
     { label:"Qty",        render:r => r.qty ?? "—" },
     { label:"Net P&L ₹",  render:r => `<span class="${(r.net_pnl ?? 0) >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPnl(r.net_pnl)}</span>` },
     { label:"Return %",   render:r => { const p = tradeReturnPct(r); return p == null ? "—" : `<span class="${p >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p >= 0 ? '+' : ''}${p.toFixed(2)}%</span>`; } },
-    { label:"Result",     render:r => statusTag(r.result || ((r.net_pnl ?? 0) >= 0 ? "PROFIT" : "LOSS")) }
+    { label:"Result",     render:r => statusTag(r.result || ((r.net_pnl ?? 0) >= 0 ? "PROFIT" : "LOSS")) },
+    { label:"Source",     render:r => r.source === "browser_import" ? '<span style="color:var(--muted);font-size:10px">🌐 browser</span>' : '<span style="color:var(--muted);font-size:10px">☁ cloud</span>' }
   ], "No closed trades yet.");
 
   pager.style.display = totalPages > 1 ? "flex" : "none";
@@ -914,8 +921,9 @@ async function loadLiveConfig(){
       o.selected = enabled.has(o.value);
     });
     document.getElementById("liveLotSelect").value = String(cfg.lot_multiplier || 1);
+    document.getElementById("liveLossLimitInput").value = String(cfg.daily_loss_limit_inr || 5000);
     meta.textContent = enabled.size
-      ? enabled.size + " strategy" + (enabled.size === 1 ? "" : "ies") + " live · " + (cfg.lot_multiplier || 1) + " lot" + (cfg.lot_multiplier === 1 ? "" : "s")
+      ? enabled.size + " strategy" + (enabled.size === 1 ? "" : "ies") + " live · " + (cfg.lot_multiplier || 1) + " lot" + (cfg.lot_multiplier === 1 ? "" : "s") + " · ₹" + (cfg.daily_loss_limit_inr || 5000) + " daily loss limit"
       : "no strategies live yet";
   } catch(e){
     meta.textContent = "could not load";
@@ -927,10 +935,11 @@ document.getElementById("liveConfigSaveBtn").addEventListener("click", async () 
   const msg = document.getElementById("liveConfigMsg");
   const selected = Array.from(document.getElementById("liveStrategySelect").selectedOptions).map(o => o.value);
   const lots = Number(document.getElementById("liveLotSelect").value);
+  const lossLimit = Number(document.getElementById("liveLossLimitInput").value) || 5000;
 
   const confirmed = confirm(
     (selected.length
-      ? "Enable LIVE trading (real money) for: " + selected.join(", ") + "\nLot size: " + lots + " (" + (lots*65) + " qty)"
+      ? "Enable LIVE trading (real money) for: " + selected.join(", ") + "\nLot size: " + lots + " (" + (lots*65) + " qty)\nDaily loss limit: ₹" + lossLimit + " (auto-pauses for the rest of the day past this)"
       : "Disable live trading for ALL strategies — everything will be paper-trade only.") +
     "\n\nThis takes effect on the engine's next signal. Continue?"
   );
@@ -940,7 +949,7 @@ document.getElementById("liveConfigSaveBtn").addEventListener("click", async () 
   msg.textContent = "Saving…";
   msg.style.color = "var(--muted)";
   try{
-    await sbRpc("set_live_trading_config", { p_strategies: selected, p_lot_multiplier: lots });
+    await sbRpc("set_live_trading_config", { p_strategies: selected, p_lot_multiplier: lots, p_daily_loss_limit_inr: lossLimit });
     msg.textContent = "Saved.";
     msg.style.color = "#3ddc84";
     await loadLiveConfig();
@@ -952,7 +961,6 @@ document.getElementById("liveConfigSaveBtn").addEventListener("click", async () 
   }
 });
 
-  
 loadLiveConfig();
 document.getElementById("refreshBtn").addEventListener("click", loadAll);
 loadAll();
