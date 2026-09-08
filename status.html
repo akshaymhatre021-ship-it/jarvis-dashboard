@@ -729,6 +729,7 @@ function renderOpenPositions(rows){
           <div class="pos-title">
             <span class="pos-dot"></span>${name}
             <span class="pos-strat">${r.strategy || "—"}</span>
+            <span style="font-weight:700;font-size:10px;color:${r.is_live ? '#ff3d5a' : 'var(--muted)'}">${r.is_live ? '💰 LIVE' : 'PAPER'}</span>
             <span class="pos-trail">🔒 Trail SL: ON${slTrailed ? " · trailed from ₹" + r.sl_original : ""}</span>
             <span class="pos-time">${r.opened_at ? new Date(r.opened_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}) : ""}</span>
           </div>
@@ -808,6 +809,7 @@ function renderTradeHistoryPage(){
     { label:"Net P&L ₹",  render:r => `<span class="${(r.net_pnl ?? 0) >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPnl(r.net_pnl)}</span>` },
     { label:"Return %",   render:r => { const p = tradeReturnPct(r); return p == null ? "—" : `<span class="${p >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p >= 0 ? '+' : ''}${p.toFixed(2)}%</span>`; } },
     { label:"Result",     render:r => statusTag(r.result || ((r.net_pnl ?? 0) >= 0 ? "PROFIT" : "LOSS")) },
+    { label:"Money",      render:r => r.is_live ? '<span style="color:#ff3d5a;font-weight:700;font-size:10px">💰 LIVE</span>' : '<span style="color:var(--muted);font-size:10px">PAPER</span>' },
     { label:"Source",     render:r => r.source === "browser_import" ? '<span style="color:var(--muted);font-size:10px">🌐 browser</span>' : '<span style="color:var(--muted);font-size:10px">☁ cloud</span>' }
   ], "No closed trades yet.");
 
