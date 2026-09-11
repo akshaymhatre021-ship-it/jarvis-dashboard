@@ -374,8 +374,16 @@ async function sbRpc(fn, args){
     },
     body: JSON.stringify(args)
   });
-  if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
+  const text = await res.text();
+  // BUG FIX: a Postgres function that `returns void` (e.g.
+  // set_live_trading_enabled) comes back from PostgREST as 204 No
+  // Content with an EMPTY body — calling res.json() directly on that
+  // throws "Unexpected end of JSON input" even though the call fully
+  // succeeded and the write already happened. Read as text first and
+  // only parse if there's actually something to parse.
+  if(!res.ok) throw new Error("HTTP " + res.status + (text ? ": " + text : ""));
+  if(!text) return null;
+  try { return JSON.parse(text); } catch(e) { return null; }
 }
 
 // Shows the REAL live-trading state written by liveTrading.js on the
