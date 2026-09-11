@@ -47,6 +47,20 @@
   }
   #refreshBtn:hover{border-color:var(--cyan);color:var(--cyan);}
   #refreshBtn:active{transform:translateY(1px);}
+  #liveEntriesToggleBtn{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    border-radius:6px;cursor:pointer;letter-spacing:0.03em;
+    transition:border-color .15s,color .15s;
+  }
+  #liveEntriesToggleBtn:hover{border-color:var(--cyan);}
+  #liveEntriesToggleBtn:active{transform:translateY(1px);}
+  .manual-close-btn{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;
+    transition:border-color .15s,color .15s;
+  }
+  .manual-close-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .manual-close-btn:active{transform:translateY(1px);}
 
   /* ---- hero pulse ---- */
   .hero{
@@ -194,6 +208,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:14px">
       <span id="liveEngineBadge" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">LIVE ENGINE: —</span>
+      <button id="liveEntriesToggleBtn" style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px">LIVE BUY: —</button>
       <button id="refreshBtn">↺ Refresh</button>
     </div>
   </header>
@@ -220,8 +235,14 @@
     <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
       Only strategies selected here can place real orders (and only when
       the VM's <code>LIVE_TRADING_ENABLED</code> is also on). Everything
-      else stays paper-trade only. Changes apply on the engine's next
-      signal — no restart needed.
+      else stays paper-trade only. The <b>LIVE BUY</b> switch (top right)
+      is a separate master on/off for new live entries — turning it OFF
+      stops all new live BUYs immediately regardless of which strategies
+      are selected below, but does <b>not</b> touch any already-open live
+      position, which keeps being managed normally (its own stop-loss,
+      target, trailing, and end-of-day square-off all continue exactly as
+      before). Changes apply on the engine's next signal — no restart
+      needed.
     </p>
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1;min-width:220px">
@@ -358,11 +379,13 @@ async function sbRpc(fn, args){
 }
 
 // Shows the REAL live-trading state written by liveTrading.js on the
-// engine itself (Phase 10) — read-only, since this page can no longer
-// set live_trading_enabled directly (that flag was a dead placeholder
-// nothing read; see Live Trading Settings panel below for the actual
-// control, which is strategy+lot selection, not an on/off switch —
-// live trading is armed by LIVE_TRADING_ENABLED in the VM's .env).
+// engine itself (Phase 10): ACTIVE, or PAUSED with a reason — this is
+// the automatic circuit breaker (order failure, daily loss limit),
+// always read-only here, it resets itself. This is DIFFERENT from the
+// LIVE BUY switch below, which is a manual on/off this page DOES
+// control (Phase 14, live_trading_config.live_trading_enabled) — the
+// engine can be ACTIVE while LIVE BUY is deliberately OFF, and either
+// state can independently show PAUSED/OFF at the same time.
 function renderLiveEngineStatus(status, pauseReason){
   const el = document.getElementById("liveEngineBadge");
   if(status === "ACTIVE"){
@@ -743,9 +766,49 @@ function renderOpenPositions(rows){
           <span><b>SL:</b> ${r.stop_loss != null ? "₹" + r.stop_loss : "—"}</span>
           <span><b>To Target:</b> ${toTargetPct == null ? "—" : toTargetPct.toFixed(1) + "%"}</span>
           <span><b>To SL:</b> ${toSlPct == null ? "—" : toSlPct.toFixed(1) + "%"}</span>
+          ${r.live_exit_failed ? `<span style="color:#ffb020;font-weight:700">⚠️ EXIT FAILED — needs manual check</span>` : ""}
+        </div>
+        <div class="pos-actions" style="margin-top:8px">
+          <button class="manual-close-btn" data-id="${r.id}" data-name="${name}" data-live="${r.is_live ? '1' : '0'}"
+            style="font-size:11px;padding:5px 10px">✏️ Close manually</button>
         </div>
       </div>`;
   }).join("");
+
+  box.querySelectorAll(".manual-close-btn").forEach(btn => {
+    btn.addEventListener("click", () => manualCloseTrade(btn.dataset.id, btn.dataset.name, btn.dataset.live === "1"));
+  });
+}
+
+// Manual-close flow — for when a live position was sold directly in
+// the Angel One app (or otherwise needs correcting) and status.html
+// would otherwise keep showing it open forever. Calls manual_close_trade
+// (phase14_migration.sql), which recomputes gross/net P&L server-side
+// from the price entered here, so this replaces hand-writing a one-off
+// fix_stuck_trade.sql UPDATE every time this happens.
+async function manualCloseTrade(id, name, isLive){
+  const priceStr = prompt(
+    (isLive ? "💰 LIVE position: " : "PAPER position: ") + name +
+    "\n\nEnter the actual exit/fill price to close this trade at:\n(if you sold it directly in Angel One, use the real fill price shown there)"
+  );
+  if(priceStr === null) return; // cancelled
+  const price = Number(priceStr);
+  if(!price || price <= 0){
+    alert("Enter a valid positive price.");
+    return;
+  }
+  const confirmed = confirm(
+    "Close " + name + " at ₹" + price + "?\n\nThis marks the trade CLOSED in status.html with this exit price. " +
+    (isLive ? "Only do this after confirming the position is actually closed at the broker." : "") +
+    "\nThis cannot be undone from here."
+  );
+  if(!confirmed) return;
+  try{
+    await sbRpc("manual_close_trade", { p_trade_id: id, p_exit_price: price, p_note: "MANUAL_CLOSE" });
+    await loadAll();
+  } catch(e){
+    alert("Failed to close trade: " + e.message);
+  }
 }
 
 // trade.symbol in paper_trades is always the literal string 'NIFTY' —
@@ -809,7 +872,7 @@ function renderTradeHistoryPage(){
     { label:"Net P&L ₹",  render:r => `<span class="${(r.net_pnl ?? 0) >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPnl(r.net_pnl)}</span>` },
     { label:"Return %",   render:r => { const p = tradeReturnPct(r); return p == null ? "—" : `<span class="${p >= 0 ? 'pnl-pos' : 'pnl-neg'}">${p >= 0 ? '+' : ''}${p.toFixed(2)}%</span>`; } },
     { label:"Result",     render:r => statusTag(r.result || ((r.net_pnl ?? 0) >= 0 ? "PROFIT" : "LOSS")) },
-    { label:"Money",      render:r => r.is_live ? '<span style="color:#ff3d5a;font-weight:700;font-size:10px">💰 LIVE</span>' : '<span style="color:var(--muted);font-size:10px">PAPER</span>' },
+    { label:"Money",      render:r => (r.is_live ? '<span style="color:#ff3d5a;font-weight:700;font-size:10px">💰 LIVE</span>' : '<span style="color:var(--muted);font-size:10px">PAPER</span>') + (r.exit_reason === 'MANUAL_CLOSE' ? ' <span style="color:var(--amber);font-size:10px" title="Closed manually from the dashboard, not by the engine">✏️ manual</span>' : '') },
     { label:"Source",     render:r => r.source === "browser_import" ? '<span style="color:var(--muted);font-size:10px">🌐 browser</span>' : '<span style="color:var(--muted);font-size:10px">☁ cloud</span>' }
   ], "No closed trades yet.");
 
@@ -912,25 +975,66 @@ async function loadAll(){
 // SELECT, allowed by RLS) and saves via the validating RPC (the only
 // write this page can make; see set_live_trading_config in
 // phase11_migration.sql).
+// Reflects live_trading_config.live_trading_enabled on the LIVE BUY
+// button. Defaults to treating a missing/unreadable value as ON (same
+// "missing key = on" convention as liveTrading.js's tryEnterLive, so
+// the dashboard never shows a state the engine disagrees with) —
+// enabled_strategies staying empty is still the real fail-closed gate.
+let LIVE_BUY_ENABLED = true;
+function renderLiveEntriesToggle(){
+  const btn = document.getElementById("liveEntriesToggleBtn");
+  if(LIVE_BUY_ENABLED){
+    btn.textContent = "🟢 LIVE BUY: ON";
+    btn.title = "New live entries are allowed (subject to the strategy list below). Click to turn off.";
+  } else {
+    btn.textContent = "🔴 LIVE BUY: OFF";
+    btn.title = "New live entries are blocked. Open live positions still exit normally. Click to turn on.";
+  }
+}
+
 async function loadLiveConfig(){
   const meta = document.getElementById("liveConfigMeta");
   try{
     const rows = await sb("/rest/v1/live_trading_config?select=*&id=eq.1");
     const cfg = rows && rows[0];
-    if(!cfg){ meta.textContent = "not configured yet"; return; }
+    if(!cfg){ meta.textContent = "not configured yet"; renderLiveEntriesToggle(); return; }
     const enabled = new Set(cfg.enabled_strategies || []);
     document.querySelectorAll("#liveStrategySelect option").forEach(o => {
       o.selected = enabled.has(o.value);
     });
     document.getElementById("liveLotSelect").value = String(cfg.lot_multiplier || 1);
     document.getElementById("liveLossLimitInput").value = String(cfg.daily_loss_limit_inr || 5000);
+    LIVE_BUY_ENABLED = cfg.live_trading_enabled !== false;
+    renderLiveEntriesToggle();
     meta.textContent = enabled.size
       ? enabled.size + " strategy" + (enabled.size === 1 ? "" : "ies") + " live · " + (cfg.lot_multiplier || 1) + " lot" + (cfg.lot_multiplier === 1 ? "" : "s") + " · ₹" + (cfg.daily_loss_limit_inr || 5000) + " daily loss limit"
       : "no strategies live yet";
   } catch(e){
     meta.textContent = "could not load";
+    renderLiveEntriesToggle();
   }
 }
+
+document.getElementById("liveEntriesToggleBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("liveEntriesToggleBtn");
+  const next = !LIVE_BUY_ENABLED;
+  const confirmed = confirm(
+    (next
+      ? "Turn LIVE BUY back ON?\nNew live entries will resume (still subject to the strategy list and daily loss limit)."
+      : "Turn LIVE BUY OFF?\nNo new live orders will be placed until you turn this back on. Any already-open live position keeps being managed normally (SL/target/EOD square-off) — this does NOT close or affect it.")
+  );
+  if(!confirmed) return;
+  btn.disabled = true;
+  try{
+    await sbRpc("set_live_trading_enabled", { p_enabled: next });
+    LIVE_BUY_ENABLED = next;
+    renderLiveEntriesToggle();
+  } catch(e){
+    alert("Failed to update LIVE BUY switch: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 document.getElementById("liveConfigSaveBtn").addEventListener("click", async () => {
   const btn = document.getElementById("liveConfigSaveBtn");
