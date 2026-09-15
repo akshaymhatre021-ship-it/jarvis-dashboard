@@ -4355,7 +4355,7 @@ setTimeout(nd2SyncAll, 2000);
   <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
     <div class="ph">
       <div class="pt" style="color:#a064ff">🤖 XAUUSD AUTO SIGNAL ENGINE</div>
-      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Liquidity sweep → Asian-range breakout → EMA9/EMA21+RSI14+DXY · one open position at a time</span>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Liquidity sweep → Asian-range breakout → EMA/RSI/MACD/VWAP+DXY (ADX-gated) · one open position at a time</span>
     </div>
     <div style="padding:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
@@ -4370,18 +4370,24 @@ setTimeout(nd2SyncAll, 2000);
             <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Checks every ~30s · target 1.5×ATR / SL 0.8×ATR (~1.9:1 R:R) · trailing SL arms at 55%, locks 60% of peak</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);white-space:nowrap">SIZE:</span>
-          <select id="xpt-lot-size" style="background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+          <select id="xpt-lot-size" onchange="xptToggleCustomSize()" style="background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
             <option value="1">1 micro-lot (1 oz)</option>
             <option value="2">2 micro-lots (2 oz)</option>
             <option value="5">5 micro-lots (5 oz)</option>
             <option value="10">10 micro-lots = 1 mini-lot (10 oz)</option>
+            <option value="custom">Custom ₹ amount</option>
           </select>
+          <span id="xpt-custom-wrap" style="display:none;align-items:center;gap:4px">
+            <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">₹</span>
+            <input id="xpt-custom-inr" type="number" value="10000" min="100" step="500" oninput="xptUpdateCustomOzPreview()" style="width:90px;background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+            <span id="xpt-custom-oz-preview" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></span>
+          </span>
         </div>
       </div>
       <div id="xpt-market-note" style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b>. Each tick checks, in order: a <b>liquidity sweep reversal</b> (highest conviction, rare by design), then an <b>Asian-range breakout</b> (first 2hrs after London opens only), then falls back to the EMA/RSI(+DXY) engine. Engine pauses on the weekend gap and force-squares any open position before Friday's close. Target/SL scale with live volatility (ATR) instead of a fixed %.
+        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b>. Each tick checks, in order: a <b>liquidity sweep reversal</b> (highest conviction, rare by design), then an <b>Asian-range breakout</b> (first 2hrs after London opens only), then falls back to <b>EMA/RSI/MACD(12,26,9)/session-VWAP+DXY</b> — same building blocks as your F&O Nifty Pro V2, gated by an <b>ADX(14) regime filter</b> (skips this fallback layer entirely when the market's too choppy to trend-trade, same idea as Quality Breakout). Note: "VWAP" here is a session-average-price proxy, not true volume-weighted — free forex feeds don't carry volume. Engine pauses on the weekend gap and force-squares any open position before Friday's close.
       </div>
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
       <div id="xpt-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:var(--ov25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
@@ -26442,6 +26448,77 @@ function xptCalcATR(highs, lows, closes, period) {
   return slice.reduce(function(a,b){ return a+b; }, 0) / slice.length;
 }
 
+// ── MACD(12,26,9) — same parameters as your F&O Nifty Pro V2 engine.
+// Needs a full EMA series (not just calcEMA's single ending value) to
+// get a real signal-line crossover, so this computes its own series
+// rather than reusing calcEMA.
+function xptEmaSeries(closes, period) {
+  var out = new Array(closes.length).fill(null);
+  if (closes.length < period) return out;
+  var seed = 0;
+  for (var i = 0; i < period; i++) seed += closes[i];
+  seed /= period;
+  out[period-1] = seed;
+  var k = 2/(period+1), ema = seed;
+  for (var j = period; j < closes.length; j++) { ema = closes[j]*k + ema*(1-k); out[j] = ema; }
+  return out;
+}
+function xptCalcMACD(closes) {
+  if (closes.length < 35) return null; // needs 26+9 bars minimum, same as macdAt()
+  var ema12 = xptEmaSeries(closes, 12), ema26 = xptEmaSeries(closes, 26);
+  var macdLine = [];
+  for (var i = 0; i < closes.length; i++) macdLine.push((ema12[i]!=null && ema26[i]!=null) ? ema12[i]-ema26[i] : null);
+  var valid = macdLine.filter(function(v){ return v!=null; });
+  if (valid.length < 9) return null;
+  var sig = xptEmaSeries(valid, 9);
+  var line = macdLine[macdLine.length-1], signal = sig[sig.length-1];
+  if (line==null || signal==null) return null;
+  return { line: line, signal: signal, hist: line - signal };
+}
+
+// ── Session "VWAP" — honest caveat: true VWAP needs volume, and the
+// free forex feeds we're using (Yahoo/Finnhub) don't carry volume for
+// XAUUSD. This is a session-average-price proxy (cumulative mean since
+// the day's start), not a real volume-weighted number. Still useful as
+// a trend-bias line, just don't treat it as identical to your F&O
+// VWAP, which does have real NSE volume behind it.
+var XPT_VWAP_SUM = 0, XPT_VWAP_COUNT = 0, XPT_VWAP_DATE = null, XPT_VWAP = null;
+function xptUpdateSessionVWAP(priceInr) {
+  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  var dateStr = ist.toDateString();
+  if (dateStr !== XPT_VWAP_DATE) { XPT_VWAP_DATE = dateStr; XPT_VWAP_SUM = 0; XPT_VWAP_COUNT = 0; }
+  XPT_VWAP_SUM += priceInr; XPT_VWAP_COUNT++;
+  XPT_VWAP = XPT_VWAP_SUM / XPT_VWAP_COUNT;
+}
+
+// ── ADX(14) regime filter — same concept as your F&O "Quality Breakout
+// (Regime-Filtered)": only trust trend-following signals (EMA/RSI/MACD/
+// VWAP below) when the market is actually trending (ADX above
+// threshold). Does NOT gate the liquidity-sweep or Asian-breakout
+// signals above — those work differently and shouldn't be suppressed
+// by a trend-strength filter designed for trend-following entries.
+function xptCalcADX(highs, lows, closes, period) {
+  period = period || 14;
+  if (closes.length < period*2+1) return null;
+  var plusDM=[], minusDM=[], tr=[];
+  for (var i=1;i<closes.length;i++){
+    var up = highs[i]-highs[i-1], down = lows[i-1]-lows[i];
+    plusDM.push(up>down && up>0 ? up : 0);
+    minusDM.push(down>up && down>0 ? down : 0);
+    tr.push(Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1])));
+  }
+  function smooth(arr,p){ var s=[arr.slice(0,p).reduce(function(a,b){return a+b;},0)]; for(var k=p;k<arr.length;k++) s.push(s[s.length-1]-(s[s.length-1]/p)+arr[k]); return s; }
+  var trS=smooth(tr,period), pS=smooth(plusDM,period), mS=smooth(minusDM,period);
+  var dx=[];
+  for (var j=0;j<trS.length;j++){
+    var pdi = trS[j]?(pS[j]/trS[j])*100:0, mdi = trS[j]?(mS[j]/trS[j])*100:0;
+    dx.push((pdi+mdi)?(Math.abs(pdi-mdi)/(pdi+mdi))*100:0);
+  }
+  if (dx.length<period) return null;
+  var slice = dx.slice(-period);
+  return slice.reduce(function(a,b){return a+b;},0)/slice.length;
+}
+
 // ── Auto signal: EMA9/EMA21 + RSI14, 3-of-4 conditions — same shape
 // as runSignalEngine(), applied to the ₹/oz price series instead of
 // Nifty spot.
@@ -26458,13 +26535,23 @@ async function xptRefreshDXY() {
 }
 
 function xptEvaluateSignal(priceInr, dp) {
-  if (XPT_HISTORY_INR.length < 22) return null;
+  if (XPT_HISTORY_INR.length < 35) return null; // MACD needs 35 bars minimum, so this now gates the whole function
+  // ADX regime filter — same idea as F&O's "Quality Breakout
+  // (Regime-Filtered)": don't trust trend-following signals (this
+  // function only, not the sweep/breakout ones above) when the market
+  // is genuinely directionless/choppy.
+  var adx = xptCalcADX(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
+  if (adx != null && adx < 18) return null;
+
   var ema9 = calcEMA(XPT_HISTORY_INR, 9);
   var ema21 = calcEMA(XPT_HISTORY_INR, 21);
   var rsi = calcRSI(XPT_HISTORY_INR, 14);
+  var macd = xptCalcMACD(XPT_HISTORY_INR);
   var trend = dp > 0.15 ? 'BULLISH' : dp < -0.15 ? 'BEARISH' : 'NEUTRAL';
   var dxyKnown = XPT_DXY_DP != null;
-  var totalConditions = dxyKnown ? 5 : 4;
+  var macdKnown = macd != null;
+  var vwapKnown = XPT_VWAP != null;
+  var totalConditions = 4 + (dxyKnown?1:0) + (macdKnown?1:0) + (vwapKnown?1:0);
 
   var longC = 0, longR = [];
   if (ema9 && ema21 && ema9 > ema21) { longC++; longR.push('EMA9>EMA21'); }
@@ -26472,6 +26559,8 @@ function xptEvaluateSignal(priceInr, dp) {
   if (trend === 'BULLISH') { longC++; longR.push('Trend Bullish'); }
   if (dp > 0.3) { longC++; longR.push('Strong +'+dp.toFixed(2)+'%'); }
   if (dxyKnown && XPT_DXY_DP < -0.05) { longC++; longR.push('DXY falling '+XPT_DXY_DP.toFixed(2)+'%'); }
+  if (macdKnown && macd.line > macd.signal) { longC++; longR.push('MACD bullish'); }
+  if (vwapKnown && priceInr > XPT_VWAP) { longC++; longR.push('Above session VWAP'); }
 
   var shortC = 0, shortR = [];
   if (ema9 && ema21 && ema9 < ema21) { shortC++; shortR.push('EMA9<EMA21'); }
@@ -26479,6 +26568,8 @@ function xptEvaluateSignal(priceInr, dp) {
   if (trend === 'BEARISH') { shortC++; shortR.push('Trend Bearish'); }
   if (dp < -0.3) { shortC++; shortR.push('Strong '+dp.toFixed(2)+'%'); }
   if (dxyKnown && XPT_DXY_DP > 0.05) { shortC++; shortR.push('DXY rising '+XPT_DXY_DP.toFixed(2)+'%'); }
+  if (macdKnown && macd.line < macd.signal) { shortC++; shortR.push('MACD bearish'); }
+  if (vwapKnown && priceInr < XPT_VWAP) { shortC++; shortR.push('Below session VWAP'); }
 
   if (longC >= 3 && longC >= shortC) return { side:'BUY', reasons: longR.join(' | '), strength: longC===totalConditions?'STRONG':'MODERATE' };
   if (shortC >= 3 && shortC > longC) return { side:'SELL', reasons: shortR.join(' | '), strength: shortC===totalConditions?'STRONG':'MODERATE' };
@@ -26551,6 +26642,46 @@ function xptEvaluateBreakoutSignal(priceInr) {
 
 function xptOpenTrade() { return (XPT_PORTFOLIO.trades||[]).find(function(t){ return t.status==='OPEN'; }) || null; }
 
+function xptToggleCustomSize() {
+  var sel = document.getElementById('xpt-lot-size');
+  var wrap = document.getElementById('xpt-custom-wrap');
+  if (wrap) wrap.style.display = (sel && sel.value === 'custom') ? 'inline-flex' : 'none';
+  xptUpdateCustomOzPreview();
+}
+
+// Shows "≈ 0.0244 oz" next to the ₹ input so it's clear what that
+// rupee amount actually buys at the current live price, before you
+// commit to it — updates on typing and on every price tick.
+function xptUpdateCustomOzPreview() {
+  var preview = document.getElementById('xpt-custom-oz-preview');
+  if (!preview) return;
+  var sel = document.getElementById('xpt-lot-size');
+  if (!sel || sel.value !== 'custom') { preview.textContent = ''; return; }
+  var amt = parseFloat((document.getElementById('xpt-custom-inr')||{}).value) || 0;
+  var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : null;
+  preview.textContent = (amt > 0 && last) ? ('≈ ' + (amt/last).toFixed(4) + ' oz') : '';
+}
+
+// Resolves whatever the SIZE control currently says into an oz
+// quantity — either a fixed micro-lot count, or a fractional oz amount
+// derived from a custom ₹ figure (e.g. ₹10,000 at ₹4,10,000/oz ≈ 0.0244 oz).
+function xptResolveTradeQtyOz(priceInr) {
+  var sel = document.getElementById('xpt-lot-size');
+  var val = sel ? sel.value : '1';
+  if (val === 'custom') {
+    var amt = parseFloat((document.getElementById('xpt-custom-inr')||{}).value) || 0;
+    return amt > 0 ? amt / priceInr : 0;
+  }
+  return parseInt(val, 10) || 1;
+}
+
+// Fractional oz (custom ₹ amounts) need more decimal places to display
+// meaningfully than whole micro-lots do.
+function xptFmtOz(q) {
+  if (q == null) return '—';
+  return q < 1 ? q.toFixed(4) : (Number.isInteger(q) ? String(q) : q.toFixed(2));
+}
+
 // target = 1.5x ATR, SL = 0.8x ATR (~1.9:1 reward:risk) when ATR is
 // available; falls back to the fixed +0.6%/-0.35% only while ATR
 // hasn't warmed up yet (needs 15+ bars of high/low/close history).
@@ -26567,9 +26698,10 @@ function xptTargetSL(entry, side, atr) {
 }
 
 function xptEnterTrade(sig, priceInr, atr) {
-  var lotOz = parseInt((document.getElementById('xpt-lot-size')||{}).value || '1', 10);
+  var lotOz = xptResolveTradeQtyOz(priceInr);
+  if (!lotOz || lotOz <= 0) { xptLog('Signal ' + sig.side + ' skipped — enter a valid custom ₹ amount first'); return; }
   var cost = priceInr * lotOz;
-  if (cost > XPT_PORTFOLIO.cash) { xptLog('Signal ' + sig.side + ' skipped — insufficient virtual cash for ' + lotOz + ' oz'); return; }
+  if (cost > XPT_PORTFOLIO.cash) { xptLog('Signal ' + sig.side + ' skipped — insufficient virtual cash for ' + xptFmtOz(lotOz) + ' oz'); return; }
   var ts = xptTargetSL(priceInr, sig.side, atr);
   var trade = {
     side: sig.side, qty: lotOz, entry: priceInr, target: ts.target, stopLoss: ts.stopLoss,
@@ -26579,7 +26711,7 @@ function xptEnterTrade(sig, priceInr, atr) {
   XPT_PORTFOLIO.trades.push(trade);
   xptRecalculateCash();
   xptSave();
-  xptLog('🟢 ' + sig.strength + ' ' + sig.side + ' opened — ' + lotOz + ' oz @ ₹' + Math.round(priceInr).toLocaleString('en-IN') + '/oz'
+  xptLog('🟢 ' + sig.strength + ' ' + sig.side + ' opened — ' + xptFmtOz(lotOz) + ' oz @ ₹' + Math.round(priceInr).toLocaleString('en-IN') + '/oz'
     + ' · target ₹' + Math.round(ts.target).toLocaleString('en-IN') + ' · SL ₹' + Math.round(ts.stopLoss).toLocaleString('en-IN')
     + (ts.atrBased ? ' (ATR-based)' : ' (fixed %, ATR warming up)') + ' (' + sig.reasons + ')');
 }
@@ -26674,6 +26806,7 @@ async function xptTick() {
 
   var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
   xptUpdateAsianRange(priceInr);
+  xptUpdateSessionVWAP(priceInr);
   await xptRefreshDXY();
 
   var open = xptOpenTrade();
@@ -26741,6 +26874,7 @@ function xptRefreshUI(usdPrice, inrPrice, dp) {
     set('xpt-live-price-inr', xptFmtInr(inrPrice) + '/oz');
   }
   set('xpt-cash', xptFmtInr(XPT_PORTFOLIO.cash));
+  xptUpdateCustomOzPreview();
   var openMTM = open.reduce(function(s,t){
     var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : t.entry;
     var dir = t.side==='BUY'?1:-1;
@@ -26764,7 +26898,7 @@ function xptRefreshUI(usdPrice, inrPrice, dp) {
         var mtm = dir*(last-t.entry)*t.qty;
         var color = t.side==='BUY' ? 'var(--g)' : 'var(--r)';
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">'
-          + '<div><b style="color:'+color+'">'+t.side+'</b> '+t.qty+' oz @ ₹'+Math.round(t.entry).toLocaleString('en-IN')
+          + '<div><b style="color:'+color+'">'+t.side+'</b> '+xptFmtOz(t.qty)+' oz @ ₹'+Math.round(t.entry).toLocaleString('en-IN')
           + '<div style="font-size:9px;color:var(--dim)">Target ₹'+Math.round(t.target).toLocaleString('en-IN')+' · SL ₹'+Math.round(t.stopLoss).toLocaleString('en-IN')+' · '+t.reasons+'</div></div>'
           + '<div style="text-align:right;font-weight:700;color:'+(mtm>=0?'var(--g)':'var(--r)')+'">'+(mtm>=0?'+':'')+xptFmtInr(mtm)+'</div>'
           + '</div>';
@@ -26786,7 +26920,7 @@ function xptRefreshUI(usdPrice, inrPrice, dp) {
           + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.openedAt).toLocaleDateString('en-IN')+'</td>'
           + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.openedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</td>'
           + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.closedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+t.qty+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+xptFmtOz(t.qty)+'</td>'
           + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+Math.round(t.entry).toLocaleString('en-IN')+'</td>'
           + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+Math.round(t.exit).toLocaleString('en-IN')+'</td>'
           + '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:'+color+';font-weight:700">'+(t.net>=0?'+':'')+t.net.toLocaleString('en-IN')+'</td>'
