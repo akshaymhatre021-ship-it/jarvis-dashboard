@@ -26275,13 +26275,20 @@ async function xptFetchYahoo(symbol) {
 // the freshest WebSocket tick on top when one has arrived recently.
 async function xptFetchGold() {
   var y = await xptFetchYahoo('XAUUSD=X');
-  if (!y) return null;
-  y.source = 'yahoo';
-  if (XPT_WS_LAST_PRICE && (Date.now() - XPT_WS_LAST_AT) < 30000) {
-    y.ltp = XPT_WS_LAST_PRICE;
-    y.source = 'finnhub-ws';
+  var wsFresh = XPT_WS_LAST_PRICE && (Date.now() - XPT_WS_LAST_AT) < 30000;
+  if (y) {
+    y.source = 'yahoo';
+    if (wsFresh) { y.ltp = XPT_WS_LAST_PRICE; y.source = 'finnhub-ws'; }
+    return y;
   }
-  return y;
+  // Yahoo failed this tick (proxies blocked on this network, most likely)
+  // — if the WebSocket has delivered a fresh tick anyway, use it rather
+  // than blanking the whole display. EMA/RSI/ATR context will just
+  // build up gradually from live ticks instead of Yahoo's seed history.
+  if (wsFresh) {
+    return { ltp: XPT_WS_LAST_PRICE, prevClose: XPT_WS_LAST_PRICE, closes: [], highs: [], lows: [], source: 'finnhub-ws' };
+  }
+  return null;
 }
 async function xptFetchUSDINR() { return xptFetchYahoo('USDINR=X'); }
 
