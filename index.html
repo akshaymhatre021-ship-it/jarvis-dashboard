@@ -1242,6 +1242,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <button class="nav-tab" onclick="showPage('mf',this)">💰 MUT. FUNDS</button>
   <button class="nav-tab" onclick="showPage('advanced',this)" style="border-color:rgba(160,100,255,.3);color:#a064ff;">⚡ F&O</button>
   <button class="nav-tab" onclick="showPage('stockadv',this)" style="border-color:rgba(0,255,136,.3);color:var(--g);">📈 STOCK ADVANCE</button>
+  <button class="nav-tab" onclick="showPage('gold',this)" style="border-color:rgba(255,193,7,.35);color:#ffc107;">🥇 GOLD (XAUUSD)</button>
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <button class="nav-tab" onclick="showPage('ipo',this)" style="border-color:rgba(255,204,0,.3);color:#ffcc00;">🚀 IPO WATCH</button>
@@ -4256,6 +4257,171 @@ setTimeout(nd2SyncAll, 2000);
 
 </div>
 <!-- ══ END STOCK ADVANCE PAGE ══ -->
+
+<!-- ══════════════════════════════════════════════════════════════════
+     GOLD (XAUUSD) AUTO PAPER TRADING — "XPT" module
+     Independent virtual portfolio, fully client-side (no broker —
+     Angel One has no XAUUSD/spot-gold feed). Price comes from Yahoo
+     Finance's XAUUSD=X ticker via the same rotating CORS-proxy pattern
+     already used by fetchSensex(). Entries/exits are auto-fired by an
+     EMA9/EMA21 + RSI14 signal engine (same math as runSignalEngine),
+     no manual trade entry — per user's choice. P&L shown in ₹ (INR),
+     converted live via USDINR=X. Position size in micro-lots (1 = 1 oz).
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-gold">
+
+  <div id="xpt-header" style="background:linear-gradient(135deg,rgba(255,193,7,.07),rgba(0,212,255,.03));border:1px solid rgba(255,193,7,.25);border-left:4px solid #ffc107;border-radius:12px;padding:14px 18px;margin-bottom:10px;position:relative;overflow:hidden">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ffc107,var(--a),#ffc107)"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-family:Orbitron;font-size:11px;color:#ffc107;letter-spacing:2px;margin-bottom:4px">🥇 XAUUSD — AUTO PAPER TRADING</div>
+        <div style="font-family:Share Tech Mono;font-size:10px;color:var(--dim)">Spot gold (USD/oz) · price via Yahoo Finance · auto-traded by EMA/RSI engine · independent virtual portfolio, P&amp;L shown in ₹</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="xptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
+        <button onclick="xptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px">
+      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">XAUUSD LIVE</div>
+        <div id="xpt-live-price" style="font-family:Orbitron;font-size:17px;font-weight:700;color:#ffc107">—</div>
+        <div id="xpt-last-update" style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-top:2px">no data yet</div>
+      </div>
+      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">₹/OZ (USDINR conv.)</div>
+        <div id="xpt-live-price-inr" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--w)">—</div>
+      </div>
+      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">PORTFOLIO VALUE</div>
+        <div id="xpt-value" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">₹10,00,000</div>
+      </div>
+      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">TOTAL P&amp;L</div>
+        <div id="xpt-pnl" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">+₹0</div>
+      </div>
+      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">WIN RATE</div>
+        <div id="xpt-winrate" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--w)">—</div>
+      </div>
+      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">CASH BALANCE</div>
+        <div id="xpt-cash" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--a)">₹10,00,000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free TradingView widget — visual cross-check only. This is an
+       iframe (TradingView's free embed program, no signup/key needed);
+       it can't feed data into the JS engine below (cross-origin
+       sandboxed) — it's purely so you can eyeball whether our fetched
+       price is tracking the real market or has gone stale. -->
+  <div style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+    <div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+    </div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+      { "symbols": [{ "proName": "OANDA:XAUUSD", "title": "XAUUSD (TradingView, live)" }],
+        "showSymbolLogo": false, "colorTheme": "dark", "isTransparent": true, "displayMode": "regular", "locale": "en" }
+    </script>
+  </div>
+
+  <!-- Finnhub live data setup — free, no broker account, no residency
+       restriction (it's a market-data aggregator, not a broker, so
+       there's no KYC/country block like OANDA). One API key, no
+       account ID. Falls back to Yahoo automatically if left blank or
+       a call fails. -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(0,212,255,.25)">
+    <div class="ph">
+      <div class="pt">🔌 XAUUSD LIVE DATA SETUP (Finnhub — free, no residency restriction)</div>
+      <span id="xpt-fh-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Not connected — using free Yahoo feed</span>
+    </div>
+    <div style="padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end">
+      <div>
+        <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:4px">FINNHUB API KEY</div>
+        <input id="xpt-fh-key" type="password" placeholder="paste Finnhub API key" style="width:100%;background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:11px;padding:8px;border-radius:5px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="xptFinnhubSave()" style="flex:1;padding:9px 14px;background:rgba(0,212,255,.1);border:1px solid var(--a);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:9px;cursor:pointer;letter-spacing:1px">💾 SAVE &amp; TEST</button>
+        <button onclick="xptFinnhubClear()" style="padding:9px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:9px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div style="padding:0 14px 14px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
+      Free forever, no card, no country restriction: sign up at finnhub.io → confirm email → API key appears on your dashboard. This connects to Finnhub's live trade WebSocket for the freshest tick; historical context (EMA/RSI/ATR) still comes from Yahoo, since Finnhub's history endpoint is paid-only. Leave blank to stay on Yahoo-only.
+    </div>
+  </div>
+
+  <!-- Auto Signal Engine -->
+  <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
+    <div class="ph">
+      <div class="pt" style="color:#a064ff">🤖 XAUUSD AUTO SIGNAL ENGINE</div>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">EMA9/EMA21 + RSI14, needs 3-of-4 conditions · one open position at a time</span>
+    </div>
+    <div style="padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+            <input type="checkbox" id="xpt-toggle" onchange="xptToggleEngine()" style="opacity:0;width:0;height:0">
+            <span id="xpt-toggle-track" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:24px;transition:.2s"></span>
+            <span id="xpt-toggle-knob" style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.2s"></span>
+          </label>
+          <div>
+            <div id="xpt-status" style="font-family:Orbitron;font-size:11px;color:var(--dim);letter-spacing:1px">ENGINE OFF</div>
+            <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Checks every ~30s · target 1.5×ATR / SL 0.8×ATR (~1.9:1 R:R) · trailing SL arms at 55%, locks 60% of peak</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);white-space:nowrap">SIZE:</span>
+          <select id="xpt-lot-size" style="background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
+            <option value="1">1 micro-lot (1 oz)</option>
+            <option value="2">2 micro-lots (2 oz)</option>
+            <option value="5">5 micro-lots (5 oz)</option>
+            <option value="10">10 micro-lots = 1 mini-lot (10 oz)</option>
+          </select>
+        </div>
+      </div>
+      <div id="xpt-market-note" style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
+        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b> — gold chops in the thin Asian session and most real trend moves happen here. Engine pauses on the weekend gap and force-squares any open position before Friday's close to avoid weekend gap risk. Target/SL scale with live volatility (ATR) instead of a fixed %.
+      </div>
+      <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
+      <div id="xpt-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:var(--ov25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
+    </div>
+  </div>
+
+  <!-- Open Position -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">🔓 OPEN POSITION</div><span id="xpt-open-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 positions</span></div>
+    <div id="xpt-open-list" style="padding:10px">
+      <div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open position. Turn the engine ON above ↑</div>
+    </div>
+  </div>
+
+  <!-- Trade History -->
+  <div class="panel" style="margin-bottom:10px">
+    <div class="ph"><div class="pt">📜 TRADE HISTORY</div><span id="xpt-closed-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 closed trades</span></div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:820px">
+        <thead><tr style="background:var(--ov3)">
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">SIDE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">DATE</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">QTY (oz)</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY ₹/oz</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT ₹/oz</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">NET P&amp;L ₹</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">REASON</th>
+          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
+        </tr></thead>
+        <tbody id="xpt-history-body">
+          <tr><td colspan="10" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+<!-- ══ END GOLD (XAUUSD) PAGE ══ -->
 
 <div class="page" id="page-admin">
 
@@ -8665,6 +8831,9 @@ function showPage(id,btn){
       if(id==='advanced'){
         try{ ptInit(); ptRefreshUI(); }catch(e){}
         try{ advTab('backtest', document.getElementById('adv-tab-backtest')); }catch(e){}
+      }
+      if(id==='gold'){
+        try{ xptInit(); xptRefreshUI(); xptEnsureTicker(); }catch(e){}
       }
       if(id==='stockadv'){
         try{ stockAdvTab('paper', null); }catch(e){}
@@ -25914,6 +26083,650 @@ console.log('[JARVIS] Auto-connect + role UI loaded');
       if (wrap) lwChart.applyOptions({ width: wrap.clientWidth, height: wrap.clientHeight });
     }
   };
+})();
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  XAUUSD (GOLD) AUTO PAPER TRADING — "XPT" module
+//  Fully client-side, independent of Angel One (no XAUUSD feed there).
+//  Price: Yahoo Finance XAUUSD=X, same rotating-proxy pattern as
+//  fetchSensex(). FX: Yahoo USDINR=X, same pattern. Signals: EMA9/EMA21
+//  + RSI14, same math as calcEMA/calcRSI/runSignalEngine (3-of-4
+//  conditions). One open position at a time, auto entry+exit, no
+//  manual trade entry. Position size in micro-lots (1 micro-lot = 1 oz).
+//  P&L bookkeeping done entirely in ₹ (INR) — the live USD price is
+//  converted to ₹/oz on every tick before any math touches it.
+// ══════════════════════════════════════════════════════════════════
+
+var XPT_INITIAL = 1000000;          // ₹10 Lakh, same starting capital as other paper portfolios
+var XPT_TARGET_PCT = 0.006;         // +0.6% target
+var XPT_SL_PCT = 0.0035;            // -0.35% stop loss (~1.7:1 reward:risk)
+var XPT_TRAIL_ARM_PCT = 0.55;       // same trailing constants as paperTrading.js (F&O)
+var XPT_TRAIL_LOCK_PCT = 0.60;
+var XPT_BROKERAGE_PER_TRADE = 50;   // flat ₹50 round-trip cost per trade (spread/slippage proxy)
+var XPT_POLL_MS = 15000;            // 15s — was 30s; halves worst-case staleness
+var XPT_LAST_TICK_OK = null;        // Date of the last tick that actually got a price (not just the last attempt)
+var XPT_LAST_SOURCE = null;         // 'oanda' or 'yahoo' — which feed the current price actually came from
+
+var XPT_PORTFOLIO = null;
+var XPT_TICKER = null;
+var XPT_USDINR = 83.5;              // fallback if the FX fetch fails
+var XPT_LAST_USD_PRICE = null;
+var XPT_HISTORY_INR = [];           // rolling ₹/oz closes, for EMA/RSI
+
+function xptLog(msg) {
+  if (!XPT_PORTFOLIO) return;
+  XPT_PORTFOLIO.log = XPT_PORTFOLIO.log || [];
+  XPT_PORTFOLIO.log.unshift(new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' — ' + msg);
+  if (XPT_PORTFOLIO.log.length > 40) XPT_PORTFOLIO.log.length = 40;
+  var el = document.getElementById('xpt-log');
+  if (el) el.innerHTML = XPT_PORTFOLIO.log.map(function(l){ return '<div>' + l + '</div>'; }).join('');
+}
+
+function xptInit() {
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('jarvis_xpt_portfolio')); } catch(e) {}
+  if (stored && stored.version === 1) {
+    XPT_PORTFOLIO = stored;
+  } else {
+    XPT_PORTFOLIO = { version: 1, cash: XPT_INITIAL, startCapital: XPT_INITIAL, trades: [], engineOn: false, log: [] };
+    xptSave();
+  }
+  xptRecalculateCash();
+  var toggle = document.getElementById('xpt-toggle');
+  if (toggle) toggle.checked = !!XPT_PORTFOLIO.engineOn;
+  xptRenderToggle();
+
+  // Restore Finnhub setup field + status from whatever's already saved
+  var fhEl = document.getElementById('xpt-fh-key'); if (fhEl && xptFinnhub.key) fhEl.value = xptFinnhub.key;
+  if (xptFinnhubConfigured()) {
+    xptFinnhubSetStatus('Reconnecting WebSocket…', null);
+    xptWSConnect(false).then(function(ok){
+      xptFinnhubSetStatus(ok ? '✅ Live — WebSocket ticks flowing (history/context still via Yahoo)' : '⚠️ Saved key, but no ticks yet — retrying in background', ok ? true : null);
+    });
+  } else {
+    xptFinnhubSetStatus('Not connected — using free Yahoo feed', null);
+  }
+}
+
+function xptSave() {
+  if (!XPT_PORTFOLIO) return;
+  try { localStorage.setItem('jarvis_xpt_portfolio', JSON.stringify(XPT_PORTFOLIO)); } catch(e) {}
+  xptSyncCloud();
+}
+
+// Same self-heal pattern as ptRecalculateCash/sptRecalculateCash — cash
+// is always derivable from startCapital - openCost + closedNet, so any
+// drift (bad write, interrupted session) is corrected on every load.
+function xptRecalculateCash() {
+  if (!XPT_PORTFOLIO) return 0;
+  var openCost = XPT_PORTFOLIO.trades.filter(function(t){ return t.status==='OPEN'; })
+    .reduce(function(s,t){ return s + (t.cost||0); }, 0);
+  var closedNet = XPT_PORTFOLIO.trades.filter(function(t){ return t.status!=='OPEN'; })
+    .reduce(function(s,t){ return s + (t.net||0); }, 0);
+  var correct = XPT_PORTFOLIO.startCapital - openCost + closedNet;
+  var diff = correct - XPT_PORTFOLIO.cash;
+  if (Math.abs(diff) > 0.5) XPT_PORTFOLIO.cash = correct;
+  return diff;
+}
+
+// Cloud sync — same generic 'reports' table + debounce/merge pattern
+// used by ptSyncCloud/sptSyncCloud, under its own report_type so the
+// three portfolios never collide.
+var XPT_CLOUD_SYNC_PENDING = false;
+async function xptSyncCloud() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  if (!XPT_PORTFOLIO || XPT_CLOUD_SYNC_PENDING) return;
+  XPT_CLOUD_SYNC_PENDING = true;
+  setTimeout(async function(){
+    XPT_CLOUD_SYNC_PENDING = false;
+    try {
+      await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          user_id: window.SUPA_USER.id,
+          report_type: 'xau_paper_trades',
+          title: 'XAUUSD Paper Trading Portfolio',
+          content: JSON.stringify(XPT_PORTFOLIO),
+          metadata: { trade_count: XPT_PORTFOLIO.trades.length, updated_at: new Date().toISOString() }
+        })
+      });
+    } catch(e) { console.warn('[XPT] cloud sync failed', e); }
+  }, 800);
+}
+
+async function xptCloudLoad() {
+  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
+  try {
+    var r = await supaFetch('/rest/v1/reports?report_type=eq.xau_paper_trades&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
+    if (r && r.data && r.data[0] && r.data[0].content) {
+      var cloud = JSON.parse(r.data[0].content);
+      if (cloud && cloud.version === 1 && (!XPT_PORTFOLIO || (cloud.trades||[]).length > (XPT_PORTFOLIO.trades||[]).length)) {
+        XPT_PORTFOLIO = cloud;
+        xptRecalculateCash();
+        xptSave();
+        xptRefreshUI();
+      }
+    }
+  } catch(e) { console.warn('[XPT] cloud load failed', e); }
+}
+
+function xptReset() {
+  if (!confirm('Reset the virtual XAUUSD portfolio to ₹10,00,000? All gold paper trades will be cleared.')) return;
+  localStorage.removeItem('jarvis_xpt_portfolio');
+  XPT_PORTFOLIO = null;
+  XPT_HISTORY_INR = [];
+  xptInit();
+  xptRefreshUI();
+  xptSyncCloud();
+}
+
+// ── Price feed: XAUUSD=X and USDINR=X via Yahoo, same rotating-proxy
+// trick as fetchSensex(). Returns both the live quote AND the day's
+// intraday closes, so EMA21/RSI14 can be seeded immediately instead of
+// waiting ~11 minutes for 22 live ticks to accumulate.
+async function xptFetchYahoo(symbol) {
+  var yUrl  = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1d&interval=5m';
+  var y2Url = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1d&interval=5m';
+  var proxies = [
+    'https://corsproxy.io/?url=' + encodeURIComponent(yUrl),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(yUrl),
+    'https://corsproxy.io/?url=' + encodeURIComponent(y2Url),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(yUrl)
+  ];
+  for (var pi = 0; pi < proxies.length; pi++) {
+    try {
+      var res = await Promise.race([
+        fetch(proxies[pi], { mode:'cors', cache:'no-store' }).catch(function(){ return null; }),
+        new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 5000); })
+      ]).catch(function(){ return null; });
+      if (!res || !res.ok) continue;
+      var d = null;
+      try { d = await res.json(); } catch(e) { continue; }
+      var result = d && d.chart && d.chart.result && d.chart.result[0];
+      var meta = result && result.meta;
+      if (!meta || !meta.regularMarketPrice) continue;
+      var closes = [], highs = [], lows = [];
+      try {
+        var q = result.indicators && result.indicators.quote && result.indicators.quote[0];
+        if (q && Array.isArray(q.close)) {
+          // Keep close/high/low index-aligned (needed for true-range/ATR) —
+          // filter all three together on close being valid, not each array
+          // independently, or they'd drift out of alignment.
+          for (var qi = 0; qi < q.close.length; qi++) {
+            if (q.close[qi] == null || q.close[qi] <= 0) continue;
+            closes.push(q.close[qi]);
+            highs.push(q.high && q.high[qi] != null ? q.high[qi] : q.close[qi]);
+            lows.push(q.low && q.low[qi] != null ? q.low[qi] : q.close[qi]);
+          }
+        }
+      } catch(e) {}
+      return { ltp: meta.regularMarketPrice, prevClose: meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice, closes: closes, highs: highs, lows: lows };
+    } catch(e) { /* try next proxy */ }
+  }
+  return null;
+}
+
+// Candle data (for prevClose + EMA/RSI/ATR seed) still comes from
+// Yahoo — Finnhub's REST candle endpoint is paid-only, but its
+// WebSocket trade stream isn't, so we use Yahoo for context and layer
+// the freshest WebSocket tick on top when one has arrived recently.
+async function xptFetchGold() {
+  var y = await xptFetchYahoo('XAUUSD=X');
+  if (!y) return null;
+  y.source = 'yahoo';
+  if (XPT_WS_LAST_PRICE && (Date.now() - XPT_WS_LAST_AT) < 30000) {
+    y.ltp = XPT_WS_LAST_PRICE;
+    y.source = 'finnhub-ws';
+  }
+  return y;
+}
+async function xptFetchUSDINR() { return xptFetchYahoo('USDINR=X'); }
+
+// ── Market hours: gold trades ~23h x 5 days. Closed Saturday, and
+// Sunday until the Monday-morning Asia open (~6:30 AM IST). This is a
+// simplification (skips the brief daily NY-close/Asia-open gap) —
+// good enough for paper trading, not a precision forex-session model.
+function xptMarketOpen() {
+  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  var day = ist.getDay(), hour = ist.getHours();
+  if (day === 6) return false;                 // Saturday: fully closed
+  if (day === 0 && hour < 6) return false;      // Sunday before ~6 AM IST Monday-session open
+  return true;
+}
+
+function xptIsFridayCloseWindow() {
+  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  return ist.getDay() === 5 && ist.getHours() >= 23; // Fri 11PM IST — force flat before the weekend gap
+}
+
+// ── Session filter: gold is thin/choppy through the Asian session
+// (roughly midnight–12:30 PM IST) and does most of its real directional
+// moving during London (from 12:30 PM IST) through the London/NY
+// overlap and into the NY session (to ~11:30 PM IST). New AUTO entries
+// are restricted to this window — open positions still get managed
+// (trailed/exited) round the clock regardless of session.
+function xptInSession() {
+  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  var mins = ist.getHours() * 60 + ist.getMinutes();
+  return mins >= (12*60+30) && mins <= (23*60+30); // 12:30 PM – 11:30 PM IST
+}
+
+// ── ATR (Average True Range) — same true-range formula used everywhere
+// (max of high-low, |high-prevClose|, |low-prevClose|), simple moving
+// average over `period` bars. Feeds volatility-adjusted target/SL below
+// instead of a fixed % that's too tight in fast markets and too loose
+// in quiet ones.
+var XPT_HIGH_HISTORY = [];
+var XPT_LOW_HISTORY = [];
+var XPT_LAST_SESSION_STATE = null; // tracks session on/off so the log only fires on the transition
+
+// ── Finnhub live data integration, take 2 — WEBSOCKET, not REST.
+// The REST /forex/candle endpoint (tried first) turned out to be
+// gated behind Finnhub's paid plan even on a "free" key — confirmed by
+// years of other users hitting the same 403. Their raw trade
+// WebSocket has historically stayed open on free keys instead (it's
+// how they hook people into wanting the paid REST access), so that's
+// what this uses. Design: Yahoo still supplies the historical candle
+// series (EMA/RSI/ATR context, prevClose) since that keeps working;
+// the WebSocket only supplies the single freshest live tick, which
+// overrides Yahoo's price when it's arrived in the last 30s. This is
+// a genuine improvement (faster real ticks) layered on top of what
+// already works — not a full broker-grade replacement.
+var xptFinnhub = { key: localStorage.getItem('ja_finnhub_key') || '' };
+function xptFinnhubConfigured() { return !!xptFinnhub.key; }
+
+var XPT_WS = null;
+var XPT_WS_LAST_PRICE = null;
+var XPT_WS_LAST_AT = 0;
+var XPT_WS_RECONNECT_TIMER = null;
+
+function xptFinnhubSetStatus(text, ok) {
+  var el = document.getElementById('xpt-fh-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = ok === true ? 'var(--g)' : ok === false ? 'var(--r)' : 'var(--dim)';
+}
+
+function xptWSClose() {
+  if (XPT_WS_RECONNECT_TIMER) { clearTimeout(XPT_WS_RECONNECT_TIMER); XPT_WS_RECONNECT_TIMER = null; }
+  if (XPT_WS) { try { XPT_WS.onclose = null; XPT_WS.close(); } catch(e) {} XPT_WS = null; }
+  XPT_WS_LAST_PRICE = null;
+}
+
+function xptFinnhubClear() {
+  localStorage.removeItem('ja_finnhub_key');
+  xptFinnhub = { key: '' };
+  var k = document.getElementById('xpt-fh-key'); if (k) k.value = '';
+  xptWSClose();
+  xptFinnhubSetStatus('Not connected — using free Yahoo feed', null);
+  xptLog('Finnhub key cleared — back to Yahoo-only');
+}
+
+// Opens the WebSocket, subscribes to XAUUSD trades, and resolves true/
+// false once we've either received a first trade or timed out (~8s) —
+// used both for the initial "Save & Test" and silent reconnects.
+function xptWSConnect(isTest) {
+  return new Promise(function(resolve) {
+    if (!xptFinnhubConfigured()) { resolve(false); return; }
+    xptWSClose();
+    var settled = false;
+    var timer = setTimeout(function(){ if (!settled) { settled = true; resolve(false); } }, 8000);
+    try {
+      var ws = new WebSocket('wss://ws.finnhub.io?token=' + encodeURIComponent(xptFinnhub.key));
+      XPT_WS = ws;
+      ws.onopen = function() {
+        try { ws.send(JSON.stringify({ type:'subscribe', symbol:'OANDA:XAU_USD' })); } catch(e) {}
+      };
+      ws.onmessage = function(evt) {
+        var d; try { d = JSON.parse(evt.data); } catch(e) { return; }
+        if (d && d.type === 'trade' && Array.isArray(d.data) && d.data.length) {
+          var last = d.data[d.data.length - 1];
+          if (last && last.p) {
+            XPT_WS_LAST_PRICE = last.p;
+            XPT_WS_LAST_AT = Date.now();
+            if (!settled) { settled = true; clearTimeout(timer); resolve(true); }
+          }
+        }
+      };
+      ws.onerror = function() { if (!settled) { settled = true; clearTimeout(timer); resolve(false); } };
+      ws.onclose = function() {
+        if (!settled) { settled = true; clearTimeout(timer); resolve(false); }
+        // Auto-reconnect after 15s as long as a key is still set and this
+        // wasn't an intentional close from xptFinnhubClear().
+        if (xptFinnhubConfigured() && XPT_WS === ws) {
+          XPT_WS_RECONNECT_TIMER = setTimeout(function(){ xptWSConnect(false); }, 15000);
+        }
+      };
+    } catch(e) { if (!settled) { settled = true; clearTimeout(timer); resolve(false); } }
+  });
+}
+
+async function xptFinnhubSave() {
+  var key = (document.getElementById('xpt-fh-key')||{}).value || '';
+  if (!key) { xptFinnhubClear(); return; }
+  xptFinnhub = { key: key.trim() };
+  localStorage.setItem('ja_finnhub_key', xptFinnhub.key);
+  xptFinnhubSetStatus('Connecting WebSocket, waiting for first tick…', null);
+  var ok = await xptWSConnect(true);
+  if (ok) {
+    xptFinnhubSetStatus('✅ Live — WebSocket ticks flowing (history/context still via Yahoo)', true);
+    xptLog('Finnhub WebSocket connected — live ticks now layered on top of Yahoo');
+  } else {
+    xptFinnhubSetStatus('❌ No ticks received in 8s — check the key, staying on Yahoo-only', false);
+    xptLog('Finnhub WebSocket did not deliver a trade in time — check the key');
+  }
+}
+function xptCalcATR(highs, lows, closes, period) {
+  period = period || 14;
+  if (closes.length < period + 1) return null;
+  var trs = [];
+  for (var i = 1; i < closes.length; i++) {
+    var tr = Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i-1]),
+      Math.abs(lows[i] - closes[i-1])
+    );
+    trs.push(tr);
+  }
+  var slice = trs.slice(-period);
+  return slice.reduce(function(a,b){ return a+b; }, 0) / slice.length;
+}
+
+// ── Auto signal: EMA9/EMA21 + RSI14, 3-of-4 conditions — same shape
+// as runSignalEngine(), applied to the ₹/oz price series instead of
+// Nifty spot.
+function xptEvaluateSignal(priceInr, dp) {
+  if (XPT_HISTORY_INR.length < 22) return null;
+  var ema9 = calcEMA(XPT_HISTORY_INR, 9);
+  var ema21 = calcEMA(XPT_HISTORY_INR, 21);
+  var rsi = calcRSI(XPT_HISTORY_INR, 14);
+  var trend = dp > 0.15 ? 'BULLISH' : dp < -0.15 ? 'BEARISH' : 'NEUTRAL';
+
+  var longC = 0, longR = [];
+  if (ema9 && ema21 && ema9 > ema21) { longC++; longR.push('EMA9>EMA21'); }
+  if (rsi && rsi > 55) { longC++; longR.push('RSI '+rsi.toFixed(1)+'>55'); }
+  if (trend === 'BULLISH') { longC++; longR.push('Trend Bullish'); }
+  if (dp > 0.3) { longC++; longR.push('Strong +'+dp.toFixed(2)+'%'); }
+
+  var shortC = 0, shortR = [];
+  if (ema9 && ema21 && ema9 < ema21) { shortC++; shortR.push('EMA9<EMA21'); }
+  if (rsi && rsi < 45) { shortC++; shortR.push('RSI '+rsi.toFixed(1)+'<45'); }
+  if (trend === 'BEARISH') { shortC++; shortR.push('Trend Bearish'); }
+  if (dp < -0.3) { shortC++; shortR.push('Strong '+dp.toFixed(2)+'%'); }
+
+  if (longC >= 3 && longC >= shortC) return { side:'BUY', reasons: longR.join(' | '), strength: longC===4?'STRONG':'MODERATE' };
+  if (shortC >= 3 && shortC > longC) return { side:'SELL', reasons: shortR.join(' | '), strength: shortC===4?'STRONG':'MODERATE' };
+  return null;
+}
+
+function xptOpenTrade() { return (XPT_PORTFOLIO.trades||[]).find(function(t){ return t.status==='OPEN'; }) || null; }
+
+// target = 1.5x ATR, SL = 0.8x ATR (~1.9:1 reward:risk) when ATR is
+// available; falls back to the fixed +0.6%/-0.35% only while ATR
+// hasn't warmed up yet (needs 15+ bars of high/low/close history).
+function xptTargetSL(entry, side, atr) {
+  if (atr && atr > 0) {
+    var tgtDist = atr * 1.5, slDist = atr * 0.8;
+    return side === 'BUY'
+      ? { target: entry + tgtDist, stopLoss: entry - slDist, atrBased: true }
+      : { target: entry - tgtDist, stopLoss: entry + slDist, atrBased: true };
+  }
+  return side === 'BUY'
+    ? { target: entry * (1 + XPT_TARGET_PCT), stopLoss: entry * (1 - XPT_SL_PCT), atrBased: false }
+    : { target: entry * (1 - XPT_TARGET_PCT), stopLoss: entry * (1 + XPT_SL_PCT), atrBased: false };
+}
+
+function xptEnterTrade(sig, priceInr, atr) {
+  var lotOz = parseInt((document.getElementById('xpt-lot-size')||{}).value || '1', 10);
+  var cost = priceInr * lotOz;
+  if (cost > XPT_PORTFOLIO.cash) { xptLog('Signal ' + sig.side + ' skipped — insufficient virtual cash for ' + lotOz + ' oz'); return; }
+  var ts = xptTargetSL(priceInr, sig.side, atr);
+  var trade = {
+    side: sig.side, qty: lotOz, entry: priceInr, target: ts.target, stopLoss: ts.stopLoss,
+    highWater: priceInr, cost: cost, status: 'OPEN', reasons: sig.reasons, strength: sig.strength,
+    atrBased: ts.atrBased, openedAt: new Date().toISOString()
+  };
+  XPT_PORTFOLIO.trades.push(trade);
+  xptRecalculateCash();
+  xptSave();
+  xptLog('🟢 ' + sig.strength + ' ' + sig.side + ' opened — ' + lotOz + ' oz @ ₹' + Math.round(priceInr).toLocaleString('en-IN') + '/oz'
+    + ' · target ₹' + Math.round(ts.target).toLocaleString('en-IN') + ' · SL ₹' + Math.round(ts.stopLoss).toLocaleString('en-IN')
+    + (ts.atrBased ? ' (ATR-based)' : ' (fixed %, ATR warming up)') + ' (' + sig.reasons + ')');
+}
+
+function xptCloseTrade(trade, exitPriceInr, reason) {
+  var dir = trade.side === 'BUY' ? 1 : -1;
+  var gross = Math.round(dir * (exitPriceInr - trade.entry) * trade.qty * 100) / 100;
+  var net = Math.round((gross - XPT_BROKERAGE_PER_TRADE) * 100) / 100;
+  trade.status = 'CLOSED';
+  trade.exit = exitPriceInr;
+  trade.gross = gross;
+  trade.net = net;
+  trade.reason = reason;
+  trade.result = net >= 0 ? 'PROFIT' : 'LOSS';
+  trade.closedAt = new Date().toISOString();
+  xptRecalculateCash();
+  xptSave();
+  xptLog((net>=0?'✅':'❌') + ' ' + trade.side + ' closed (' + reason + ') — net ₹' + net.toLocaleString('en-IN'));
+}
+
+// Same trailing-SL math as paperTrading.js's evaluateOpenTrade, adapted
+// for a directional (BUY/SELL) spot position instead of an options
+// premium that only ever goes up when "in the money".
+function xptEvaluateOpenTrade(trade, priceInr) {
+  if (!priceInr || priceInr <= 0) return;
+  var dir = trade.side === 'BUY' ? 1 : -1;
+
+  if (xptIsFridayCloseWindow()) { xptCloseTrade(trade, priceInr, 'WEEKEND_SQUAREOFF'); return; }
+
+  trade.highWater = dir === 1 ? Math.max(trade.highWater, priceInr) : Math.min(trade.highWater, priceInr);
+  var favMove = dir * (trade.highWater - trade.entry);
+  var totalRisk = Math.abs(trade.target - trade.entry);
+  var armLevel = totalRisk * XPT_TRAIL_ARM_PCT;
+
+  if (favMove >= armLevel) {
+    var lockedMove = favMove * XPT_TRAIL_LOCK_PCT;
+    var candidate = trade.entry + dir * lockedMove;
+    var better = dir === 1 ? candidate > trade.stopLoss : candidate < trade.stopLoss;
+    if (better) trade.stopLoss = candidate;
+  }
+
+  var hitSL = dir === 1 ? priceInr <= trade.stopLoss : priceInr >= trade.stopLoss;
+  var hitTarget = dir === 1 ? priceInr >= trade.target : priceInr <= trade.target;
+  if (hitSL) { xptCloseTrade(trade, priceInr, (dir===1?trade.stopLoss>trade.entry:trade.stopLoss<trade.entry) ? 'TRAIL_SL' : 'AUTO_SL'); return; }
+  if (hitTarget) { xptCloseTrade(trade, priceInr, 'AUTO_TARGET'); return; }
+}
+
+function xptToggleEngine() {
+  var toggle = document.getElementById('xpt-toggle');
+  XPT_PORTFOLIO.engineOn = !!(toggle && toggle.checked);
+  xptSave();
+  xptRenderToggle();
+  xptLog('Engine turned ' + (XPT_PORTFOLIO.engineOn ? 'ON' : 'OFF'));
+}
+
+function xptRenderToggle() {
+  var on = !!(XPT_PORTFOLIO && XPT_PORTFOLIO.engineOn);
+  var track = document.getElementById('xpt-toggle-track');
+  var knob = document.getElementById('xpt-toggle-knob');
+  var status = document.getElementById('xpt-status');
+  if (track) track.style.background = on ? 'rgba(160,100,255,.35)' : 'rgba(255,255,255,.08)';
+  if (knob) { knob.style.left = on ? '24px' : '2px'; knob.style.background = on ? '#a064ff' : 'var(--dim)'; }
+  if (status) { status.textContent = on ? 'ENGINE ON' : 'ENGINE OFF'; status.style.color = on ? '#a064ff' : 'var(--dim)'; }
+}
+
+// ── Main tick: fetch price+FX, update history, run the engine ──
+async function xptTick() {
+  if (!XPT_PORTFOLIO) xptInit();
+  var gold = await xptFetchGold();
+  if (!gold) { xptRefreshUI(); return; } // proxies all failed this cycle — leave last price on screen, "last updated" ticker below shows staleness
+  XPT_LAST_TICK_OK = new Date();
+  XPT_LAST_SOURCE = gold.source || 'yahoo';
+  var fx = await xptFetchUSDINR();
+  if (fx && fx.ltp) XPT_USDINR = fx.ltp;
+
+  XPT_LAST_USD_PRICE = gold.ltp;
+  var priceInr = gold.ltp * XPT_USDINR;
+  var dp = gold.prevClose ? (gold.ltp - gold.prevClose) / gold.prevClose * 100 : 0;
+
+  // Seed history from Yahoo's own intraday closes/highs/lows on first
+  // load so EMA21/RSI14/ATR don't need ~11-15 minutes of live polling
+  // to warm up. All three arrays stay index-aligned (see xptFetchYahoo).
+  if (XPT_HISTORY_INR.length === 0 && gold.closes.length > 1) {
+    XPT_HISTORY_INR = gold.closes.slice(-49).map(function(c){ return c * XPT_USDINR; });
+    XPT_HIGH_HISTORY = gold.highs.slice(-49).map(function(c){ return c * XPT_USDINR; });
+    XPT_LOW_HISTORY  = gold.lows.slice(-49).map(function(c){ return c * XPT_USDINR; });
+  }
+  XPT_HISTORY_INR.push(priceInr);
+  XPT_HIGH_HISTORY.push(priceInr);
+  XPT_LOW_HISTORY.push(priceInr);
+  if (XPT_HISTORY_INR.length > 200) { XPT_HISTORY_INR.shift(); XPT_HIGH_HISTORY.shift(); XPT_LOW_HISTORY.shift(); }
+
+  var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
+
+  var open = xptOpenTrade();
+  if (open) {
+    xptEvaluateOpenTrade(open, priceInr);
+  } else if (XPT_PORTFOLIO.engineOn && xptMarketOpen()) {
+    var inSession = xptInSession();
+    // Only log the session-gate message on the ON->OFF transition, not
+    // every 30s tick, or the log fills with the same line all night.
+    if (!inSession && XPT_LAST_SESSION_STATE !== false) {
+      xptLog('Outside London/NY session (12:30 PM\u201311:30 PM IST) \u2014 no new entries until session opens');
+    }
+    XPT_LAST_SESSION_STATE = inSession;
+    if (inSession) {
+      var sig = xptEvaluateSignal(priceInr, dp);
+      if (sig) xptEnterTrade(sig, priceInr, atr);
+    }
+  }
+
+  xptRefreshUI(gold.ltp, priceInr, dp);
+}
+
+function xptEnsureTicker() {
+  if (XPT_TICKER) return;
+  xptTick();
+  XPT_TICKER = setInterval(xptTick, XPT_POLL_MS);
+  // Separate 1s timer just for the "updated Xs ago" label — independent
+  // of the 15s data poll so staleness is visible in real time even
+  // between fetches, not just refreshed once per poll.
+  setInterval(xptUpdateLastUpdateLabel, 1000);
+}
+
+function xptUpdateLastUpdateLabel() {
+  var el = document.getElementById('xpt-last-update');
+  if (!el) return;
+  if (!XPT_LAST_TICK_OK) { el.textContent = 'no data yet'; el.style.color = 'var(--dim)'; return; }
+  var secs = Math.round((Date.now() - XPT_LAST_TICK_OK.getTime()) / 1000);
+  var label = secs < 60 ? ('updated ' + secs + 's ago') : ('updated ' + Math.round(secs/60) + 'm ago');
+  el.textContent = label;
+  // Turn amber past 45s (missed ~3 polls) and red past 120s so staleness
+  // is visible at a glance instead of trusting a frozen number.
+  el.style.color = secs > 120 ? 'var(--r)' : secs > 45 ? 'var(--w)' : 'var(--dim)';
+}
+
+function xptFmtInr(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+
+function xptRefreshUI(usdPrice, inrPrice, dp) {
+  if (!XPT_PORTFOLIO) return;
+  var closed = XPT_PORTFOLIO.trades.filter(function(t){ return t.status==='CLOSED'; });
+  var open = XPT_PORTFOLIO.trades.filter(function(t){ return t.status==='OPEN'; });
+  var totalNet = closed.reduce(function(s,t){ return s + (t.net||0); }, 0);
+  var wins = closed.filter(function(t){ return t.net >= 0; }).length;
+  var winRate = closed.length ? (wins / closed.length * 100).toFixed(1) : null;
+
+  var set = function(id, text, color) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    if (color) el.style.color = color;
+  };
+
+  if (usdPrice != null) {
+    var srcTag = XPT_LAST_SOURCE === 'finnhub-ws' ? ' 🔌WS live' : ' Yahoo';
+    set('xpt-live-price', '$' + usdPrice.toFixed(2) + (dp!=null ? ' (' + (dp>=0?'+':'') + dp.toFixed(2) + '%)' : '') + srcTag, dp>=0?'var(--g)':'var(--r)');
+    set('xpt-live-price-inr', xptFmtInr(inrPrice) + '/oz');
+  }
+  set('xpt-cash', xptFmtInr(XPT_PORTFOLIO.cash));
+  var openMTM = open.reduce(function(s,t){
+    var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : t.entry;
+    var dir = t.side==='BUY'?1:-1;
+    return s + dir*(last - t.entry)*t.qty;
+  }, 0);
+  var value = XPT_PORTFOLIO.cash + open.reduce(function(s,t){return s+t.cost;},0) + openMTM;
+  set('xpt-value', xptFmtInr(value));
+  set('xpt-pnl', (totalNet+openMTM>=0?'+':'') + xptFmtInr(totalNet+openMTM), (totalNet+openMTM)>=0?'var(--g)':'var(--r)');
+  set('xpt-winrate', winRate!=null ? winRate+'%' : '—');
+
+  var openCountEl = document.getElementById('xpt-open-count');
+  if (openCountEl) openCountEl.textContent = open.length + ' position' + (open.length===1?'':'s');
+  var openList = document.getElementById('xpt-open-list');
+  if (openList) {
+    if (!open.length) {
+      openList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open position. Turn the engine ON above ↑</div>';
+    } else {
+      openList.innerHTML = open.map(function(t){
+        var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : t.entry;
+        var dir = t.side==='BUY'?1:-1;
+        var mtm = dir*(last-t.entry)*t.qty;
+        var color = t.side==='BUY' ? 'var(--g)' : 'var(--r)';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">'
+          + '<div><b style="color:'+color+'">'+t.side+'</b> '+t.qty+' oz @ ₹'+Math.round(t.entry).toLocaleString('en-IN')
+          + '<div style="font-size:9px;color:var(--dim)">Target ₹'+Math.round(t.target).toLocaleString('en-IN')+' · SL ₹'+Math.round(t.stopLoss).toLocaleString('en-IN')+' · '+t.reasons+'</div></div>'
+          + '<div style="text-align:right;font-weight:700;color:'+(mtm>=0?'var(--g)':'var(--r)')+'">'+(mtm>=0?'+':'')+xptFmtInr(mtm)+'</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+
+  var closedCountEl = document.getElementById('xpt-closed-count');
+  if (closedCountEl) closedCountEl.textContent = closed.length + ' closed trade' + (closed.length===1?'':'s');
+  var body = document.getElementById('xpt-history-body');
+  if (body) {
+    if (!closed.length) {
+      body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>';
+    } else {
+      body.innerHTML = closed.slice().reverse().map(function(t){
+        var color = t.net>=0 ? 'var(--g)' : 'var(--r)';
+        return '<tr>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+t.side+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.openedAt).toLocaleDateString('en-IN')+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.openedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.closedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+t.qty+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+Math.round(t.entry).toLocaleString('en-IN')+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+Math.round(t.exit).toLocaleString('en-IN')+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:'+color+';font-weight:700">'+(t.net>=0?'+':'')+t.net.toLocaleString('en-IN')+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+t.reason+'</td>'
+          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:'+color+'">'+t.result+'</td>'
+          + '</tr>';
+      }).join('');
+    }
+  }
+}
+
+function xptExportCSV() {
+  if (!XPT_PORTFOLIO || !XPT_PORTFOLIO.trades.length) { alert('No trades to export yet.'); return; }
+  var rows = [['Side','Opened','Closed','Qty(oz)','Entry INR/oz','Exit INR/oz','Net INR','Reason','Result']];
+  XPT_PORTFOLIO.trades.filter(function(t){return t.status==='CLOSED';}).forEach(function(t){
+    rows.push([t.side, t.openedAt, t.closedAt, t.qty, Math.round(t.entry), Math.round(t.exit), t.net, t.reason, t.result]);
+  });
+  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'jarvis-xauusd-paper-trades.csv';
+  a.click();
+}
+
+// Auto-init when the page loads, same pattern as ptInit()/sptInit() above.
+(function(){
+  try { xptInit(); } catch(e) {}
+  try { xptCloudLoad(); } catch(e) {}
 })();
 </script>
 
