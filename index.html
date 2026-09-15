@@ -4355,7 +4355,7 @@ setTimeout(nd2SyncAll, 2000);
   <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
     <div class="ph">
       <div class="pt" style="color:#a064ff">🤖 XAUUSD AUTO SIGNAL ENGINE</div>
-      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">EMA9/EMA21 + RSI14, needs 3-of-4 conditions · one open position at a time</span>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Liquidity sweep → Asian-range breakout → EMA9/EMA21+RSI14+DXY · one open position at a time</span>
     </div>
     <div style="padding:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
@@ -4381,7 +4381,7 @@ setTimeout(nd2SyncAll, 2000);
         </div>
       </div>
       <div id="xpt-market-note" style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b> — gold chops in the thin Asian session and most real trend moves happen here. Engine pauses on the weekend gap and force-squares any open position before Friday's close to avoid weekend gap risk. Target/SL scale with live volatility (ATR) instead of a fixed %.
+        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b>. Each tick checks, in order: a <b>liquidity sweep reversal</b> (highest conviction, rare by design), then an <b>Asian-range breakout</b> (first 2hrs after London opens only), then falls back to the EMA/RSI(+DXY) engine. Engine pauses on the weekend gap and force-squares any open position before Friday's close. Target/SL scale with live volatility (ATR) instead of a fixed %.
       </div>
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
       <div id="xpt-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:var(--ov25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
@@ -26438,27 +26438,107 @@ function xptCalcATR(highs, lows, closes, period) {
 // ── Auto signal: EMA9/EMA21 + RSI14, 3-of-4 conditions — same shape
 // as runSignalEngine(), applied to the ₹/oz price series instead of
 // Nifty spot.
+// DXY (US Dollar Index) refreshed at most every 2 min — gold moves
+// inversely to the dollar ~70-80% of the time, so it's used here as a
+// confirming vote, not a hard requirement (skips gracefully if it
+// hasn't loaded, so a slow/failed DXY fetch never blocks trading).
+var XPT_DXY_DP = null;
+var XPT_DXY_AT = 0;
+async function xptRefreshDXY() {
+  if (Date.now() - XPT_DXY_AT < 120000) return; // cap DXY calls to once per 2 min
+  var dxy = await xptFetchYahoo('DX-Y.NYB');
+  if (dxy && dxy.prevClose) { XPT_DXY_DP = (dxy.ltp - dxy.prevClose) / dxy.prevClose * 100; XPT_DXY_AT = Date.now(); }
+}
+
 function xptEvaluateSignal(priceInr, dp) {
   if (XPT_HISTORY_INR.length < 22) return null;
   var ema9 = calcEMA(XPT_HISTORY_INR, 9);
   var ema21 = calcEMA(XPT_HISTORY_INR, 21);
   var rsi = calcRSI(XPT_HISTORY_INR, 14);
   var trend = dp > 0.15 ? 'BULLISH' : dp < -0.15 ? 'BEARISH' : 'NEUTRAL';
+  var dxyKnown = XPT_DXY_DP != null;
+  var totalConditions = dxyKnown ? 5 : 4;
 
   var longC = 0, longR = [];
   if (ema9 && ema21 && ema9 > ema21) { longC++; longR.push('EMA9>EMA21'); }
   if (rsi && rsi > 55) { longC++; longR.push('RSI '+rsi.toFixed(1)+'>55'); }
   if (trend === 'BULLISH') { longC++; longR.push('Trend Bullish'); }
   if (dp > 0.3) { longC++; longR.push('Strong +'+dp.toFixed(2)+'%'); }
+  if (dxyKnown && XPT_DXY_DP < -0.05) { longC++; longR.push('DXY falling '+XPT_DXY_DP.toFixed(2)+'%'); }
 
   var shortC = 0, shortR = [];
   if (ema9 && ema21 && ema9 < ema21) { shortC++; shortR.push('EMA9<EMA21'); }
   if (rsi && rsi < 45) { shortC++; shortR.push('RSI '+rsi.toFixed(1)+'<45'); }
   if (trend === 'BEARISH') { shortC++; shortR.push('Trend Bearish'); }
   if (dp < -0.3) { shortC++; shortR.push('Strong '+dp.toFixed(2)+'%'); }
+  if (dxyKnown && XPT_DXY_DP > 0.05) { shortC++; shortR.push('DXY rising '+XPT_DXY_DP.toFixed(2)+'%'); }
 
-  if (longC >= 3 && longC >= shortC) return { side:'BUY', reasons: longR.join(' | '), strength: longC===4?'STRONG':'MODERATE' };
-  if (shortC >= 3 && shortC > longC) return { side:'SELL', reasons: shortR.join(' | '), strength: shortC===4?'STRONG':'MODERATE' };
+  if (longC >= 3 && longC >= shortC) return { side:'BUY', reasons: longR.join(' | '), strength: longC===totalConditions?'STRONG':'MODERATE' };
+  if (shortC >= 3 && shortC > longC) return { side:'SELL', reasons: shortR.join(' | '), strength: shortC===totalConditions?'STRONG':'MODERATE' };
+  return null;
+}
+
+// Asian-range breakout — tracks the day's Asian-session (00:00–12:30
+// IST) high/low, then in the first 2 hours after London opens, a clean
+// break beyond that range (with a 10%-of-range buffer so it's a real
+// break, not just touching the edge) is one of gold's more reliable
+// intraday triggers. Checked before the EMA/RSI engine each tick; if
+// it doesn't fire, falls through to the regular signal as normal.
+var XPT_ASIAN_HIGH = null, XPT_ASIAN_LOW = null, XPT_ASIAN_DATE = null;
+function xptUpdateAsianRange(priceInr) {
+  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  var dateStr = ist.toDateString();
+  var mins = ist.getHours() * 60 + ist.getMinutes();
+  if (dateStr !== XPT_ASIAN_DATE) { XPT_ASIAN_DATE = dateStr; XPT_ASIAN_HIGH = null; XPT_ASIAN_LOW = null; }
+  if (mins < 12*60+30) { // still in the Asian session — keep building today's range
+    XPT_ASIAN_HIGH = XPT_ASIAN_HIGH == null ? priceInr : Math.max(XPT_ASIAN_HIGH, priceInr);
+    XPT_ASIAN_LOW  = XPT_ASIAN_LOW  == null ? priceInr : Math.min(XPT_ASIAN_LOW, priceInr);
+  }
+}
+
+// Liquidity sweep reversal — the one concept from gold-strategy research
+// that's genuinely respected (not marketing hype): price briefly wicks
+// beyond a recent swing high/low (trapping breakout traders who jumped
+// in), then snaps back inside. That rejection is a real, well-known
+// institutional-trading pattern. Checked first, every tick, ahead of
+// the breakout and EMA/RSI layers — this is the highest-conviction
+// setup when it appears, but it won't appear often (that's expected
+// and correct — quality over frequency, not a volume play).
+function xptEvaluateLiquiditySweep(priceInr) {
+  var n = XPT_HISTORY_INR.length;
+  if (n < 65) return null; // needs a real "structure" window plus a separate recent "sweep zone"
+  var structureHighs = XPT_HIGH_HISTORY.slice(n-65, n-5);
+  var structureLows  = XPT_LOW_HISTORY.slice(n-65, n-5);
+  var swingHigh = Math.max.apply(null, structureHighs);
+  var swingLow  = Math.min.apply(null, structureLows);
+  var recentHighs = XPT_HIGH_HISTORY.slice(n-5);
+  var recentLows  = XPT_LOW_HISTORY.slice(n-5);
+  var sweptHigh = Math.max.apply(null, recentHighs) > swingHigh;
+  var sweptLow  = Math.min.apply(null, recentLows) < swingLow;
+  var rsi = calcRSI(XPT_HISTORY_INR, 14);
+
+  if (sweptHigh && priceInr < swingHigh) {
+    var strongUp = rsi && rsi > 65;
+    return { side:'SELL', reasons: 'Liquidity sweep above ₹'+Math.round(swingHigh).toLocaleString('en-IN')+' rejected'+(strongUp?' + RSI exhaustion '+rsi.toFixed(1):''), strength: strongUp?'STRONG':'MODERATE' };
+  }
+  if (sweptLow && priceInr > swingLow) {
+    var strongDn = rsi && rsi < 35;
+    return { side:'BUY', reasons: 'Liquidity sweep below ₹'+Math.round(swingLow).toLocaleString('en-IN')+' rejected'+(strongDn?' + RSI exhaustion '+rsi.toFixed(1):''), strength: strongDn?'STRONG':'MODERATE' };
+  }
+  return null;
+}
+
+function xptEvaluateBreakoutSignal(priceInr) {
+  if (XPT_ASIAN_HIGH == null || XPT_ASIAN_LOW == null) return null;
+  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  var mins = ist.getHours() * 60 + ist.getMinutes();
+  if (mins < 12*60+30 || mins > 14*60+30) return null; // only the first 2 hours of London — later than that, the breakout has likely already happened
+  var rangeSize = XPT_ASIAN_HIGH - XPT_ASIAN_LOW;
+  if (rangeSize <= 0) return null;
+  var buffer = rangeSize * 0.1;
+  var rangeLabel = '₹' + Math.round(XPT_ASIAN_LOW).toLocaleString('en-IN') + '–₹' + Math.round(XPT_ASIAN_HIGH).toLocaleString('en-IN');
+  if (priceInr > XPT_ASIAN_HIGH + buffer) return { side:'BUY', reasons:'Asian range breakout ↑ (range '+rangeLabel+')', strength:'STRONG' };
+  if (priceInr < XPT_ASIAN_LOW - buffer) return { side:'SELL', reasons:'Asian range breakdown ↓ (range '+rangeLabel+')', strength:'STRONG' };
   return null;
 }
 
@@ -26586,6 +26666,8 @@ async function xptTick() {
   if (XPT_HISTORY_INR.length > 200) { XPT_HISTORY_INR.shift(); XPT_HIGH_HISTORY.shift(); XPT_LOW_HISTORY.shift(); }
 
   var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
+  xptUpdateAsianRange(priceInr);
+  await xptRefreshDXY();
 
   var open = xptOpenTrade();
   if (open) {
@@ -26599,7 +26681,7 @@ async function xptTick() {
     }
     XPT_LAST_SESSION_STATE = inSession;
     if (inSession) {
-      var sig = xptEvaluateSignal(priceInr, dp);
+      var sig = xptEvaluateLiquiditySweep(priceInr) || xptEvaluateBreakoutSignal(priceInr) || xptEvaluateSignal(priceInr, dp);
       if (sig) xptEnterTrade(sig, priceInr, atr);
     }
   }
