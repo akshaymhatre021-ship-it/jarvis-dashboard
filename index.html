@@ -4355,7 +4355,7 @@ setTimeout(nd2SyncAll, 2000);
   <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
     <div class="ph">
       <div class="pt" style="color:#a064ff">🤖 XAUUSD AUTO SIGNAL ENGINE</div>
-      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Liquidity sweep → Asian-range breakout → EMA/RSI/MACD/VWAP+DXY (ADX-gated) · one open position at a time</span>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Liquidity sweep → Trendline break → Asian-range breakout → EMA/RSI/MACD/VWAP+DXY (ADX-gated)</span>
     </div>
     <div style="padding:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
@@ -4386,8 +4386,29 @@ setTimeout(nd2SyncAll, 2000);
           </span>
         </div>
       </div>
+      <div style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px">
+        <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:8px">STRATEGIES · green = active, gray = off · click to toggle · evaluated in this order each tick</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-family:Share Tech Mono;font-size:10px">
+          <div id="xpt-chip-sweep" onclick="xptToggleStrategyChip('sweep')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
+            <input type="checkbox" id="xpt-strat-sweep" checked style="display:none">
+            <span class="xpt-chip-mark">✓</span> Liquidity Sweep
+          </div>
+          <div id="xpt-chip-trendline" onclick="xptToggleStrategyChip('trendline')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
+            <input type="checkbox" id="xpt-strat-trendline" checked style="display:none">
+            <span class="xpt-chip-mark">✓</span> Trendline Break
+          </div>
+          <div id="xpt-chip-breakout" onclick="xptToggleStrategyChip('breakout')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
+            <input type="checkbox" id="xpt-strat-breakout" checked style="display:none">
+            <span class="xpt-chip-mark">✓</span> Asian-Range Breakout
+          </div>
+          <div id="xpt-chip-emarsi" onclick="xptToggleStrategyChip('emarsi')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
+            <input type="checkbox" id="xpt-strat-emarsi" checked style="display:none">
+            <span class="xpt-chip-mark">✓</span> EMA/RSI/MACD/VWAP+DXY
+          </div>
+        </div>
+      </div>
       <div id="xpt-market-note" style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b>. Each tick checks, in order: a <b>liquidity sweep reversal</b> (highest conviction, rare by design), then an <b>Asian-range breakout</b> (first 2hrs after London opens only), then falls back to <b>EMA/RSI/MACD(12,26,9)/session-VWAP+DXY</b> — same building blocks as your F&O Nifty Pro V2, gated by an <b>ADX(14) regime filter</b> (skips this fallback layer entirely when the market's too choppy to trend-trade, same idea as Quality Breakout). Note: "VWAP" here is a session-average-price proxy, not true volume-weighted — free forex feeds don't carry volume. Engine pauses on the weekend gap and force-squares any open position before Friday's close.
+        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b> — this applies to every layer below, including trendline breaks (your F&O version has no such window, but gold's thin Asian-session liquidity makes even a valid trendline break less trustworthy there, so it's kept gated here). Each tick checks, in order: a <b>liquidity sweep reversal</b> (rare by design), then a <b>14-bar pivot trendline break</b> (same ATR-decay logic as your F&O Trendline Breakout), then an <b>Asian-range breakout</b> (first 2hrs after London opens), then falls back to <b>EMA/RSI/MACD(12,26,9)/session-VWAP+DXY</b> — same building blocks as Nifty Pro V2, gated by an <b>ADX(14) regime filter</b>. "VWAP" here is a session-average-price proxy, not true volume-weighted — free forex feeds don't carry volume. Engine pauses on the weekend gap and force-squares any open position before Friday's close.
       </div>
       <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
       <div id="xpt-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:var(--ov25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
@@ -26143,6 +26164,8 @@ function xptInit() {
   var toggle = document.getElementById('xpt-toggle');
   if (toggle) toggle.checked = !!XPT_PORTFOLIO.engineOn;
   xptRenderToggle();
+  xptRestoreStrategySelection();
+  xptRenderAllStrategyChips();
 
   // Restore Finnhub setup field + status from whatever's already saved
   var fhEl = document.getElementById('xpt-fh-key'); if (fhEl && xptFinnhub.key) fhEl.value = xptFinnhub.key;
@@ -26626,6 +26649,52 @@ function xptEvaluateLiquiditySweep(priceInr) {
   return null;
 }
 
+// Trendline breakout — ported directly from your F&O trendline.js:
+// find the last confirmed 14-bar pivot high/low, draw a line from it
+// that decays by an ATR/14 slope each bar, fire on an actual CROSS
+// (price was on one side, now on the other) rather than just "beyond
+// the line". No time-window restriction, same as the F&O version.
+var XPT_TL_LOOKBACK = 14;
+function xptFindLastPivot(arr, lookback, isHigh) {
+  for (var i = arr.length - 1 - lookback; i >= lookback; i--) {
+    var val = arr[i];
+    var isPivot = true;
+    for (var j = i - lookback; j <= i + lookback; j++) {
+      if (j === i) continue;
+      if (isHigh ? (arr[j] > val) : (arr[j] < val)) { isPivot = false; break; }
+    }
+    if (isPivot) return { index: i, value: val, barsAgo: (arr.length - 1) - i };
+  }
+  return null;
+}
+function xptCalcTrendlines() {
+  var n = XPT_HISTORY_INR.length;
+  if (n < XPT_TL_LOOKBACK*2 + 2) return null;
+  var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, XPT_TL_LOOKBACK);
+  if (!atr) return null;
+  var slopeStep = atr / XPT_TL_LOOKBACK;
+  var lastHigh = xptFindLastPivot(XPT_HIGH_HISTORY, XPT_TL_LOOKBACK, true);
+  var lastLow  = xptFindLastPivot(XPT_LOW_HISTORY, XPT_TL_LOOKBACK, false);
+  return {
+    upperNow: lastHigh ? lastHigh.value - slopeStep*lastHigh.barsAgo : null,
+    lowerNow: lastLow  ? lastLow.value  + slopeStep*lastLow.barsAgo  : null
+  };
+}
+function xptEvaluateTrendlineSignal(priceInr) {
+  var n = XPT_HISTORY_INR.length;
+  if (n < XPT_TL_LOOKBACK*2 + 3) return null;
+  var tl = xptCalcTrendlines();
+  if (!tl) return null;
+  var prevClose = XPT_HISTORY_INR[n-2];
+  if (tl.upperNow != null && prevClose <= tl.upperNow && priceInr > tl.upperNow) {
+    return { side:'BUY', reasons:'Trendline breakout ↑ (line ₹'+Math.round(tl.upperNow).toLocaleString('en-IN')+', 14-bar pivot)', strength:'MODERATE' };
+  }
+  if (tl.lowerNow != null && prevClose >= tl.lowerNow && priceInr < tl.lowerNow) {
+    return { side:'SELL', reasons:'Trendline breakdown ↓ (line ₹'+Math.round(tl.lowerNow).toLocaleString('en-IN')+', 14-bar pivot)', strength:'MODERATE' };
+  }
+  return null;
+}
+
 function xptEvaluateBreakoutSignal(priceInr) {
   if (XPT_ASIAN_HIGH == null || XPT_ASIAN_LOW == null) return null;
   var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
@@ -26641,6 +26710,62 @@ function xptEvaluateBreakoutSignal(priceInr) {
 }
 
 function xptOpenTrade() { return (XPT_PORTFOLIO.trades||[]).find(function(t){ return t.status==='OPEN'; }) || null; }
+
+// Strategy selector — same idea as the F&O Stock Advance checkboxes:
+// each layer can be turned on/off independently, persisted locally.
+// Evaluation order in xptTick() stays fixed regardless of which boxes
+// are checked; unchecking one just skips it.
+var XPT_STRAT_KEYS = ['sweep','trendline','breakout','emarsi'];
+function xptToggleStrategyChip(key) {
+  var box = document.getElementById('xpt-strat-' + key);
+  if (!box) return;
+  box.checked = !box.checked;
+  xptRenderStrategyChip(key);
+  xptSaveStrategySelection();
+}
+
+// Visually distinguishes active (green, filled, ✓) vs off (gray,
+// hollow, ✕) — plain checkboxes were nearly invisible on this dark
+// theme, so the whole chip changes color/border instead.
+function xptRenderStrategyChip(key) {
+  var chip = document.getElementById('xpt-chip-' + key);
+  var box = document.getElementById('xpt-strat-' + key);
+  if (!chip || !box) return;
+  var mark = chip.querySelector('.xpt-chip-mark');
+  if (box.checked) {
+    chip.style.border = '1px solid var(--g)';
+    chip.style.background = 'rgba(0,255,136,.12)';
+    chip.style.color = 'var(--g)';
+    if (mark) mark.textContent = '✓';
+  } else {
+    chip.style.border = '1px solid var(--border)';
+    chip.style.background = 'var(--ov4)';
+    chip.style.color = 'var(--dim)';
+    if (mark) mark.textContent = '✕';
+  }
+}
+function xptRenderAllStrategyChips() { XPT_STRAT_KEYS.forEach(xptRenderStrategyChip); }
+
+function xptStrategyEnabled(key) {
+  var el = document.getElementById('xpt-strat-' + key);
+  return el ? el.checked : true;
+}
+function xptSaveStrategySelection() {
+  var sel = {};
+  XPT_STRAT_KEYS.forEach(function(k){ sel[k] = xptStrategyEnabled(k); });
+  try { localStorage.setItem('jarvis_xpt_strategies', JSON.stringify(sel)); } catch(e) {}
+  var labels = { sweep:'Liquidity Sweep', trendline:'Trendline Break', breakout:'Asian-Range Breakout', emarsi:'EMA/RSI/MACD/VWAP+DXY' };
+  xptLog('Strategy selection updated — ' + XPT_STRAT_KEYS.filter(function(k){return sel[k];}).map(function(k){return labels[k];}).join(', ') || 'none active');
+}
+function xptRestoreStrategySelection() {
+  var sel = null;
+  try { sel = JSON.parse(localStorage.getItem('jarvis_xpt_strategies')); } catch(e) {}
+  if (!sel) return;
+  XPT_STRAT_KEYS.forEach(function(k){
+    var el = document.getElementById('xpt-strat-' + k);
+    if (el && typeof sel[k] === 'boolean') el.checked = sel[k];
+  });
+}
 
 function xptToggleCustomSize() {
   var sel = document.getElementById('xpt-lot-size');
@@ -26821,7 +26946,10 @@ async function xptTick() {
     }
     XPT_LAST_SESSION_STATE = inSession;
     if (inSession) {
-      var sig = xptEvaluateLiquiditySweep(priceInr) || xptEvaluateBreakoutSignal(priceInr) || xptEvaluateSignal(priceInr, dp);
+      var sig = (xptStrategyEnabled('sweep') && xptEvaluateLiquiditySweep(priceInr))
+             || (xptStrategyEnabled('trendline') && xptEvaluateTrendlineSignal(priceInr))
+             || (xptStrategyEnabled('breakout') && xptEvaluateBreakoutSignal(priceInr))
+             || (xptStrategyEnabled('emarsi') && xptEvaluateSignal(priceInr, dp));
       if (sig) xptEnterTrade(sig, priceInr, atr);
     }
   }
