@@ -1245,9 +1245,8 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <button class="nav-tab" onclick="showPage('gold',this)" style="border-color:rgba(255,193,7,.35);color:#ffc107;">🥇 GOLD (XAUUSD)</button>
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
-  <button class="nav-tab" onclick="showPage('ipo',this)" style="border-color:rgba(255,204,0,.3);color:#ffcc00;">🚀 IPO WATCH</button>
+  <!-- IPO Watch and Journal tabs removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('strathealth',this)" style="border-color:rgba(0,212,255,.3);color:#00d4ff;">📊 STRATEGY HEALTH</button>
-  <button class="nav-tab" onclick="showPage('journal',this)" style="border-color:rgba(255,140,0,.3);color:#ff8c00;">📓 JOURNAL</button>
   <button class="nav-tab" id="adminTabBtn" onclick="showPage('admin',this)" style="display:none;border-color:rgba(255,204,0,.3);color:#ffcc00;background:rgba(255,204,0,.06);">🔐 ADMIN</button>
 
   <!-- ══ GLOBAL NOTIFICATION BELL — accessible from any tab ══ -->
@@ -3962,6 +3961,11 @@ setTimeout(nd2SyncAll, 2000);
         </tbody>
       </table>
     </div>
+    <div id="pt-history-pagination" style="display:flex;justify-content:center;align-items:center;gap:12px;padding:10px;font-family:Share Tech Mono;font-size:10px;color:var(--dim)">
+      <button onclick="ptHistPage(-1)" style="padding:5px 14px;background:var(--ov4);border:1px solid var(--border);border-radius:5px;color:var(--txt);cursor:pointer">‹ Prev</button>
+      <span id="pt-history-page-label">Page 1 of 1</span>
+      <button onclick="ptHistPage(1)" style="padding:5px 14px;background:var(--ov4);border:1px solid var(--border);border-radius:5px;color:var(--txt);cursor:pointer">Next ›</button>
+    </div>
   </div>
 
   <!-- Nifty Benchmark Comparison -->
@@ -3978,8 +3982,11 @@ setTimeout(nd2SyncAll, 2000);
 
   <!-- P&L Dashboard (Week 2) -->
   <div class="panel" style="margin-bottom:10px;border-color:rgba(0,212,255,.25)">
-    <div class="ph"><div class="pt">📈 P&amp;L DASHBOARD</div><span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Real performance from your closed trades</span></div>
-    <div style="padding:14px">
+    <div class="ph" onclick="ptToggleDashboardPanel()" style="cursor:pointer">
+      <div class="pt">📈 P&amp;L DASHBOARD</div>
+      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);display:flex;align-items:center;gap:8px">Real performance from your closed trades <span id="pt-pnl-toggle-icon">▸ Show</span></span>
+    </div>
+    <div id="pt-pnl-dashboard-body" style="display:none;padding:14px">
 
       <!-- Daily P&L bar chart -->
       <div style="margin-bottom:16px">
@@ -4038,6 +4045,11 @@ setTimeout(nd2SyncAll, 2000);
           <tr><td colspan="7" style="text-align:center;padding:16px;color:var(--dim)">No trades yet</td></tr>
         </tbody>
       </table>
+    </div>
+    <div id="pt-days-pagination" style="display:flex;justify-content:center;align-items:center;gap:12px;padding:10px;font-family:Share Tech Mono;font-size:10px;color:var(--dim)">
+      <button onclick="ptDaysPage(-1)" style="padding:5px 14px;background:var(--ov4);border:1px solid var(--border);border-radius:5px;color:var(--txt);cursor:pointer">‹ Prev</button>
+      <span id="pt-days-page-label">Page 1 of 1</span>
+      <button onclick="ptDaysPage(1)" style="padding:5px 14px;background:var(--ov4);border:1px solid var(--border);border-radius:5px;color:var(--txt);cursor:pointer">Next ›</button>
     </div>
   </div>
 
@@ -17708,6 +17720,43 @@ function ptSetStrategyFilter(val) {
   ptRefreshUI();
 }
 
+// ── Pagination for the F&O Trade History and Day-Wise Breakdown tables
+// — both could grow to hundreds of rows over time, which made the page
+// very long. 15 rows per page, most-recent first, same as everywhere
+// else in the app that shows a "most recent" list.
+var PT_PAGE_SIZE = 15;
+var PT_HIST_PAGE = 0;
+var PT_DAYS_PAGE = 0;
+function ptHistPage(delta) { PT_HIST_PAGE = Math.max(0, PT_HIST_PAGE + delta); ptRefreshUI(); }
+function ptDaysPage(delta) { PT_DAYS_PAGE = Math.max(0, PT_DAYS_PAGE + delta); ptRefreshUI(); }
+function ptRenderPager(idPrefix, page, totalItems) {
+  var totalPages = Math.max(1, Math.ceil(totalItems / PT_PAGE_SIZE));
+  var label = document.getElementById(idPrefix + '-page-label');
+  if (label) label.textContent = 'Page ' + (page+1) + ' of ' + totalPages + ' (' + totalItems + ' total)';
+  var wrap = document.getElementById(idPrefix + '-pagination');
+  if (wrap) {
+    var btns = wrap.querySelectorAll('button');
+    if (btns[0]) btns[0].disabled = page <= 0;
+    if (btns[1]) btns[1].disabled = page >= totalPages - 1;
+    if (btns[0]) btns[0].style.opacity = btns[0].disabled ? 0.4 : 1;
+    if (btns[1]) btns[1].style.opacity = btns[1].disabled ? 0.4 : 1;
+  }
+  return totalPages;
+}
+
+// P&L Dashboard is charts/summaries, not a row list, so it's collapsed
+// by default (rather than paginated) to cut down initial page length —
+// expands on click, same charts as before once opened.
+var PT_PNL_DASHBOARD_OPEN = false;
+function ptToggleDashboardPanel() {
+  PT_PNL_DASHBOARD_OPEN = !PT_PNL_DASHBOARD_OPEN;
+  var body = document.getElementById('pt-pnl-dashboard-body');
+  var icon = document.getElementById('pt-pnl-toggle-icon');
+  if (body) body.style.display = PT_PNL_DASHBOARD_OPEN ? 'block' : 'none';
+  if (icon) icon.textContent = PT_PNL_DASHBOARD_OPEN ? '▾ Hide' : '▸ Show';
+  if (PT_PNL_DASHBOARD_OPEN) { try { ptRefreshUI(); } catch(e) {} } // charts need real layout width, draw fresh on open
+}
+
 function ptRefreshUI() {
   if (!PT_PORTFOLIO) ptInit();
   ptCheckAutoExits();
@@ -17876,10 +17925,14 @@ function ptRefreshUI() {
   // Closed history
   var hbody = document.getElementById('pt-history-body');
   if (hbody) {
+    var reversedClosed = filteredClosed.slice().reverse();
+    var histTotalPages = ptRenderPager('pt-history', PT_HIST_PAGE, reversedClosed.length);
+    if (PT_HIST_PAGE > histTotalPages - 1) PT_HIST_PAGE = histTotalPages - 1;
+    var pagedClosed = reversedClosed.slice(PT_HIST_PAGE * PT_PAGE_SIZE, PT_HIST_PAGE * PT_PAGE_SIZE + PT_PAGE_SIZE);
     if (!filteredClosed.length) {
       hbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:16px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">'+(closedTrades.length?'No closed trades match this filter':'No closed trades yet')+'</td></tr>';
     } else {
-      hbody.innerHTML = filteredClosed.slice().reverse().map(function(t){
+      hbody.innerHTML = pagedClosed.map(function(t){
         var pColor = (t.net||0)>=0?'var(--g)':'var(--r)';
         var rBg = t.result==='PROFIT'?'rgba(0,255,136,.12)':'rgba(255,61,90,.12)';
         return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
@@ -17931,7 +17984,10 @@ function ptRenderDayWise(closedTrades) {
   });
   var keys = Object.keys(byDay).sort().reverse(); // most recent first
   if (countEl) countEl.textContent = keys.length + ' trading day' + (keys.length!==1?'s':'');
-  body.innerHTML = keys.map(function(k){
+  var daysTotalPages = ptRenderPager('pt-days', PT_DAYS_PAGE, keys.length);
+  if (PT_DAYS_PAGE > daysTotalPages - 1) PT_DAYS_PAGE = daysTotalPages - 1;
+  var pagedKeys = keys.slice(PT_DAYS_PAGE * PT_PAGE_SIZE, PT_DAYS_PAGE * PT_PAGE_SIZE + PT_PAGE_SIZE);
+  body.innerHTML = pagedKeys.map(function(k){
     var d = byDay[k];
     var winPct = d.trades ? Math.round(d.wins/d.trades*100) : 0;
     var pColor = d.net >= 0 ? 'var(--g)' : 'var(--r)';
