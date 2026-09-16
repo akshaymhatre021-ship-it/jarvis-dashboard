@@ -26138,7 +26138,7 @@ var XPT_LAST_SOURCE = null;         // 'oanda' or 'yahoo' — which feed the cur
 
 var XPT_PORTFOLIO = null;
 var XPT_TICKER = null;
-var XPT_USDINR = 83.5;              // fallback if the FX fetch fails
+var XPT_USDINR = 95.4;              // fallback if the FX fetch never once succeeds (updated Sep 2026 — was stuck at a stale 83.5 before)
 var XPT_LAST_USD_PRICE = null;
 var XPT_HISTORY_INR = [];           // rolling ₹/oz closes, for EMA/RSI
 
@@ -26903,6 +26903,53 @@ function xptRenderToggle() {
 }
 
 // ── Main tick: fetch price+FX, update history, run the engine ──
+// ── Price-outlier guard — rejects a single tick that jumps more than
+// 3% from the last accepted price (gold basically never moves that
+// much in 15 seconds without a global panic). Guards against a single
+// corrupted/glitched price from a proxy being used to close a real
+// trade at a nonsense level. If the "outlier" repeats 4 times in a row
+// it's accepted anyway — that's no longer a glitch, it's confirmed
+// (e.g. a genuine weekend-gap reopen).
+var XPT_LAST_GOOD_PRICE = null;
+var XPT_OUTLIER_STREAK = 0;
+function xptIsPriceOutlier(priceInr) {
+  if (!XPT_LAST_GOOD_PRICE) return false;
+  var pctMove = Math.abs(priceInr - XPT_LAST_GOOD_PRICE) / XPT_LAST_GOOD_PRICE;
+  if (pctMove <= 0.03) { XPT_OUTLIER_STREAK = 0; return false; }
+  XPT_OUTLIER_STREAK++;
+  if (XPT_OUTLIER_STREAK >= 4) { xptLog('Accepting a >3% price jump after 4 consecutive confirmations — treating as real, not a glitch'); XPT_OUTLIER_STREAK = 0; return false; }
+  return true;
+}
+
+// ── Real 5-minute candles, built from the live tick stream — this is
+// what actually fixes the "stops way too tight" problem. ATR/EMA/RSI/
+// MACD/ADX/trendline were previously being fed raw 15s ticks directly,
+// so a "14-period" ATR only covered 3.5 minutes of real time instead
+// of the ~70 minutes your F&O side gets from real 5-min candles —
+// making every distance calculation absurdly tight. Seeded once from
+// Yahoo's real 5-min candles when available; otherwise builds up from
+// live ticks (takes hours to fully warm up from cold — see the note
+// this prints once).
+var XPT_CANDLES = [];
+var XPT_CANDLE_MS = 5*60*1000;
+var XPT_CANDLE_SEED_TRIED = false;
+function xptSeedCandlesFromFeed(gold) {
+  if (XPT_CANDLES.length || !gold.closes || gold.closes.length < 2) return;
+  var closes = gold.closes.slice(-200), highs = gold.highs.slice(-200), lows = gold.lows.slice(-200);
+  for (var i=0;i<closes.length;i++) XPT_CANDLES.push({ o:closes[i], h:highs[i], l:lows[i], c:closes[i] });
+  if (!XPT_CANDLE_SEED_TRIED) { XPT_CANDLE_SEED_TRIED = true; xptLog('Seeded '+XPT_CANDLES.length+' real 5-min candles from Yahoo for indicator history'); }
+}
+function xptUpdateCandles(priceInr) {
+  var bucket = Math.floor(Date.now()/XPT_CANDLE_MS);
+  var last = XPT_CANDLES[XPT_CANDLES.length-1];
+  if (last && last._bucket === bucket) {
+    last.h = Math.max(last.h, priceInr); last.l = Math.min(last.l, priceInr); last.c = priceInr;
+  } else {
+    XPT_CANDLES.push({ _bucket: bucket, o: priceInr, h: priceInr, l: priceInr, c: priceInr });
+    if (XPT_CANDLES.length > 200) XPT_CANDLES.shift();
+  }
+}
+
 async function xptTick() {
   if (!XPT_PORTFOLIO) xptInit();
   var gold = await xptFetchGold();
@@ -26916,18 +26963,18 @@ async function xptTick() {
   var priceInr = gold.ltp * XPT_USDINR;
   var dp = gold.prevClose ? (gold.ltp - gold.prevClose) / gold.prevClose * 100 : 0;
 
-  // Seed history from Yahoo's own intraday closes/highs/lows on first
-  // load so EMA21/RSI14/ATR don't need ~11-15 minutes of live polling
-  // to warm up. All three arrays stay index-aligned (see xptFetchYahoo).
-  if (XPT_HISTORY_INR.length === 0 && gold.closes.length > 1) {
-    XPT_HISTORY_INR = gold.closes.slice(-49).map(function(c){ return c * XPT_USDINR; });
-    XPT_HIGH_HISTORY = gold.highs.slice(-49).map(function(c){ return c * XPT_USDINR; });
-    XPT_LOW_HISTORY  = gold.lows.slice(-49).map(function(c){ return c * XPT_USDINR; });
+  if (xptIsPriceOutlier(priceInr)) {
+    xptLog('⚠️ Rejected a suspicious price tick (₹' + Math.round(priceInr).toLocaleString('en-IN') + ' vs last good ₹' + Math.round(XPT_LAST_GOOD_PRICE).toLocaleString('en-IN') + ', >3% in one tick) — likely a bad data point, skipping this cycle');
+    xptRefreshUI();
+    return;
   }
-  XPT_HISTORY_INR.push(priceInr);
-  XPT_HIGH_HISTORY.push(priceInr);
-  XPT_LOW_HISTORY.push(priceInr);
-  if (XPT_HISTORY_INR.length > 200) { XPT_HISTORY_INR.shift(); XPT_HIGH_HISTORY.shift(); XPT_LOW_HISTORY.shift(); }
+  XPT_LAST_GOOD_PRICE = priceInr;
+
+  xptSeedCandlesFromFeed(gold);
+  xptUpdateCandles(priceInr);
+  XPT_HISTORY_INR = XPT_CANDLES.map(function(c){ return c.c; });
+  XPT_HIGH_HISTORY = XPT_CANDLES.map(function(c){ return c.h; });
+  XPT_LOW_HISTORY  = XPT_CANDLES.map(function(c){ return c.l; });
 
   var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
   xptUpdateAsianRange(priceInr);
