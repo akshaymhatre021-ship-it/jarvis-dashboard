@@ -1189,7 +1189,7 @@ input, select{font-size:16px !important;} /* Prevents iOS zoom on focus */
   <button class="nav-tab" onclick="showPage('mf',this)">💰 MUT. FUNDS</button>
   <button class="nav-tab" onclick="showPage('advanced',this)" style="border-color:rgba(160,100,255,.3);color:#a064ff;">⚡ F&O</button>
   <button class="nav-tab" onclick="showPage('stockadv',this)" style="border-color:rgba(0,255,136,.3);color:var(--g);">📈 STOCK ADVANCE</button>
-  <button class="nav-tab" onclick="showPage('gold',this)" style="border-color:rgba(255,193,7,.35);color:#ffc107;">🥇 GOLD (XAUUSD)</button>
+  
   <!-- Dash V2 tab removed per user request. Page markup/logic left intact but unreachable. -->
   <button class="nav-tab" onclick="showPage('finadvice',this)" style="border-color:rgba(0,255,136,.3);color:#00ff88;">💡 FIN ADVISOR</button>
   <!-- IPO Watch and Journal tabs removed per user request. Page markup/logic left intact but unreachable. -->
@@ -3375,6 +3375,7 @@ setTimeout(nd2SyncAll, 2000);
           <option value="manual">Manual</option>
         </select>
         <button onclick="ptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
+        <button onclick="ptPurgeRetiredStrategies()" style="padding:6px 14px;background:rgba(255,159,67,.08);border:1px solid rgba(255,159,67,.3);border-radius:5px;color:#ff9f43;font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🗑️ REMOVE OLD STRATEGY DATA</button>
         <button onclick="ptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
         <button onclick="ptExportPDF()" style="padding:6px 14px;background:rgba(255,61,90,.06);border:1px solid rgba(255,107,53,.3);border-radius:5px;color:var(--o);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🧾 EXPORT PDF</button>
       </div>
@@ -3485,9 +3486,6 @@ setTimeout(nd2SyncAll, 2000);
         </button>
         <div id="ase-strategy-panel" style="display:none;position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:40;background:#0d1424;border:1px solid var(--a);border-radius:8px;padding:6px;box-shadow:0 10px 30px var(--ov55);max-height:280px;overflow-y:auto">
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:var(--txt);cursor:pointer" onmouseover="this.style.background='rgba(0,212,255,.06)'" onmouseout="this.style.background='transparent'">
-            <input type="checkbox" id="ase-strat-chk-trendline" onchange="aseToggleStrategy('trendline', this.checked)" style="accent-color:var(--a);width:14px;height:14px;flex-shrink:0"> Trendline Breakout (5-min)
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:var(--txt);cursor:pointer" onmouseover="this.style.background='rgba(0,212,255,.06)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-trendline_confirmed" onchange="aseToggleStrategy('trendline_confirmed', this.checked)" style="accent-color:var(--a);width:14px;height:14px;flex-shrink:0"> Trendline + PCR/EMA Confirmation
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:var(--txt);cursor:pointer" onmouseover="this.style.background='rgba(0,212,255,.06)'" onmouseout="this.style.background='transparent'">
@@ -3499,39 +3497,12 @@ setTimeout(nd2SyncAll, 2000);
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#00ff88;cursor:pointer" onmouseover="this.style.background='rgba(0,255,136,.07)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-nifty_pro_v2" onchange="aseToggleStrategy('nifty_pro_v2', this.checked)" style="accent-color:#00ff88;width:14px;height:14px;flex-shrink:0"> ✨ Nifty Pro V2 (+MACD +VOL +ATR)
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:#ff9f43;cursor:pointer" onmouseover="this.style.background='rgba(255,159,67,.07)'" onmouseout="this.style.background='transparent'">
-            <input type="checkbox" id="ase-strat-chk-orb_vwap" onchange="aseToggleStrategy('orb_vwap', this.checked)" style="accent-color:#ff9f43;width:14px;height:14px;flex-shrink:0"> 🆕 ORB + VWAP (Opening Range Breakout)
-          </label>
           <label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-family:Share Tech Mono;font-size:11px;color:var(--a);cursor:pointer" onmouseover="this.style.background='rgba(0,212,255,.06)'" onmouseout="this.style.background='transparent'">
             <input type="checkbox" id="ase-strat-chk-quality_orb_vwap" onchange="aseToggleStrategy('quality_orb_vwap', this.checked)" style="accent-color:var(--a);width:14px;height:14px;flex-shrink:0"> 🆕 Quality ORB+VWAP (Regime-Filtered)
           </label>
         </div>
       </div>
       <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin:0 0 12px 2px">Check 1–3+ strategies to run them together — each fires its own paper trades independently (no agreement required between them). Chart overlay below follows the first one checked.</div>
-
-      <!-- Live condition readout: Trendline strategy -->
-      <div id="ase-readout-trendline" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">UP-TRENDLINE</div>
-          <div id="ase-tl-upper" style="font-family:Orbitron;font-size:13px;color:#00d4ff">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">DOWN-TRENDLINE</div>
-          <div id="ase-tl-lower" style="font-family:Orbitron;font-size:13px;color:var(--r)">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">NIFTY LTP</div>
-          <div id="ase-tl-ltp" style="font-family:Orbitron;font-size:13px;color:var(--txt)">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">5-MIN CANDLES</div>
-          <div id="ase-tl-candles" style="font-family:Orbitron;font-size:13px;color:var(--txt)">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
-          <div id="ase-tl-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
-        </div>
-      </div>
 
       <!-- Live condition readout: Trendline + PCR/EMA Confirmation strategy -->
       <div id="ase-readout-confirmed" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
@@ -3570,11 +3541,6 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:#a064ff;margin-bottom:4px">BUY CE: PCR&gt;1.2 · Price&gt;EMA21 · VIX&lt;15 · 9:20–10:30 or 13:30–14:30 · ATM/1-OTM · TGT +40% / SL -30%</div>
         <div style="color:#a064ff;margin-bottom:4px">BUY PE: PCR&lt;0.8 · Price&lt;EMA21 · VIX spike &gt;10% in 15min · ATM/1-OTM</div>
         <div style="color:var(--r)">NO TRADE: PCR 0.9–1.1 · VIX&gt;20 · within 30min of expiry-day open</div>
-      </div>
-      <div id="ase-rules-trendline" style="display:none;background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
-        <div style="color:#00d4ff;margin-bottom:4px">BUY CE: 5-min close crosses ABOVE the up-trendline (pivot-high based, 14-bar lookback, ATR slope decay) · SL = trendline level at cross · TGT +40% premium</div>
-        <div style="color:var(--r);margin-bottom:4px">BUY PE: 5-min close crosses BELOW the down-trendline (pivot-low based) · SL = trendline level at cross · TGT +40% premium</div>
-        <div style="color:var(--dim)">Trendline recalculates every 5-min candle close. Requires Angel One historical candle access (needs broker login).</div>
       </div>
       <div id="ase-rules-confirmed" style="display:none;background:rgba(160,100,255,.04);border:1px solid rgba(160,100,255,.18);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
         <div style="color:#00d4ff;margin-bottom:4px">BUY CE: Trendline up-break AND (PCR&gt;1.0 OR price&gt;EMA21) — breakout must agree with at least one bullish confirmation</div>
@@ -3688,36 +3654,6 @@ setTimeout(nd2SyncAll, 2000);
         <div style="color:#00d4ff;margin-bottom:4px">BUY CE: same V1.5 base filter (EMA20&gt;EMA50, price&gt;VWAP, RSI&gt;55, close&gt;prior high, price&gt;15-min EMA50) PLUS MACD line&gt;signal · volume ≥120% of its 20-bar avg · candle closes in upper 45% of its range</div>
         <div style="color:var(--r);margin-bottom:4px">BUY PE: mirrored bearish conditions on all of the above</div>
         <div style="color:var(--dim)">SL/TARGET: ATR(14)-based (1.2×/2.4×ATR) instead of a fixed 5-bar window — scales with real-time volatility · R:R kept at 1:2 · ONE trade per day · only between 9:30-11:30 AM.</div>
-      </div>
-
-      <!-- Live condition readout: ORB + VWAP strategy (new) -->
-      <div id="ase-readout-orb" style="display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">OPENING RANGE</div>
-          <div id="ase-orb-range" style="font-family:Orbitron;font-size:11px;color:var(--txt)">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VS VWAP</div>
-          <div id="ase-orb-vwap" style="font-family:Orbitron;font-size:12px;color:var(--txt)">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">RSI(14)</div>
-          <div id="ase-orb-rsi" style="font-family:Orbitron;font-size:14px;color:var(--txt)">—</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">TRADED TODAY?</div>
-          <div id="ase-orb-tradedtoday" style="font-family:Orbitron;font-size:12px;color:var(--txt)">NO</div>
-        </div>
-        <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:3px">VERDICT</div>
-          <div id="ase-orb-verdict" style="font-family:Orbitron;font-size:12px;color:var(--w)">IDLE</div>
-        </div>
-      </div>
-      <div id="ase-rules-orb" style="display:none;background:rgba(255,159,67,.05);border:1px solid rgba(255,159,67,.22);border-radius:8px;padding:10px 12px;font-family:Share Tech Mono;font-size:10px;color:var(--dim);line-height:1.6">
-        <div style="color:#ff9f43;margin-bottom:4px">🆕 New strategy — classic Opening Range Breakout, confirmed by VWAP + RSI + volume so it only fires on genuine breakouts, not the first noisy poke out of the range</div>
-        <div style="color:#00d4ff;margin-bottom:4px">BUY CE: 5-min close breaks above the first 15 minutes' high (09:15-09:30 range) · price&gt;VWAP · RSI&gt;55 · candle volume &gt;1.3× the trailing 10-bar average</div>
-        <div style="color:var(--r);margin-bottom:4px">BUY PE: mirrored bearish break of the opening range low · price&lt;VWAP · RSI&lt;45 · volume confirmed</div>
-        <div style="color:var(--dim)">SL: opposite side of the opening range · TARGET: 1.5× that risk · ONE trade per day · only between 9:30 AM-2:30 PM (avoids trading the still-forming range and the volatile last 45 min into close).</div>
       </div>
 
       <!-- Live condition readout: Quality ORB+VWAP strategy (new) -->
@@ -4257,199 +4193,6 @@ setTimeout(nd2SyncAll, 2000);
 
 </div>
 <!-- ══ END STOCK ADVANCE PAGE ══ -->
-
-<!-- ══════════════════════════════════════════════════════════════════
-     GOLD (XAUUSD) AUTO PAPER TRADING — "XPT" module
-     Independent virtual portfolio, fully client-side (no broker —
-     Angel One has no XAUUSD/spot-gold feed). Price comes from Yahoo
-     Finance's XAUUSD=X ticker via the same rotating CORS-proxy pattern
-     already used by fetchSensex(). Entries/exits are auto-fired by an
-     EMA9/EMA21 + RSI14 signal engine (same math as runSignalEngine),
-     no manual trade entry — per user's choice. P&L shown in ₹ (INR),
-     converted live via USDINR=X. Position size in micro-lots (1 = 1 oz).
-     ══════════════════════════════════════════════════════════════════ -->
-<div class="page" id="page-gold">
-
-  <div id="xpt-header" style="background:linear-gradient(135deg,rgba(255,193,7,.07),rgba(0,212,255,.03));border:1px solid rgba(255,193,7,.25);border-left:4px solid #ffc107;border-radius:12px;padding:14px 18px;margin-bottom:10px;position:relative;overflow:hidden">
-    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ffc107,var(--a),#ffc107)"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <div>
-        <div style="font-family:Orbitron;font-size:11px;color:#ffc107;letter-spacing:2px;margin-bottom:4px">🥇 XAUUSD — AUTO PAPER TRADING</div>
-        <div style="font-family:Share Tech Mono;font-size:10px;color:var(--dim)">Spot gold (USD/oz) · price via Yahoo Finance · auto-traded by EMA/RSI engine · independent virtual portfolio, P&amp;L shown in ₹</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="xptReset()" style="padding:6px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">🔄 RESET</button>
-        <button onclick="xptExportCSV()" style="padding:6px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:8px;cursor:pointer;letter-spacing:1px">📥 EXPORT CSV</button>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px">
-      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">XAUUSD LIVE</div>
-        <div id="xpt-live-price" style="font-family:Orbitron;font-size:17px;font-weight:700;color:#ffc107">—</div>
-        <div id="xpt-last-update" style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-top:2px">no data yet</div>
-      </div>
-      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">₹/OZ (USDINR conv.)</div>
-        <div id="xpt-live-price-inr" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--w)">—</div>
-      </div>
-      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">PORTFOLIO VALUE</div>
-        <div id="xpt-value" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">₹10,00,000</div>
-      </div>
-      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">TOTAL P&amp;L</div>
-        <div id="xpt-pnl" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--g)">+₹0</div>
-      </div>
-      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">WIN RATE</div>
-        <div id="xpt-winrate" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--w)">—</div>
-      </div>
-      <div style="background:var(--ov3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-        <div style="font-family:Share Tech Mono;font-size:8px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px">CASH BALANCE</div>
-        <div id="xpt-cash" style="font-family:Orbitron;font-size:17px;font-weight:700;color:var(--a)">₹10,00,000</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Free TradingView widget — visual cross-check only. This is an
-       iframe (TradingView's free embed program, no signup/key needed);
-       it can't feed data into the JS engine below (cross-origin
-       sandboxed) — it's purely so you can eyeball whether our fetched
-       price is tracking the real market or has gone stale. -->
-  <div style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-    <div class="tradingview-widget-container">
-      <div class="tradingview-widget-container__widget"></div>
-    </div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-      { "symbols": [{ "proName": "OANDA:XAUUSD", "title": "XAUUSD (TradingView, live)" }],
-        "showSymbolLogo": false, "colorTheme": "dark", "isTransparent": true, "displayMode": "regular", "locale": "en" }
-    </script>
-  </div>
-
-  <!-- Finnhub live data setup — free, no broker account, no residency
-       restriction (it's a market-data aggregator, not a broker, so
-       there's no KYC/country block like OANDA). One API key, no
-       account ID. Falls back to Yahoo automatically if left blank or
-       a call fails. -->
-  <div class="panel" style="margin-bottom:10px;border-color:rgba(0,212,255,.25)">
-    <div class="ph">
-      <div class="pt">🔌 XAUUSD LIVE DATA SETUP (Finnhub — free, no residency restriction)</div>
-      <span id="xpt-fh-status" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Not connected — using free Yahoo feed</span>
-    </div>
-    <div style="padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;align-items:end">
-      <div>
-        <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);margin-bottom:4px">FINNHUB API KEY</div>
-        <input id="xpt-fh-key" type="password" placeholder="paste Finnhub API key" style="width:100%;background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:11px;padding:8px;border-radius:5px;box-sizing:border-box">
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="xptFinnhubSave()" style="flex:1;padding:9px 14px;background:rgba(0,212,255,.1);border:1px solid var(--a);border-radius:5px;color:var(--a);font-family:Orbitron;font-size:9px;cursor:pointer;letter-spacing:1px">💾 SAVE &amp; TEST</button>
-        <button onclick="xptFinnhubClear()" style="padding:9px 14px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3);border-radius:5px;color:var(--r);font-family:Orbitron;font-size:9px;cursor:pointer">✕</button>
-      </div>
-    </div>
-    <div style="padding:0 14px 14px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-      Free forever, no card, no country restriction: sign up at finnhub.io → confirm email → API key appears on your dashboard. This connects to Finnhub's live trade WebSocket for the freshest tick; historical context (EMA/RSI/ATR) still comes from Yahoo, since Finnhub's history endpoint is paid-only. Leave blank to stay on Yahoo-only.
-    </div>
-  </div>
-
-  <!-- Auto Signal Engine -->
-  <div class="panel" style="margin-bottom:10px;border-color:rgba(160,100,255,.3)">
-    <div class="ph">
-      <div class="pt" style="color:#a064ff">🤖 XAUUSD AUTO SIGNAL ENGINE</div>
-      <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Liquidity sweep → Trendline break → Asian-range breakout → EMA/RSI/MACD/VWAP+DXY (ADX-gated)</span>
-    </div>
-    <div style="padding:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-            <input type="checkbox" id="xpt-toggle" onchange="xptToggleEngine()" style="opacity:0;width:0;height:0">
-            <span id="xpt-toggle-track" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:24px;transition:.2s"></span>
-            <span id="xpt-toggle-knob" style="position:absolute;height:18px;width:18px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.2s"></span>
-          </label>
-          <div>
-            <div id="xpt-status" style="font-family:Orbitron;font-size:11px;color:var(--dim);letter-spacing:1px">ENGINE OFF</div>
-            <div style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">Checks every ~30s · target 1.5×ATR / SL 0.8×ATR (~1.9:1 R:R) · trailing SL arms at 55%, locks 60% of peak</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim);white-space:nowrap">SIZE:</span>
-          <select id="xpt-lot-size" onchange="xptToggleCustomSize()" style="background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
-            <option value="1">1 micro-lot (1 oz)</option>
-            <option value="2">2 micro-lots (2 oz)</option>
-            <option value="5">5 micro-lots (5 oz)</option>
-            <option value="10">10 micro-lots = 1 mini-lot (10 oz)</option>
-            <option value="custom">Custom ₹ amount</option>
-          </select>
-          <span id="xpt-custom-wrap" style="display:none;align-items:center;gap:4px">
-            <span style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">₹</span>
-            <input id="xpt-custom-inr" type="number" value="10000" min="100" step="500" oninput="xptUpdateCustomOzPreview()" style="width:90px;background:var(--ov4);border:1px solid var(--border);color:var(--txt);font-family:Share Tech Mono;font-size:10px;padding:5px 8px;border-radius:5px">
-            <span id="xpt-custom-oz-preview" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)"></span>
-          </span>
-        </div>
-      </div>
-      <div style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px">
-        <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:8px">STRATEGIES · green = active, gray = off · click to toggle · evaluated in this order each tick</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;font-family:Share Tech Mono;font-size:10px">
-          <div id="xpt-chip-sweep" onclick="xptToggleStrategyChip('sweep')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
-            <input type="checkbox" id="xpt-strat-sweep" checked style="display:none">
-            <span class="xpt-chip-mark">✓</span> Liquidity Sweep
-          </div>
-          <div id="xpt-chip-trendline" onclick="xptToggleStrategyChip('trendline')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
-            <input type="checkbox" id="xpt-strat-trendline" checked style="display:none">
-            <span class="xpt-chip-mark">✓</span> Trendline Break
-          </div>
-          <div id="xpt-chip-breakout" onclick="xptToggleStrategyChip('breakout')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
-            <input type="checkbox" id="xpt-strat-breakout" checked style="display:none">
-            <span class="xpt-chip-mark">✓</span> Asian-Range Breakout
-          </div>
-          <div id="xpt-chip-emarsi" onclick="xptToggleStrategyChip('emarsi')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 12px;border-radius:16px;border:1px solid var(--g);background:rgba(0,255,136,.12);color:var(--g);transition:.15s">
-            <input type="checkbox" id="xpt-strat-emarsi" checked style="display:none">
-            <span class="xpt-chip-mark">✓</span> EMA/RSI/MACD/VWAP+DXY
-          </div>
-        </div>
-      </div>
-      <div id="xpt-market-note" style="margin-bottom:10px;padding:8px 10px;background:var(--ov25);border:1px solid var(--border);border-radius:6px;font-family:Share Tech Mono;font-size:9px;color:var(--dim)">
-        Gold trades ~23hrs × 5 days. New entries only fire during the <b>London/NY session (12:30 PM–11:30 PM IST)</b> — this applies to every layer below, including trendline breaks (your F&O version has no such window, but gold's thin Asian-session liquidity makes even a valid trendline break less trustworthy there, so it's kept gated here). Each tick checks, in order: a <b>liquidity sweep reversal</b> (rare by design), then a <b>14-bar pivot trendline break</b> (same ATR-decay logic as your F&O Trendline Breakout), then an <b>Asian-range breakout</b> (first 2hrs after London opens), then falls back to <b>EMA/RSI/MACD(12,26,9)/session-VWAP+DXY</b> — same building blocks as Nifty Pro V2, gated by an <b>ADX(14) regime filter</b>. "VWAP" here is a session-average-price proxy, not true volume-weighted — free forex feeds don't carry volume. Engine pauses on the weekend gap and force-squares any open position before Friday's close.
-      </div>
-      <div style="font-family:Orbitron;font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px">ENGINE LOG</div>
-      <div id="xpt-log" style="max-height:110px;overflow-y:auto;font-family:Share Tech Mono;font-size:9px;color:var(--dim);background:var(--ov25);border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
-    </div>
-  </div>
-
-  <!-- Open Position -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph"><div class="pt">🔓 OPEN POSITION</div><span id="xpt-open-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 positions</span></div>
-    <div id="xpt-open-list" style="padding:10px">
-      <div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open position. Turn the engine ON above ↑</div>
-    </div>
-  </div>
-
-  <!-- Trade History -->
-  <div class="panel" style="margin-bottom:10px">
-    <div class="ph"><div class="pt">📜 TRADE HISTORY</div><span id="xpt-closed-count" style="font-family:Share Tech Mono;font-size:9px;color:var(--dim)">0 closed trades</span></div>
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-family:Share Tech Mono;font-size:10px;min-width:820px">
-        <thead><tr style="background:var(--ov3)">
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">SIDE</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">DATE</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">QTY (oz)</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">ENTRY ₹/oz</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">EXIT ₹/oz</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">NET P&amp;L ₹</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">REASON</th>
-          <th style="padding:8px 10px;text-align:left;font-family:Orbitron;font-size:8px;color:var(--dim);border-bottom:1px solid var(--border);letter-spacing:1px">RESULT</th>
-        </tr></thead>
-        <tbody id="xpt-history-body">
-          <tr><td colspan="10" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-<!-- ══ END GOLD (XAUUSD) PAGE ══ -->
-
 <div class="page" id="page-admin">
 
 <!-- Header -->
@@ -8859,9 +8602,7 @@ function showPage(id,btn){
         try{ ptInit(); ptRefreshUI(); }catch(e){}
         try{ advTab('backtest', document.getElementById('adv-tab-backtest')); }catch(e){}
       }
-      if(id==='gold'){
-        try{ xptInit(); xptRefreshUI(); xptEnsureTicker(); }catch(e){}
-      }
+      
       if(id==='stockadv'){
         try{ stockAdvTab('paper', null); }catch(e){}
       }
@@ -17427,6 +17168,31 @@ function ptReset() {
   ptRefreshUI();
 }
 
+// One-time cleanup: ORB+VWAP, Trendline, JARVIS (the old composite
+// EMA+RSI+MACD engine), and Auto (unspecified) were all retired —
+// backend no longer generates new trades under these, and their
+// checkboxes/UI are gone. This removes their EXISTING historical trade
+// records from this portfolio too, so old data doesn't linger and skew
+// Strategy Health / P&L stats after they're gone. Cash is recalculated
+// from whatever trades remain, exactly as if the retired ones had never
+// happened. Also re-syncs to the cloud afterward, so the same cleanup
+// reaches your Supabase-backed copy — it does NOT touch your backend's
+// own separate paper_trades/signals tables (see chat for the SQL to
+// clean those directly, since this runs in the browser only).
+function ptPurgeRetiredStrategies() {
+  var retired = ['orb_vwap', 'trendline', 'jarvis', 'auto'];
+  if (!PT_PORTFOLIO || !PT_PORTFOLIO.trades) { alert('No paper trading portfolio loaded yet.'); return; }
+  var toRemove = PT_PORTFOLIO.trades.filter(function(t){ return retired.indexOf(t.strategy) !== -1; });
+  if (!toRemove.length) { alert('No trades found tagged ORB+VWAP, Trendline, JARVIS, or Auto (unspecified) — nothing to remove.'); return; }
+  if (!confirm('This will PERMANENTLY delete ' + toRemove.length + ' trade' + (toRemove.length===1?'':'s') + ' tagged ORB+VWAP, Trendline, JARVIS, or Auto (unspecified) from this browser\'s paper trading history, and update your synced cloud copy to match. This cannot be undone. Continue?')) return;
+  PT_PORTFOLIO.trades = PT_PORTFOLIO.trades.filter(function(t){ return retired.indexOf(t.strategy) === -1; });
+  ptRecalculateCash();
+  ptSave();
+  ptSyncCloud();
+  ptRefreshUI();
+  alert('Removed ' + toRemove.length + ' trade(s). Cash and stats recalculated from the remaining trades.');
+}
+
 function ptAddTrade() {
   if (!PT_PORTFOLIO) ptInit();
   var instr  = document.getElementById('pt-instr').value.trim();
@@ -17689,9 +17455,9 @@ function ptToggleTrail(id) {
 
 function ptStrategyLabel(key) {
   var labels = {
-    pcr_ema_vix: 'PCR+EMA21+VIX', trendline: 'Trendline Breakout', trendline_confirmed: 'Trendline+Confirm',
+    pcr_ema_vix: 'PCR+EMA21+VIX', trendline_confirmed: 'Trendline+Confirm',
     quality_breakout: 'Quality Breakout', nifty_pro_v15: 'Nifty Pro V1.5', nifty_pro_v2: 'Nifty Pro V2',
-    orb_vwap: 'ORB + VWAP', quality_orb_vwap: 'Quality ORB+VWAP',
+    quality_orb_vwap: 'Quality ORB+VWAP',
     oi_buildup: 'OI Buildup', pipeline_test: 'Pipeline Test (removed)', manual: 'Manual', auto: 'Auto (unspecified)'
   };
   if (labels[key]) return labels[key];
@@ -19992,14 +19758,12 @@ var ASE_STRATEGIES = ['trendline']; // multi-select: every strategy in this list
 //  drift is).
 // ══════════════════════════════════════════════════════════════════
 var STRATEGY_REGISTRY = {
-  trendline:            { label: 'Trendline Breakout (5-min)',                         shortLabel: 'Trendline',     needsIntraday: true  },
   trendline_confirmed:  { label: 'Trendline + PCR/EMA Confirmation',                   shortLabel: 'Trend+Confirm', needsIntraday: true  },
   quality_breakout:     { label: 'Quality Breakout (Regime-Filtered)',                 shortLabel: 'Quality BO',    needsIntraday: true  },
   nifty_pro_v15:        { label: 'Nifty Pro V1.5',                                     shortLabel: 'Nifty Pro V1.5',needsIntraday: true  },
   nifty_pro_v2:         { label: 'Nifty Pro V2 (EMA+VWAP+RSI+MACD+VOL+ATR)',           shortLabel: 'Nifty Pro V2',  needsIntraday: true  },
-  orb_vwap:             { label: 'ORB + VWAP (Opening Range Breakout)',                shortLabel: 'ORB+VWAP',      needsIntraday: true  },
   quality_orb_vwap:     { label: 'Quality ORB+VWAP (Regime-Filtered)',                 shortLabel: 'Quality ORB',   needsIntraday: true  }
-  // pcr_ema_vix and oi_buildup removed (disabled) per user request —
+  // trendline, orb_vwap, pcr_ema_vix and oi_buildup removed (disabled) per user request —
   // no longer selectable or evaluated. Historical trades already logged
   // under these keys still display correctly via ptStrategyLabel's own
   // hardcoded label map below, and remain viewable via the Paper
@@ -20085,12 +19849,10 @@ function aseToggleStrategy(key, checked) {
 function aseApplyStrategyUI() {
   var panels = {
     pcr_ema_vix:          { readout: 'ase-readout-pcr',        rules: 'ase-rules-pcr' },
-    trendline:            { readout: 'ase-readout-trendline',  rules: 'ase-rules-trendline' },
     trendline_confirmed:  { readout: 'ase-readout-confirmed',  rules: 'ase-rules-confirmed' },
     quality_breakout:     { readout: 'ase-readout-quality',    rules: 'ase-rules-quality' },
     nifty_pro_v15:        { readout: 'ase-readout-niftypro',   rules: 'ase-rules-niftypro' },
     nifty_pro_v2:         { readout: 'ase-readout-niftypro2',  rules: 'ase-rules-niftypro2' },
-    orb_vwap:             { readout: 'ase-readout-orb',        rules: 'ase-rules-orb' },
     quality_orb_vwap:     { readout: 'ase-readout-qov',        rules: 'ase-rules-qov' }
   };
   Object.keys(panels).forEach(function(key){
@@ -20288,12 +20050,11 @@ function aseEvaluate() {
     for (var si = 0; si < strategies.length; si++) {
       var s = strategies[si];
       try {
-        if (s === 'trendline') { await aseEvaluateTrendline(); }
-        else if (s === 'trendline_confirmed') { await aseEvaluateTrendlineConfirmed(); }
+        
+        if (s === 'trendline_confirmed') { await aseEvaluateTrendlineConfirmed(); }
         else if (s === 'quality_breakout') { await aseEvaluateQualityBreakout(); }
         else if (s === 'nifty_pro_v15') { await aseEvaluateNiftyProV15(); }
         else if (s === 'nifty_pro_v2') { await aseEvaluateNiftyProV2(); }
-        else if (s === 'orb_vwap') { await aseEvaluateORB(); }
         else if (s === 'quality_orb_vwap') { await aseEvaluateQualityOrbVwap(); }
         // pcr_ema_vix and oi_buildup: disabled per user request — no
         // longer evaluated even if somehow still present in old stored
@@ -20417,16 +20178,6 @@ function aseEvaluatePcrEmaVix() {
   }
 }
 
-// ── TRENDLINE BREAKOUT STRATEGY ──
-// Pulls real 5-min OHLC candles from Angel One, runs the pivot+ATR
-// trendline calc, and auto-logs a paper trade on a confirmed cross.
-// The trendline level itself is in NIFTY index points, not option
-// premium — so the stop-loss is expressed as a % move away from entry
-// equivalent to how far the index would have to retrace to the
-// trendline (rather than a misleading direct rupee figure), then
-// converted to a premium SL the same way the other strategy does.
-var ASE_TL_LAST_CANDLE_TIME = null; // only evaluate once per new closed candle
-
 // ── Catch-up helper (shared by all trendline-based strategies) ──
 // Previously each strategy only ever looked at candles[candles.length-1] —
 // the single newest candle. If Angel One's rate limit briefly blocked a
@@ -20450,108 +20201,6 @@ function aseCandlesToCheck(candles, lastCheckedTime) {
   for (var j = lastIdx + 1; j < candles.length; j++) out.push(j);
   if (out.length > 3) out = out.slice(out.length - 3);
   return out;
-}
-
-async function aseEvaluateTrendline() {
-  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
-  if (!ni || !ni.ltp) { ptSet2('ase-tl-verdict', 'WAITING DATA', 'var(--w)'); return; }
-  ptSet2('ase-tl-ltp', fN(ni.ltp, 0));
-
-  if (!ASE_ON) { ptSet2('ase-tl-verdict', 'OFF', 'var(--dim)'); return; }
-
-  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
-    ptSet2('ase-tl-verdict', 'NEED BROKER LOGIN', 'var(--w)');
-    aseLog('Trendline strategy needs Angel One login for 5-min candle history — connect via SETUP.');
-    return;
-  }
-
-  // Reuse the candles aseRefreshChart() just fetched for the chart above —
-  // avoids a duplicate Angel One historical-candle call every cycle.
-  var candles = ASE_LAST_CANDLES;
-  if (!candles || candles.length < TL_LOOKBACK * 2 + 3) {
-    ptSet2('ase-tl-verdict', 'BUILDING CANDLES', 'var(--w)');
-    ptSet2('ase-tl-candles', candles ? candles.length : 0);
-    return;
-  }
-  ptSet2('ase-tl-candles', candles.length);
-
-  var tl = calcTrendlines(candles.slice(0, -1)); // trendline as of the last CLOSED candle
-  ptSet2('ase-tl-upper', tl && tl.upperNow != null ? fN(tl.upperNow, 1) : '—');
-  ptSet2('ase-tl-lower', tl && tl.lowerNow != null ? fN(tl.lowerNow, 1) : '—');
-
-  // Only act once per newly closed candle, not on every 15s poll, since
-  // the trendline itself only changes when a new 5-min candle closes.
-  var latestCandleTime = candles[candles.length - 1].time;
-  if (ASE_TL_LAST_CANDLE_TIME === latestCandleTime) {
-    ptSet2('ase-tl-verdict', 'NO NEW CANDLE', 'var(--dim)');
-    return;
-  }
-
-  // Check every candle closed since the last successful check, not just
-  // the newest — catches up on a candle Angel One's rate limit may have
-  // blocked us from seeing in real time. Stops at the first qualifying
-  // candle found (oldest first) to avoid stacking multiple backdated
-  // trades from one outage.
-  var toCheck = aseCandlesToCheck(candles, ASE_TL_LAST_CANDLE_TIME);
-  var breakout = null, breakoutIdx = candles.length - 1;
-  for (var ci = 0; ci < toCheck.length; ci++) {
-    var idx = toCheck[ci];
-    var b = checkTrendlineBreakout(candles.slice(0, idx), candles[idx-1].close, candles[idx].close);
-    if (b) { breakout = b; breakoutIdx = idx; break; }
-  }
-
-  if (!breakout) {
-    ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
-    ptSet2('ase-tl-verdict', 'NO BREAKOUT', 'var(--dim)');
-    return;
-  }
-  if (breakoutIdx !== candles.length - 1) {
-    aseLog('📼 Catch-up: found a real Trendline breakout on an earlier candle (' + candles[breakoutIdx].time + ') that a data gap had delayed checking.');
-  }
-
-  ptSet2('ase-tl-verdict', 'BUY ' + breakout.type, breakout.type === 'CE' ? 'var(--g)' : 'var(--r)');
-
-  var dedupeKey = candles[breakoutIdx].time + '_' + breakout.type;
-  if (ASE_LAST_LOGGED_KEY['trendline'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact signal ("+dedupeKey+") — skipping."); ASE_TL_LAST_CANDLE_TIME = latestCandleTime; return; }
-
-  var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPriceStrict('NIFTY', strike, breakout.type === 'CE' ? 'ce' : 'pe');
-  if (!chainLtp || chainLtp <= 0) {
-    ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
-    aseLog('Trendline breakout found ('+breakout.type+') but no chain price available — skipped.');
-    return;
-  }
-
-  // SL at the trendline level (index points) converted to an equivalent
-  // premium retracement: how far price would have to move back through
-  // the line, as a % of the move from the pivot, applied to premium.
-  // v1.1 recalibration (13 Aug 2026): the old clamp allowed up to 60% of
-  // premium as the stop distance — real trade history showed this
-  // strategy's avg loss (-17.1%) running nearly 1.5x its avg win
-  // (+12.2%), an inverted risk:reward that erodes edge even at a
-  // positive win rate. Tightening the max clamp caps how large any
-  // single loss can be, without changing the entry/breakout logic itself.
-  var idxMoveAtEntry = Math.abs(ni.ltp - breakout.slLevel);
-  var slPct = Math.min(0.30, Math.max(0.12, idxMoveAtEntry / ni.ltp * 8)); // scaled, clamped 12-30% (was 15-60%)
-  var target = Math.round(chainLtp * 1.40 / 5) * 5; // +40% premium gain, same convention as the other strategy
-  var sl     = Math.round(chainLtp * (1 - slPct) / 5) * 5;
-  var instr  = 'NIFTY ' + strike + breakout.type + ' ' + getNiftyExpiry();
-  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
-
-  var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'trendline',
-    signalType: 'BUY ' + breakout.type,
-    reasons: 'Trendline ' + breakout.line + ' · SL line @ ' + fN(breakout.slLevel,1) + ' · 5-min, 14-bar pivot'
-  });
-
-  ASE_TL_LAST_CANDLE_TIME = latestCandleTime;
-  if (res && res.trade) {
-    ASE_LAST_LOGGED_KEY['trendline'] = dedupeKey;
-    aseLog('✅ Trendline auto-logged BUY '+breakout.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+') — '+breakout.line);
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Trendline Breakout', 'trendline', instr, chainLtp, target, sl, res.trade.reasons);
-  } else if (res && res.error) {
-    aseLog('⚠ Trendline breakout found but could not log: ' + res.error);
-  }
 }
 
 // ── TRENDLINE + PCR/EMA CONFIRMATION STRATEGY ──
@@ -21188,136 +20837,6 @@ async function aseEvaluateNiftyProV2() {
     if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('Nifty Pro V2', 'nifty_pro_v2', instr, chainLtp, target, sl, res.trade.reasons);
   } else if (res && res.error) {
     aseLog('⚠ Nifty Pro V2 signal found but could not log: ' + res.error);
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  ORB + VWAP — strategy #7 live evaluator
-//  Calls the exact same orbComputeSignal() the backtest runner uses (see
-//  block comment near that function for the full design), so live and
-//  backtest can't quietly diverge on the entry math the way a from-
-//  scratch reimplementation could.
-// ══════════════════════════════════════════════════════════════════
-var ASE_ORB_LAST_CANDLE_TIME = null;
-
-function aseOrbTradedToday() {
-  var todayKey = getIST().toLocaleDateString('en-CA');
-  return (PT_PORTFOLIO && PT_PORTFOLIO.trades || []).some(function(t){
-    return t.dayKey === todayKey && t.reasons && t.reasons.indexOf('ORBVWAP') !== -1;
-  });
-}
-
-async function aseEvaluateORB() {
-  var ni = (typeof LD !== 'undefined') ? LD.NIFTY50 : null;
-  if (!ni || !ni.ltp) { ptSet2('ase-orb-verdict', 'WAITING DATA', 'var(--w)'); return; }
-
-  if (!ASE_ON) { ptSet2('ase-orb-verdict', 'OFF', 'var(--dim)'); return; }
-
-  if (typeof creds === 'undefined' || !creds.jwt || !creds.connected) {
-    ptSet2('ase-orb-verdict', 'NEED BROKER LOGIN', 'var(--w)');
-    aseLog('ORB + VWAP needs Angel One login for 5-min candle history — connect via SETUP.');
-    return;
-  }
-
-  var candles = ASE_LAST_CANDLES;
-  if (!candles || candles.length < 20) {
-    ptSet2('ase-orb-verdict', 'BUILDING CANDLES', 'var(--w)');
-    return;
-  }
-
-  var latestCandleTime = candles[candles.length - 1].time;
-  var tradedToday = aseOrbTradedToday();
-  ptSet2('ase-orb-tradedtoday', tradedToday ? 'YES' : 'NO', tradedToday ? 'var(--w)' : 'var(--dim)');
-
-  if (ASE_ORB_LAST_CANDLE_TIME === latestCandleTime) {
-    ptSet2('ase-orb-verdict', 'NO NEW CANDLE', 'var(--dim)');
-    return;
-  }
-
-  var dayKeys = candles.map(function(c){ return String(c.time).slice(0,10); });
-  var timeStrings = candles.map(function(c){ return String(c.time).slice(11,16); });
-  var vwapSeries = calcSessionVWAP(candles, dayKeys);
-  var orSeries = orbBuildDailyRanges(candles, dayKeys);
-
-  // Live readout always reflects the latest bar, regardless of catch-up scanning below.
-  var latestI = candles.length - 1;
-  var orNow = orSeries[latestI];
-  var rsiNow = latestI >= 14 ? calcRSI(candles.slice(0, latestI+1).map(function(c){ return c.close; }), 14) : null;
-  ptSet2('ase-orb-range', orNow ? ('₹'+fN(orNow.low,0)+' - ₹'+fN(orNow.high,0)) : 'FORMING', orNow ? 'var(--txt)' : 'var(--w)');
-  ptSet2('ase-orb-vwap', candles[latestI].close > vwapSeries[latestI] ? 'ABOVE' : 'BELOW', candles[latestI].close > vwapSeries[latestI] ? 'var(--g)' : 'var(--r)');
-  ptSet2('ase-orb-rsi', rsiNow != null ? rsiNow.toFixed(1) : '—');
-
-  if (tradedToday) {
-    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
-    ptSet2('ase-orb-verdict', 'ALREADY TRADED TODAY', 'var(--w)');
-    return;
-  }
-  if (!orNow) {
-    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
-    ptSet2('ase-orb-verdict', 'FORMING OPENING RANGE', 'var(--w)');
-    return;
-  }
-
-  // Catch-up scan: check every bar missed since the last poll (same pattern
-  // Quality Breakout uses), not just the single newest one. Without this,
-  // a delayed/dropped poll cycle around the exact qualifying candle meant
-  // that candle was gone forever and the strategy only fired later when a
-  // different bar happened to independently qualify — producing a real
-  // entry-time lag behind the backtest for no underlying strategy reason.
-  var toCheck = aseCandlesToCheck(candles, ASE_ORB_LAST_CANDLE_TIME);
-  var sig = null, i = latestI;
-  for (var ci = 0; ci < toCheck.length; ci++) {
-    var idx = toCheck[ci];
-    var s = orbComputeSignal(candles, idx, orSeries, vwapSeries, timeStrings);
-    if (s) { sig = s; i = idx; break; } // fire on the earliest qualifying bar in the catch-up window
-  }
-
-  if (!sig) {
-    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
-    ptSet2('ase-orb-verdict', 'NO SIGNAL', 'var(--dim)');
-    return;
-  }
-
-  ptSet2('ase-orb-verdict', 'BUY ' + sig.type, sig.type === 'CE' ? 'var(--g)' : 'var(--r)');
-
-  var dedupeKey = 'ORB_' + candles[i].time + '_' + sig.type;
-  if (ASE_LAST_LOGGED_KEY['orb_vwap'] === dedupeKey) { console.log("[AutoSignalEngine] dedupe: already logged this exact ORB signal ("+dedupeKey+") — skipping."); return; }
-
-  var strike = getATMStrike(ni.ltp, 50);
-  var chainLtp = getChainPriceStrict('NIFTY', strike, sig.type === 'CE' ? 'ce' : 'pe');
-  if (!chainLtp || chainLtp <= 0) {
-    ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
-    aseLog('ORB + VWAP signal found ('+sig.type+') but no chain price available — skipped.');
-    return;
-  }
-
-  // v1.1 recalibration (13 Aug 2026): real trade history showed ORB+VWAP's
-  // avg loss (-10.8%) running over 2x its avg win (+4.6%) — the 1:1.5
-  // R:R design was sound on paper, but combined with trailing SL capping
-  // wins early (see PT_TRAIL_ARM_PCT/LOCK_PCT above) while losses ran the
-  // full designed distance, the net effect was inverted. Tightening the
-  // max risk clamp caps single-trade loss size; the trailing-SL fix
-  // above should do most of the work of letting winners actually run.
-  var riskPct = Math.min(0.22, Math.max(0.08, sig.risk / ni.ltp * 8)); // clamped 8-22% (was 10-35%)
-  var rewardPct = riskPct * 1.5; // R:R 1:1.5, matches the backtest runner
-  var sl     = Math.round(chainLtp * (1 - riskPct) / 5) * 5;
-  var target = Math.round(chainLtp * (1 + rewardPct) / 5) * 5;
-  var instr  = 'NIFTY ' + strike + sig.type + ' ' + getNiftyExpiry();
-  var lotQty = 65; // NIFTY lot size (revised from 75 to 65, effective 31-Dec-2025)
-
-  var res = ptAddAutoTrade({
-    instr: instr, buy: chainLtp, qty: lotQty, target: target, sl: sl, strategy: 'orb_vwap',
-    signalType: 'BUY ' + sig.type,
-    reasons: 'ORBVWAP · Opening-range break + VWAP + RSI + volume aligned · R:R 1:1.5 · index SL @ ' + fN(sig.sl,1) + (i !== latestI ? ' · caught up from ' + candles[i].time.slice(11,16) : '')
-  });
-
-  ASE_ORB_LAST_CANDLE_TIME = latestCandleTime;
-  if (res && res.trade) {
-    ASE_LAST_LOGGED_KEY['orb_vwap'] = dedupeKey;
-    aseLog('✅ ORB + VWAP auto-logged BUY '+sig.type+' '+instr+' @ ₹'+chainLtp+' (TGT ₹'+target+' / SL ₹'+sl+', R:R 1:1.5) — one trade/day used');
-    if (typeof jarvisNotifyFOCall==='function') jarvisNotifyFOCall('ORB + VWAP', 'orb_vwap', instr, chainLtp, target, sl, res.trade.reasons);
-  } else if (res && res.error) {
-    aseLog('⚠ ORB + VWAP signal found but could not log: ' + res.error);
   }
 }
 
@@ -25077,1021 +24596,6 @@ setTimeout(injectApiStatus, 2000);
 
 console.log('[JARVIS] Auto-connect + role UI loaded');
 
-})();
-</script>
-
-<script>
-// ══════════════════════════════════════════════════════════════════
-//  XAUUSD (GOLD) AUTO PAPER TRADING — "XPT" module
-//  Fully client-side, independent of Angel One (no XAUUSD feed there).
-//  Price: Yahoo Finance XAUUSD=X, same rotating-proxy pattern as
-//  fetchSensex(). FX: Yahoo USDINR=X, same pattern. Signals: EMA9/EMA21
-//  + RSI14, same math as calcEMA/calcRSI/runSignalEngine (3-of-4
-//  conditions). One open position at a time, auto entry+exit, no
-//  manual trade entry. Position size in micro-lots (1 micro-lot = 1 oz).
-//  P&L bookkeeping done entirely in ₹ (INR) — the live USD price is
-//  converted to ₹/oz on every tick before any math touches it.
-// ══════════════════════════════════════════════════════════════════
-
-var XPT_INITIAL = 1000000;          // ₹10 Lakh, same starting capital as other paper portfolios
-var XPT_TARGET_PCT = 0.006;         // +0.6% target
-var XPT_SL_PCT = 0.0035;            // -0.35% stop loss (~1.7:1 reward:risk)
-var XPT_TRAIL_ARM_PCT = 0.55;       // same trailing constants as paperTrading.js (F&O)
-var XPT_TRAIL_LOCK_PCT = 0.60;
-var XPT_BROKERAGE_PER_TRADE = 50;   // flat ₹50 round-trip cost per trade (spread/slippage proxy)
-var XPT_POLL_MS = 15000;            // 15s — was 30s; halves worst-case staleness
-var XPT_LAST_TICK_OK = null;        // Date of the last tick that actually got a price (not just the last attempt)
-var XPT_LAST_SOURCE = null;         // 'oanda' or 'yahoo' — which feed the current price actually came from
-
-var XPT_PORTFOLIO = null;
-var XPT_TICKER = null;
-var XPT_USDINR = 95.4;              // fallback if the FX fetch never once succeeds (updated Sep 2026 — was stuck at a stale 83.5 before)
-var XPT_LAST_USD_PRICE = null;
-var XPT_HISTORY_INR = [];           // rolling ₹/oz closes, for EMA/RSI
-
-function xptLog(msg) {
-  if (!XPT_PORTFOLIO) return;
-  XPT_PORTFOLIO.log = XPT_PORTFOLIO.log || [];
-  XPT_PORTFOLIO.log.unshift(new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' — ' + msg);
-  if (XPT_PORTFOLIO.log.length > 40) XPT_PORTFOLIO.log.length = 40;
-  var el = document.getElementById('xpt-log');
-  if (el) el.innerHTML = XPT_PORTFOLIO.log.map(function(l){ return '<div>' + l + '</div>'; }).join('');
-}
-
-function xptInit() {
-  var stored = null;
-  try { stored = JSON.parse(localStorage.getItem('jarvis_xpt_portfolio')); } catch(e) {}
-  if (stored && stored.version === 1) {
-    XPT_PORTFOLIO = stored;
-  } else {
-    XPT_PORTFOLIO = { version: 1, cash: XPT_INITIAL, startCapital: XPT_INITIAL, trades: [], engineOn: false, log: [] };
-    xptSave();
-  }
-  xptRecalculateCash();
-  var toggle = document.getElementById('xpt-toggle');
-  if (toggle) toggle.checked = !!XPT_PORTFOLIO.engineOn;
-  xptRenderToggle();
-  xptRestoreStrategySelection();
-  xptRenderAllStrategyChips();
-
-  // Restore Finnhub setup field + status from whatever's already saved
-  var fhEl = document.getElementById('xpt-fh-key'); if (fhEl && xptFinnhub.key) fhEl.value = xptFinnhub.key;
-  if (xptFinnhubConfigured()) {
-    xptFinnhubSetStatus('Reconnecting WebSocket…', null);
-    xptWSConnect(false).then(function(ok){
-      xptFinnhubSetStatus(ok ? '✅ Live — WebSocket ticks flowing (history/context still via Yahoo)' : '⚠️ Saved key, but no ticks yet — retrying in background', ok ? true : null);
-    });
-  } else {
-    xptFinnhubSetStatus('Not connected — using free Yahoo feed', null);
-  }
-}
-
-function xptSave() {
-  if (!XPT_PORTFOLIO) return;
-  try { localStorage.setItem('jarvis_xpt_portfolio', JSON.stringify(XPT_PORTFOLIO)); } catch(e) {}
-  xptSyncCloud();
-}
-
-// Same self-heal pattern as ptRecalculateCash/sptRecalculateCash — cash
-// is always derivable from startCapital - openCost + closedNet, so any
-// drift (bad write, interrupted session) is corrected on every load.
-function xptRecalculateCash() {
-  if (!XPT_PORTFOLIO) return 0;
-  var openCost = XPT_PORTFOLIO.trades.filter(function(t){ return t.status==='OPEN'; })
-    .reduce(function(s,t){ return s + (t.cost||0); }, 0);
-  var closedNet = XPT_PORTFOLIO.trades.filter(function(t){ return t.status!=='OPEN'; })
-    .reduce(function(s,t){ return s + (t.net||0); }, 0);
-  var correct = XPT_PORTFOLIO.startCapital - openCost + closedNet;
-  var diff = correct - XPT_PORTFOLIO.cash;
-  if (Math.abs(diff) > 0.5) XPT_PORTFOLIO.cash = correct;
-  return diff;
-}
-
-// Cloud sync — same generic 'reports' table + debounce/merge pattern
-// used by ptSyncCloud/sptSyncCloud, under its own report_type so the
-// three portfolios never collide.
-var XPT_CLOUD_SYNC_PENDING = false;
-async function xptSyncCloud() {
-  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
-  if (!XPT_PORTFOLIO || XPT_CLOUD_SYNC_PENDING) return;
-  XPT_CLOUD_SYNC_PENDING = true;
-  setTimeout(async function(){
-    XPT_CLOUD_SYNC_PENDING = false;
-    try {
-      await supaFetch('/rest/v1/reports?on_conflict=user_id,report_type', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({
-          user_id: window.SUPA_USER.id,
-          report_type: 'xau_paper_trades',
-          title: 'XAUUSD Paper Trading Portfolio',
-          content: JSON.stringify(XPT_PORTFOLIO),
-          metadata: { trade_count: XPT_PORTFOLIO.trades.length, updated_at: new Date().toISOString() }
-        })
-      });
-    } catch(e) { console.warn('[XPT] cloud sync failed', e); }
-  }, 800);
-}
-
-async function xptCloudLoad() {
-  if (typeof window.SUPA_USER === 'undefined' || !window.SUPA_USER || typeof supaFetch !== 'function') return;
-  try {
-    var r = await supaFetch('/rest/v1/reports?report_type=eq.xau_paper_trades&user_id=eq.'+window.SUPA_USER.id+'&select=content&limit=1');
-    if (r && r.data && r.data[0] && r.data[0].content) {
-      var cloud = JSON.parse(r.data[0].content);
-      if (cloud && cloud.version === 1 && (!XPT_PORTFOLIO || (cloud.trades||[]).length > (XPT_PORTFOLIO.trades||[]).length)) {
-        XPT_PORTFOLIO = cloud;
-        xptRecalculateCash();
-        xptSave();
-        xptRefreshUI();
-      }
-    }
-  } catch(e) { console.warn('[XPT] cloud load failed', e); }
-}
-
-function xptReset() {
-  if (!confirm('Reset the virtual XAUUSD portfolio to ₹10,00,000? All gold paper trades will be cleared.')) return;
-  localStorage.removeItem('jarvis_xpt_portfolio');
-  XPT_PORTFOLIO = null;
-  XPT_HISTORY_INR = [];
-  xptInit();
-  xptRefreshUI();
-  xptSyncCloud();
-}
-
-// ── Price feed: XAUUSD=X and USDINR=X via Yahoo, same rotating-proxy
-// trick as fetchSensex(). Returns both the live quote AND the day's
-// intraday closes, so EMA21/RSI14 can be seeded immediately instead of
-// waiting ~11 minutes for 22 live ticks to accumulate.
-async function xptFetchYahoo(symbol) {
-  var yUrl  = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1d&interval=5m';
-  var y2Url = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1d&interval=5m';
-  var proxies = [
-    'https://corsproxy.io/?url=' + encodeURIComponent(yUrl),
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(yUrl),
-    'https://corsproxy.io/?url=' + encodeURIComponent(y2Url),
-    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(yUrl)
-  ];
-  for (var pi = 0; pi < proxies.length; pi++) {
-    try {
-      var res = await Promise.race([
-        fetch(proxies[pi], { mode:'cors', cache:'no-store' }).catch(function(){ return null; }),
-        new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 5000); })
-      ]).catch(function(){ return null; });
-      if (!res || !res.ok) continue;
-      var d = null;
-      try { d = await res.json(); } catch(e) { continue; }
-      var result = d && d.chart && d.chart.result && d.chart.result[0];
-      var meta = result && result.meta;
-      if (!meta || !meta.regularMarketPrice) continue;
-      var closes = [], highs = [], lows = [];
-      try {
-        var q = result.indicators && result.indicators.quote && result.indicators.quote[0];
-        if (q && Array.isArray(q.close)) {
-          // Keep close/high/low index-aligned (needed for true-range/ATR) —
-          // filter all three together on close being valid, not each array
-          // independently, or they'd drift out of alignment.
-          for (var qi = 0; qi < q.close.length; qi++) {
-            if (q.close[qi] == null || q.close[qi] <= 0) continue;
-            closes.push(q.close[qi]);
-            highs.push(q.high && q.high[qi] != null ? q.high[qi] : q.close[qi]);
-            lows.push(q.low && q.low[qi] != null ? q.low[qi] : q.close[qi]);
-          }
-        }
-      } catch(e) {}
-      return { ltp: meta.regularMarketPrice, prevClose: meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice, closes: closes, highs: highs, lows: lows };
-    } catch(e) { /* try next proxy */ }
-  }
-  return null;
-}
-
-// Candle data (for prevClose + EMA/RSI/ATR seed) still comes from
-// Yahoo — Finnhub's REST candle endpoint is paid-only, but its
-// WebSocket trade stream isn't, so we use Yahoo for context and layer
-// the freshest WebSocket tick on top when one has arrived recently.
-async function xptFetchGold() {
-  var y = await xptFetchYahoo('XAUUSD=X');
-  var wsFresh = XPT_WS_LAST_PRICE && (Date.now() - XPT_WS_LAST_AT) < 30000;
-  if (y) {
-    y.source = 'yahoo';
-    if (wsFresh) { y.ltp = XPT_WS_LAST_PRICE; y.source = 'finnhub-ws'; }
-    return y;
-  }
-  // Yahoo failed this tick (proxies blocked on this network, most likely)
-  // — if the WebSocket has delivered a fresh tick anyway, use it rather
-  // than blanking the whole display. EMA/RSI/ATR context will just
-  // build up gradually from live ticks instead of Yahoo's seed history.
-  if (wsFresh) {
-    return { ltp: XPT_WS_LAST_PRICE, prevClose: XPT_WS_LAST_PRICE, closes: [], highs: [], lows: [], source: 'finnhub-ws' };
-  }
-  return null;
-}
-async function xptFetchUSDINR() { return xptFetchYahoo('USDINR=X'); }
-
-// ── Market hours: gold trades ~23h x 5 days. Closed Saturday, and
-// Sunday until the Monday-morning Asia open (~6:30 AM IST). This is a
-// simplification (skips the brief daily NY-close/Asia-open gap) —
-// good enough for paper trading, not a precision forex-session model.
-function xptMarketOpen() {
-  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  var day = ist.getDay(), hour = ist.getHours();
-  if (day === 6) return false;                 // Saturday: fully closed
-  if (day === 0 && hour < 6) return false;      // Sunday before ~6 AM IST Monday-session open
-  return true;
-}
-
-function xptIsFridayCloseWindow() {
-  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  return ist.getDay() === 5 && ist.getHours() >= 23; // Fri 11PM IST — force flat before the weekend gap
-}
-
-// ── Session filter: gold is thin/choppy through the Asian session
-// (roughly midnight–12:30 PM IST) and does most of its real directional
-// moving during London (from 12:30 PM IST) through the London/NY
-// overlap and into the NY session (to ~11:30 PM IST). New AUTO entries
-// are restricted to this window — open positions still get managed
-// (trailed/exited) round the clock regardless of session.
-function xptInSession() {
-  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  var mins = ist.getHours() * 60 + ist.getMinutes();
-  return mins >= (12*60+30) && mins <= (23*60+30); // 12:30 PM – 11:30 PM IST
-}
-
-// ── ATR (Average True Range) — same true-range formula used everywhere
-// (max of high-low, |high-prevClose|, |low-prevClose|), simple moving
-// average over `period` bars. Feeds volatility-adjusted target/SL below
-// instead of a fixed % that's too tight in fast markets and too loose
-// in quiet ones.
-var XPT_HIGH_HISTORY = [];
-var XPT_LOW_HISTORY = [];
-var XPT_LAST_SESSION_STATE = null; // tracks session on/off so the log only fires on the transition
-
-// ── Finnhub live data integration, take 2 — WEBSOCKET, not REST.
-// The REST /forex/candle endpoint (tried first) turned out to be
-// gated behind Finnhub's paid plan even on a "free" key — confirmed by
-// years of other users hitting the same 403. Their raw trade
-// WebSocket has historically stayed open on free keys instead (it's
-// how they hook people into wanting the paid REST access), so that's
-// what this uses. Design: Yahoo still supplies the historical candle
-// series (EMA/RSI/ATR context, prevClose) since that keeps working;
-// the WebSocket only supplies the single freshest live tick, which
-// overrides Yahoo's price when it's arrived in the last 30s. This is
-// a genuine improvement (faster real ticks) layered on top of what
-// already works — not a full broker-grade replacement.
-var xptFinnhub = { key: localStorage.getItem('ja_finnhub_key') || '' };
-function xptFinnhubConfigured() { return !!xptFinnhub.key; }
-
-var XPT_WS = null;
-var XPT_WS_LAST_PRICE = null;
-var XPT_WS_LAST_AT = 0;
-var XPT_WS_RECONNECT_TIMER = null;
-
-function xptFinnhubSetStatus(text, ok) {
-  var el = document.getElementById('xpt-fh-status');
-  if (!el) return;
-  el.textContent = text;
-  el.style.color = ok === true ? 'var(--g)' : ok === false ? 'var(--r)' : 'var(--dim)';
-}
-
-function xptWSClose() {
-  if (XPT_WS_RECONNECT_TIMER) { clearTimeout(XPT_WS_RECONNECT_TIMER); XPT_WS_RECONNECT_TIMER = null; }
-  if (XPT_WS) { try { XPT_WS.onclose = null; XPT_WS.close(); } catch(e) {} XPT_WS = null; }
-  XPT_WS_LAST_PRICE = null;
-}
-
-function xptFinnhubClear() {
-  localStorage.removeItem('ja_finnhub_key');
-  xptFinnhub = { key: '' };
-  var k = document.getElementById('xpt-fh-key'); if (k) k.value = '';
-  xptWSClose();
-  xptFinnhubSetStatus('Not connected — using free Yahoo feed', null);
-  xptLog('Finnhub key cleared — back to Yahoo-only');
-}
-
-// Opens the WebSocket, subscribes to XAUUSD trades, and resolves true/
-// false once we've either received a first trade or timed out (~8s) —
-// used both for the initial "Save & Test" and silent reconnects.
-function xptWSConnect(isTest) {
-  return new Promise(function(resolve) {
-    if (!xptFinnhubConfigured()) { resolve(false); return; }
-    xptWSClose();
-    var settled = false;
-    var timer = setTimeout(function(){ if (!settled) { settled = true; resolve(false); } }, 8000);
-    try {
-      var ws = new WebSocket('wss://ws.finnhub.io?token=' + encodeURIComponent(xptFinnhub.key));
-      XPT_WS = ws;
-      ws.onopen = function() {
-        try { ws.send(JSON.stringify({ type:'subscribe', symbol:'OANDA:XAU_USD' })); } catch(e) {}
-      };
-      ws.onmessage = function(evt) {
-        var d; try { d = JSON.parse(evt.data); } catch(e) { return; }
-        if (d && d.type === 'trade' && Array.isArray(d.data) && d.data.length) {
-          var last = d.data[d.data.length - 1];
-          if (last && last.p) {
-            XPT_WS_LAST_PRICE = last.p;
-            XPT_WS_LAST_AT = Date.now();
-            if (!settled) { settled = true; clearTimeout(timer); resolve(true); }
-          }
-        }
-      };
-      ws.onerror = function() { if (!settled) { settled = true; clearTimeout(timer); resolve(false); } };
-      ws.onclose = function() {
-        if (!settled) { settled = true; clearTimeout(timer); resolve(false); }
-        // Auto-reconnect after 15s as long as a key is still set and this
-        // wasn't an intentional close from xptFinnhubClear().
-        if (xptFinnhubConfigured() && XPT_WS === ws) {
-          XPT_WS_RECONNECT_TIMER = setTimeout(function(){ xptWSConnect(false); }, 15000);
-        }
-      };
-    } catch(e) { if (!settled) { settled = true; clearTimeout(timer); resolve(false); } }
-  });
-}
-
-async function xptFinnhubSave() {
-  var key = (document.getElementById('xpt-fh-key')||{}).value || '';
-  if (!key) { xptFinnhubClear(); return; }
-  xptFinnhub = { key: key.trim() };
-  localStorage.setItem('ja_finnhub_key', xptFinnhub.key);
-  xptFinnhubSetStatus('Connecting WebSocket, waiting for first tick…', null);
-  var ok = await xptWSConnect(true);
-  if (ok) {
-    xptFinnhubSetStatus('✅ Live — WebSocket ticks flowing (history/context still via Yahoo)', true);
-    xptLog('Finnhub WebSocket connected — live ticks now layered on top of Yahoo');
-  } else {
-    xptFinnhubSetStatus('❌ No ticks received in 8s — check the key, staying on Yahoo-only', false);
-    xptLog('Finnhub WebSocket did not deliver a trade in time — check the key');
-  }
-}
-function xptCalcATR(highs, lows, closes, period) {
-  period = period || 14;
-  if (closes.length < period + 1) return null;
-  var trs = [];
-  for (var i = 1; i < closes.length; i++) {
-    var tr = Math.max(
-      highs[i] - lows[i],
-      Math.abs(highs[i] - closes[i-1]),
-      Math.abs(lows[i] - closes[i-1])
-    );
-    trs.push(tr);
-  }
-  var slice = trs.slice(-period);
-  return slice.reduce(function(a,b){ return a+b; }, 0) / slice.length;
-}
-
-// ── MACD(12,26,9) — same parameters as your F&O Nifty Pro V2 engine.
-// Needs a full EMA series (not just calcEMA's single ending value) to
-// get a real signal-line crossover, so this computes its own series
-// rather than reusing calcEMA.
-function xptEmaSeries(closes, period) {
-  var out = new Array(closes.length).fill(null);
-  if (closes.length < period) return out;
-  var seed = 0;
-  for (var i = 0; i < period; i++) seed += closes[i];
-  seed /= period;
-  out[period-1] = seed;
-  var k = 2/(period+1), ema = seed;
-  for (var j = period; j < closes.length; j++) { ema = closes[j]*k + ema*(1-k); out[j] = ema; }
-  return out;
-}
-function xptCalcMACD(closes) {
-  if (closes.length < 35) return null; // needs 26+9 bars minimum, same as macdAt()
-  var ema12 = xptEmaSeries(closes, 12), ema26 = xptEmaSeries(closes, 26);
-  var macdLine = [];
-  for (var i = 0; i < closes.length; i++) macdLine.push((ema12[i]!=null && ema26[i]!=null) ? ema12[i]-ema26[i] : null);
-  var valid = macdLine.filter(function(v){ return v!=null; });
-  if (valid.length < 9) return null;
-  var sig = xptEmaSeries(valid, 9);
-  var line = macdLine[macdLine.length-1], signal = sig[sig.length-1];
-  if (line==null || signal==null) return null;
-  return { line: line, signal: signal, hist: line - signal };
-}
-
-// ── Session "VWAP" — honest caveat: true VWAP needs volume, and the
-// free forex feeds we're using (Yahoo/Finnhub) don't carry volume for
-// XAUUSD. This is a session-average-price proxy (cumulative mean since
-// the day's start), not a real volume-weighted number. Still useful as
-// a trend-bias line, just don't treat it as identical to your F&O
-// VWAP, which does have real NSE volume behind it.
-var XPT_VWAP_SUM = 0, XPT_VWAP_COUNT = 0, XPT_VWAP_DATE = null, XPT_VWAP = null;
-function xptUpdateSessionVWAP(priceInr) {
-  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  var dateStr = ist.toDateString();
-  if (dateStr !== XPT_VWAP_DATE) { XPT_VWAP_DATE = dateStr; XPT_VWAP_SUM = 0; XPT_VWAP_COUNT = 0; }
-  XPT_VWAP_SUM += priceInr; XPT_VWAP_COUNT++;
-  XPT_VWAP = XPT_VWAP_SUM / XPT_VWAP_COUNT;
-}
-
-// ── ADX(14) regime filter — same concept as your F&O "Quality Breakout
-// (Regime-Filtered)": only trust trend-following signals (EMA/RSI/MACD/
-// VWAP below) when the market is actually trending (ADX above
-// threshold). Does NOT gate the liquidity-sweep or Asian-breakout
-// signals above — those work differently and shouldn't be suppressed
-// by a trend-strength filter designed for trend-following entries.
-function xptCalcADX(highs, lows, closes, period) {
-  period = period || 14;
-  if (closes.length < period*2+1) return null;
-  var plusDM=[], minusDM=[], tr=[];
-  for (var i=1;i<closes.length;i++){
-    var up = highs[i]-highs[i-1], down = lows[i-1]-lows[i];
-    plusDM.push(up>down && up>0 ? up : 0);
-    minusDM.push(down>up && down>0 ? down : 0);
-    tr.push(Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1])));
-  }
-  function smooth(arr,p){ var s=[arr.slice(0,p).reduce(function(a,b){return a+b;},0)]; for(var k=p;k<arr.length;k++) s.push(s[s.length-1]-(s[s.length-1]/p)+arr[k]); return s; }
-  var trS=smooth(tr,period), pS=smooth(plusDM,period), mS=smooth(minusDM,period);
-  var dx=[];
-  for (var j=0;j<trS.length;j++){
-    var pdi = trS[j]?(pS[j]/trS[j])*100:0, mdi = trS[j]?(mS[j]/trS[j])*100:0;
-    dx.push((pdi+mdi)?(Math.abs(pdi-mdi)/(pdi+mdi))*100:0);
-  }
-  if (dx.length<period) return null;
-  var slice = dx.slice(-period);
-  return slice.reduce(function(a,b){return a+b;},0)/slice.length;
-}
-
-// ── Auto signal: EMA9/EMA21 + RSI14, 3-of-4 conditions — same shape
-// as runSignalEngine(), applied to the ₹/oz price series instead of
-// Nifty spot.
-// DXY (US Dollar Index) refreshed at most every 2 min — gold moves
-// inversely to the dollar ~70-80% of the time, so it's used here as a
-// confirming vote, not a hard requirement (skips gracefully if it
-// hasn't loaded, so a slow/failed DXY fetch never blocks trading).
-var XPT_DXY_DP = null;
-var XPT_DXY_AT = 0;
-async function xptRefreshDXY() {
-  if (Date.now() - XPT_DXY_AT < 120000) return; // cap DXY calls to once per 2 min
-  var dxy = await xptFetchYahoo('DX-Y.NYB');
-  if (dxy && dxy.prevClose) { XPT_DXY_DP = (dxy.ltp - dxy.prevClose) / dxy.prevClose * 100; XPT_DXY_AT = Date.now(); }
-}
-
-function xptEvaluateSignal(priceInr, dp) {
-  if (XPT_HISTORY_INR.length < 35) return null; // MACD needs 35 bars minimum, so this now gates the whole function
-  // ADX regime filter — same idea as F&O's "Quality Breakout
-  // (Regime-Filtered)": don't trust trend-following signals (this
-  // function only, not the sweep/breakout ones above) when the market
-  // is genuinely directionless/choppy.
-  var adx = xptCalcADX(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
-  if (adx != null && adx < 18) return null;
-
-  var ema9 = calcEMA(XPT_HISTORY_INR, 9);
-  var ema21 = calcEMA(XPT_HISTORY_INR, 21);
-  var rsi = calcRSI(XPT_HISTORY_INR, 14);
-  var macd = xptCalcMACD(XPT_HISTORY_INR);
-  var trend = dp > 0.15 ? 'BULLISH' : dp < -0.15 ? 'BEARISH' : 'NEUTRAL';
-  var dxyKnown = XPT_DXY_DP != null;
-  var macdKnown = macd != null;
-  var vwapKnown = XPT_VWAP != null;
-  var totalConditions = 4 + (dxyKnown?1:0) + (macdKnown?1:0) + (vwapKnown?1:0);
-
-  var longC = 0, longR = [];
-  if (ema9 && ema21 && ema9 > ema21) { longC++; longR.push('EMA9>EMA21'); }
-  if (rsi && rsi > 55) { longC++; longR.push('RSI '+rsi.toFixed(1)+'>55'); }
-  if (trend === 'BULLISH') { longC++; longR.push('Trend Bullish'); }
-  if (dp > 0.3) { longC++; longR.push('Strong +'+dp.toFixed(2)+'%'); }
-  if (dxyKnown && XPT_DXY_DP < -0.05) { longC++; longR.push('DXY falling '+XPT_DXY_DP.toFixed(2)+'%'); }
-  if (macdKnown && macd.line > macd.signal) { longC++; longR.push('MACD bullish'); }
-  if (vwapKnown && priceInr > XPT_VWAP) { longC++; longR.push('Above session VWAP'); }
-
-  var shortC = 0, shortR = [];
-  if (ema9 && ema21 && ema9 < ema21) { shortC++; shortR.push('EMA9<EMA21'); }
-  if (rsi && rsi < 45) { shortC++; shortR.push('RSI '+rsi.toFixed(1)+'<45'); }
-  if (trend === 'BEARISH') { shortC++; shortR.push('Trend Bearish'); }
-  if (dp < -0.3) { shortC++; shortR.push('Strong '+dp.toFixed(2)+'%'); }
-  if (dxyKnown && XPT_DXY_DP > 0.05) { shortC++; shortR.push('DXY rising '+XPT_DXY_DP.toFixed(2)+'%'); }
-  if (macdKnown && macd.line < macd.signal) { shortC++; shortR.push('MACD bearish'); }
-  if (vwapKnown && priceInr < XPT_VWAP) { shortC++; shortR.push('Below session VWAP'); }
-
-  if (longC >= 3 && longC >= shortC) return { side:'BUY', reasons: longR.join(' | '), strength: longC===totalConditions?'STRONG':'MODERATE' };
-  if (shortC >= 3 && shortC > longC) return { side:'SELL', reasons: shortR.join(' | '), strength: shortC===totalConditions?'STRONG':'MODERATE' };
-  return null;
-}
-
-// Asian-range breakout — tracks the day's Asian-session (00:00–12:30
-// IST) high/low, then in the first 2 hours after London opens, a clean
-// break beyond that range (with a 10%-of-range buffer so it's a real
-// break, not just touching the edge) is one of gold's more reliable
-// intraday triggers. Checked before the EMA/RSI engine each tick; if
-// it doesn't fire, falls through to the regular signal as normal.
-var XPT_ASIAN_HIGH = null, XPT_ASIAN_LOW = null, XPT_ASIAN_DATE = null;
-function xptUpdateAsianRange(priceInr) {
-  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  var dateStr = ist.toDateString();
-  var mins = ist.getHours() * 60 + ist.getMinutes();
-  if (dateStr !== XPT_ASIAN_DATE) { XPT_ASIAN_DATE = dateStr; XPT_ASIAN_HIGH = null; XPT_ASIAN_LOW = null; }
-  if (mins < 12*60+30) { // still in the Asian session — keep building today's range
-    XPT_ASIAN_HIGH = XPT_ASIAN_HIGH == null ? priceInr : Math.max(XPT_ASIAN_HIGH, priceInr);
-    XPT_ASIAN_LOW  = XPT_ASIAN_LOW  == null ? priceInr : Math.min(XPT_ASIAN_LOW, priceInr);
-  }
-}
-
-// Liquidity sweep reversal — the one concept from gold-strategy research
-// that's genuinely respected (not marketing hype): price briefly wicks
-// beyond a recent swing high/low (trapping breakout traders who jumped
-// in), then snaps back inside. That rejection is a real, well-known
-// institutional-trading pattern. Checked first, every tick, ahead of
-// the breakout and EMA/RSI layers — this is the highest-conviction
-// setup when it appears, but it won't appear often (that's expected
-// and correct — quality over frequency, not a volume play).
-function xptEvaluateLiquiditySweep(priceInr) {
-  var n = XPT_HISTORY_INR.length;
-  if (n < 65) return null; // needs a real "structure" window plus a separate recent "sweep zone"
-  var structureHighs = XPT_HIGH_HISTORY.slice(n-65, n-5);
-  var structureLows  = XPT_LOW_HISTORY.slice(n-65, n-5);
-  var swingHigh = Math.max.apply(null, structureHighs);
-  var swingLow  = Math.min.apply(null, structureLows);
-  var recentHighs = XPT_HIGH_HISTORY.slice(n-5);
-  var recentLows  = XPT_LOW_HISTORY.slice(n-5);
-  var sweptHigh = Math.max.apply(null, recentHighs) > swingHigh;
-  var sweptLow  = Math.min.apply(null, recentLows) < swingLow;
-  var rsi = calcRSI(XPT_HISTORY_INR, 14);
-
-  if (sweptHigh && priceInr < swingHigh) {
-    var strongUp = rsi && rsi > 65;
-    return { side:'SELL', reasons: 'Liquidity sweep above ₹'+Math.round(swingHigh).toLocaleString('en-IN')+' rejected'+(strongUp?' + RSI exhaustion '+rsi.toFixed(1):''), strength: strongUp?'STRONG':'MODERATE' };
-  }
-  if (sweptLow && priceInr > swingLow) {
-    var strongDn = rsi && rsi < 35;
-    return { side:'BUY', reasons: 'Liquidity sweep below ₹'+Math.round(swingLow).toLocaleString('en-IN')+' rejected'+(strongDn?' + RSI exhaustion '+rsi.toFixed(1):''), strength: strongDn?'STRONG':'MODERATE' };
-  }
-  return null;
-}
-
-// Trendline breakout — ported directly from your F&O trendline.js:
-// find the last confirmed 14-bar pivot high/low, draw a line from it
-// that decays by an ATR/14 slope each bar, fire on an actual CROSS
-// (price was on one side, now on the other) rather than just "beyond
-// the line". No time-window restriction, same as the F&O version.
-var XPT_TL_LOOKBACK = 14;
-function xptFindLastPivot(arr, lookback, isHigh) {
-  for (var i = arr.length - 1 - lookback; i >= lookback; i--) {
-    var val = arr[i];
-    var isPivot = true;
-    for (var j = i - lookback; j <= i + lookback; j++) {
-      if (j === i) continue;
-      if (isHigh ? (arr[j] > val) : (arr[j] < val)) { isPivot = false; break; }
-    }
-    if (isPivot) return { index: i, value: val, barsAgo: (arr.length - 1) - i };
-  }
-  return null;
-}
-function xptCalcTrendlines() {
-  var n = XPT_HISTORY_INR.length;
-  if (n < XPT_TL_LOOKBACK*2 + 2) return null;
-  var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, XPT_TL_LOOKBACK);
-  if (!atr) return null;
-  var slopeStep = atr / XPT_TL_LOOKBACK;
-  var lastHigh = xptFindLastPivot(XPT_HIGH_HISTORY, XPT_TL_LOOKBACK, true);
-  var lastLow  = xptFindLastPivot(XPT_LOW_HISTORY, XPT_TL_LOOKBACK, false);
-  return {
-    upperNow: lastHigh ? lastHigh.value - slopeStep*lastHigh.barsAgo : null,
-    lowerNow: lastLow  ? lastLow.value  + slopeStep*lastLow.barsAgo  : null
-  };
-}
-function xptEvaluateTrendlineSignal(priceInr) {
-  var n = XPT_HISTORY_INR.length;
-  if (n < XPT_TL_LOOKBACK*2 + 3) return null;
-  var tl = xptCalcTrendlines();
-  if (!tl) return null;
-  var prevClose = XPT_HISTORY_INR[n-2];
-  if (tl.upperNow != null && prevClose <= tl.upperNow && priceInr > tl.upperNow) {
-    return { side:'BUY', reasons:'Trendline breakout ↑ (line ₹'+Math.round(tl.upperNow).toLocaleString('en-IN')+', 14-bar pivot)', strength:'MODERATE' };
-  }
-  if (tl.lowerNow != null && prevClose >= tl.lowerNow && priceInr < tl.lowerNow) {
-    return { side:'SELL', reasons:'Trendline breakdown ↓ (line ₹'+Math.round(tl.lowerNow).toLocaleString('en-IN')+', 14-bar pivot)', strength:'MODERATE' };
-  }
-  return null;
-}
-
-function xptEvaluateBreakoutSignal(priceInr) {
-  if (XPT_ASIAN_HIGH == null || XPT_ASIAN_LOW == null) return null;
-  var ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  var mins = ist.getHours() * 60 + ist.getMinutes();
-  if (mins < 12*60+30 || mins > 14*60+30) return null; // only the first 2 hours of London — later than that, the breakout has likely already happened
-  var rangeSize = XPT_ASIAN_HIGH - XPT_ASIAN_LOW;
-  if (rangeSize <= 0) return null;
-  var buffer = rangeSize * 0.1;
-  var rangeLabel = '₹' + Math.round(XPT_ASIAN_LOW).toLocaleString('en-IN') + '–₹' + Math.round(XPT_ASIAN_HIGH).toLocaleString('en-IN');
-  if (priceInr > XPT_ASIAN_HIGH + buffer) return { side:'BUY', reasons:'Asian range breakout ↑ (range '+rangeLabel+')', strength:'STRONG' };
-  if (priceInr < XPT_ASIAN_LOW - buffer) return { side:'SELL', reasons:'Asian range breakdown ↓ (range '+rangeLabel+')', strength:'STRONG' };
-  return null;
-}
-
-function xptOpenTrade() { return (XPT_PORTFOLIO.trades||[]).find(function(t){ return t.status==='OPEN'; }) || null; }
-
-// Strategy selector — same idea as the F&O Stock Advance checkboxes:
-// each layer can be turned on/off independently, persisted locally.
-// Evaluation order in xptTick() stays fixed regardless of which boxes
-// are checked; unchecking one just skips it.
-var XPT_STRAT_KEYS = ['sweep','trendline','breakout','emarsi'];
-function xptToggleStrategyChip(key) {
-  var box = document.getElementById('xpt-strat-' + key);
-  if (!box) return;
-  box.checked = !box.checked;
-  xptRenderStrategyChip(key);
-  xptSaveStrategySelection();
-}
-
-// Visually distinguishes active (green, filled, ✓) vs off (gray,
-// hollow, ✕) — plain checkboxes were nearly invisible on this dark
-// theme, so the whole chip changes color/border instead.
-function xptRenderStrategyChip(key) {
-  var chip = document.getElementById('xpt-chip-' + key);
-  var box = document.getElementById('xpt-strat-' + key);
-  if (!chip || !box) return;
-  var mark = chip.querySelector('.xpt-chip-mark');
-  if (box.checked) {
-    chip.style.border = '1px solid var(--g)';
-    chip.style.background = 'rgba(0,255,136,.12)';
-    chip.style.color = 'var(--g)';
-    if (mark) mark.textContent = '✓';
-  } else {
-    chip.style.border = '1px solid var(--border)';
-    chip.style.background = 'var(--ov4)';
-    chip.style.color = 'var(--dim)';
-    if (mark) mark.textContent = '✕';
-  }
-}
-function xptRenderAllStrategyChips() { XPT_STRAT_KEYS.forEach(xptRenderStrategyChip); }
-
-function xptStrategyEnabled(key) {
-  var el = document.getElementById('xpt-strat-' + key);
-  return el ? el.checked : true;
-}
-function xptSaveStrategySelection() {
-  var sel = {};
-  XPT_STRAT_KEYS.forEach(function(k){ sel[k] = xptStrategyEnabled(k); });
-  try { localStorage.setItem('jarvis_xpt_strategies', JSON.stringify(sel)); } catch(e) {}
-  var labels = { sweep:'Liquidity Sweep', trendline:'Trendline Break', breakout:'Asian-Range Breakout', emarsi:'EMA/RSI/MACD/VWAP+DXY' };
-  xptLog('Strategy selection updated — ' + XPT_STRAT_KEYS.filter(function(k){return sel[k];}).map(function(k){return labels[k];}).join(', ') || 'none active');
-}
-function xptRestoreStrategySelection() {
-  var sel = null;
-  try { sel = JSON.parse(localStorage.getItem('jarvis_xpt_strategies')); } catch(e) {}
-  if (!sel) return;
-  XPT_STRAT_KEYS.forEach(function(k){
-    var el = document.getElementById('xpt-strat-' + k);
-    if (el && typeof sel[k] === 'boolean') el.checked = sel[k];
-  });
-}
-
-function xptToggleCustomSize() {
-  var sel = document.getElementById('xpt-lot-size');
-  var wrap = document.getElementById('xpt-custom-wrap');
-  if (wrap) wrap.style.display = (sel && sel.value === 'custom') ? 'inline-flex' : 'none';
-  xptUpdateCustomOzPreview();
-}
-
-// Shows "≈ 0.0244 oz" next to the ₹ input so it's clear what that
-// rupee amount actually buys at the current live price, before you
-// commit to it — updates on typing and on every price tick.
-function xptUpdateCustomOzPreview() {
-  var preview = document.getElementById('xpt-custom-oz-preview');
-  if (!preview) return;
-  var sel = document.getElementById('xpt-lot-size');
-  if (!sel || sel.value !== 'custom') { preview.textContent = ''; return; }
-  var amt = parseFloat((document.getElementById('xpt-custom-inr')||{}).value) || 0;
-  var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : null;
-  preview.textContent = (amt > 0 && last) ? ('≈ ' + (amt/last).toFixed(4) + ' oz') : '';
-}
-
-// Resolves whatever the SIZE control currently says into an oz
-// quantity — either a fixed micro-lot count, or a fractional oz amount
-// derived from a custom ₹ figure (e.g. ₹10,000 at ₹4,10,000/oz ≈ 0.0244 oz).
-function xptResolveTradeQtyOz(priceInr) {
-  var sel = document.getElementById('xpt-lot-size');
-  var val = sel ? sel.value : '1';
-  if (val === 'custom') {
-    var amt = parseFloat((document.getElementById('xpt-custom-inr')||{}).value) || 0;
-    return amt > 0 ? amt / priceInr : 0;
-  }
-  return parseInt(val, 10) || 1;
-}
-
-// Fractional oz (custom ₹ amounts) need more decimal places to display
-// meaningfully than whole micro-lots do.
-function xptFmtOz(q) {
-  if (q == null) return '—';
-  return q < 1 ? q.toFixed(4) : (Number.isInteger(q) ? String(q) : q.toFixed(2));
-}
-
-// target = 1.5x ATR, SL = 0.8x ATR (~1.9:1 reward:risk) when ATR is
-// available; falls back to the fixed +0.6%/-0.35% only while ATR
-// hasn't warmed up yet (needs 15+ bars of high/low/close history).
-function xptTargetSL(entry, side, atr) {
-  if (atr && atr > 0) {
-    var tgtDist = atr * 1.5, slDist = atr * 0.8;
-    return side === 'BUY'
-      ? { target: entry + tgtDist, stopLoss: entry - slDist, atrBased: true }
-      : { target: entry - tgtDist, stopLoss: entry + slDist, atrBased: true };
-  }
-  return side === 'BUY'
-    ? { target: entry * (1 + XPT_TARGET_PCT), stopLoss: entry * (1 - XPT_SL_PCT), atrBased: false }
-    : { target: entry * (1 - XPT_TARGET_PCT), stopLoss: entry * (1 + XPT_SL_PCT), atrBased: false };
-}
-
-function xptEnterTrade(sig, priceInr, atr) {
-  var lotOz = xptResolveTradeQtyOz(priceInr);
-  if (!lotOz || lotOz <= 0) { xptLog('Signal ' + sig.side + ' skipped — enter a valid custom ₹ amount first'); return; }
-  var cost = priceInr * lotOz;
-  if (cost > XPT_PORTFOLIO.cash) { xptLog('Signal ' + sig.side + ' skipped — insufficient virtual cash for ' + xptFmtOz(lotOz) + ' oz'); return; }
-  var ts = xptTargetSL(priceInr, sig.side, atr);
-  var trade = {
-    side: sig.side, qty: lotOz, entry: priceInr, target: ts.target, stopLoss: ts.stopLoss,
-    highWater: priceInr, cost: cost, status: 'OPEN', reasons: sig.reasons, strength: sig.strength,
-    atrBased: ts.atrBased, openedAt: new Date().toISOString()
-  };
-  XPT_PORTFOLIO.trades.push(trade);
-  xptRecalculateCash();
-  xptSave();
-  xptLog('🟢 ' + sig.strength + ' ' + sig.side + ' opened — ' + xptFmtOz(lotOz) + ' oz @ ₹' + Math.round(priceInr).toLocaleString('en-IN') + '/oz'
-    + ' · target ₹' + Math.round(ts.target).toLocaleString('en-IN') + ' · SL ₹' + Math.round(ts.stopLoss).toLocaleString('en-IN')
-    + (ts.atrBased ? ' (ATR-based)' : ' (fixed %, ATR warming up)') + ' (' + sig.reasons + ')');
-}
-
-function xptCloseTrade(trade, exitPriceInr, reason) {
-  var dir = trade.side === 'BUY' ? 1 : -1;
-  var gross = Math.round(dir * (exitPriceInr - trade.entry) * trade.qty * 100) / 100;
-  var net = Math.round((gross - XPT_BROKERAGE_PER_TRADE) * 100) / 100;
-  trade.status = 'CLOSED';
-  trade.exit = exitPriceInr;
-  trade.gross = gross;
-  trade.net = net;
-  trade.reason = reason;
-  trade.result = net >= 0 ? 'PROFIT' : 'LOSS';
-  trade.closedAt = new Date().toISOString();
-  xptRecalculateCash();
-  xptSave();
-  xptLog((net>=0?'✅':'❌') + ' ' + trade.side + ' closed (' + reason + ') — net ₹' + net.toLocaleString('en-IN'));
-}
-
-// Same trailing-SL math as paperTrading.js's evaluateOpenTrade, adapted
-// for a directional (BUY/SELL) spot position instead of an options
-// premium that only ever goes up when "in the money".
-function xptEvaluateOpenTrade(trade, priceInr) {
-  if (!priceInr || priceInr <= 0) return;
-  var dir = trade.side === 'BUY' ? 1 : -1;
-
-  if (xptIsFridayCloseWindow()) { xptCloseTrade(trade, priceInr, 'WEEKEND_SQUAREOFF'); return; }
-
-  trade.highWater = dir === 1 ? Math.max(trade.highWater, priceInr) : Math.min(trade.highWater, priceInr);
-  var favMove = dir * (trade.highWater - trade.entry);
-  var totalRisk = Math.abs(trade.target - trade.entry);
-  var armLevel = totalRisk * XPT_TRAIL_ARM_PCT;
-
-  if (favMove >= armLevel) {
-    var lockedMove = favMove * XPT_TRAIL_LOCK_PCT;
-    var candidate = trade.entry + dir * lockedMove;
-    var better = dir === 1 ? candidate > trade.stopLoss : candidate < trade.stopLoss;
-    if (better) trade.stopLoss = candidate;
-  }
-
-  var hitSL = dir === 1 ? priceInr <= trade.stopLoss : priceInr >= trade.stopLoss;
-  var hitTarget = dir === 1 ? priceInr >= trade.target : priceInr <= trade.target;
-  if (hitSL) { xptCloseTrade(trade, priceInr, (dir===1?trade.stopLoss>trade.entry:trade.stopLoss<trade.entry) ? 'TRAIL_SL' : 'AUTO_SL'); return; }
-  if (hitTarget) { xptCloseTrade(trade, priceInr, 'AUTO_TARGET'); return; }
-}
-
-function xptToggleEngine() {
-  var toggle = document.getElementById('xpt-toggle');
-  XPT_PORTFOLIO.engineOn = !!(toggle && toggle.checked);
-  xptSave();
-  xptRenderToggle();
-  xptLog('Engine turned ' + (XPT_PORTFOLIO.engineOn ? 'ON' : 'OFF'));
-}
-
-function xptRenderToggle() {
-  var on = !!(XPT_PORTFOLIO && XPT_PORTFOLIO.engineOn);
-  var track = document.getElementById('xpt-toggle-track');
-  var knob = document.getElementById('xpt-toggle-knob');
-  var status = document.getElementById('xpt-status');
-  if (track) track.style.background = on ? 'rgba(160,100,255,.35)' : 'rgba(255,255,255,.08)';
-  if (knob) { knob.style.left = on ? '24px' : '2px'; knob.style.background = on ? '#a064ff' : 'var(--dim)'; }
-  if (status) { status.textContent = on ? 'ENGINE ON' : 'ENGINE OFF'; status.style.color = on ? '#a064ff' : 'var(--dim)'; }
-}
-
-// ── Main tick: fetch price+FX, update history, run the engine ──
-// ── Price-outlier guard — rejects a single tick that jumps more than
-// 3% from the last accepted price (gold basically never moves that
-// much in 15 seconds without a global panic). Guards against a single
-// corrupted/glitched price from a proxy being used to close a real
-// trade at a nonsense level. If the "outlier" repeats 4 times in a row
-// it's accepted anyway — that's no longer a glitch, it's confirmed
-// (e.g. a genuine weekend-gap reopen).
-var XPT_LAST_GOOD_PRICE = null;
-var XPT_OUTLIER_STREAK = 0;
-function xptIsPriceOutlier(priceInr) {
-  if (!XPT_LAST_GOOD_PRICE) return false;
-  var pctMove = Math.abs(priceInr - XPT_LAST_GOOD_PRICE) / XPT_LAST_GOOD_PRICE;
-  if (pctMove <= 0.03) { XPT_OUTLIER_STREAK = 0; return false; }
-  XPT_OUTLIER_STREAK++;
-  if (XPT_OUTLIER_STREAK >= 4) { xptLog('Accepting a >3% price jump after 4 consecutive confirmations — treating as real, not a glitch'); XPT_OUTLIER_STREAK = 0; return false; }
-  return true;
-}
-
-// ── Real 5-minute candles, built from the live tick stream — this is
-// what actually fixes the "stops way too tight" problem. ATR/EMA/RSI/
-// MACD/ADX/trendline were previously being fed raw 15s ticks directly,
-// so a "14-period" ATR only covered 3.5 minutes of real time instead
-// of the ~70 minutes your F&O side gets from real 5-min candles —
-// making every distance calculation absurdly tight. Seeded once from
-// Yahoo's real 5-min candles when available; otherwise builds up from
-// live ticks (takes hours to fully warm up from cold — see the note
-// this prints once).
-var XPT_CANDLES = [];
-var XPT_CANDLE_MS = 5*60*1000;
-var XPT_CANDLE_SEED_TRIED = false;
-function xptSeedCandlesFromFeed(gold) {
-  if (XPT_CANDLES.length || !gold.closes || gold.closes.length < 2) return;
-  var closes = gold.closes.slice(-200), highs = gold.highs.slice(-200), lows = gold.lows.slice(-200);
-  for (var i=0;i<closes.length;i++) XPT_CANDLES.push({ o:closes[i], h:highs[i], l:lows[i], c:closes[i] });
-  if (!XPT_CANDLE_SEED_TRIED) { XPT_CANDLE_SEED_TRIED = true; xptLog('Seeded '+XPT_CANDLES.length+' real 5-min candles from Yahoo for indicator history'); }
-}
-function xptUpdateCandles(priceInr) {
-  var bucket = Math.floor(Date.now()/XPT_CANDLE_MS);
-  var last = XPT_CANDLES[XPT_CANDLES.length-1];
-  if (last && last._bucket === bucket) {
-    last.h = Math.max(last.h, priceInr); last.l = Math.min(last.l, priceInr); last.c = priceInr;
-  } else {
-    XPT_CANDLES.push({ _bucket: bucket, o: priceInr, h: priceInr, l: priceInr, c: priceInr });
-    if (XPT_CANDLES.length > 200) XPT_CANDLES.shift();
-  }
-}
-
-async function xptTick() {
-  if (!XPT_PORTFOLIO) xptInit();
-  var gold = await xptFetchGold();
-  if (!gold) { xptRefreshUI(); return; } // proxies all failed this cycle — leave last price on screen, "last updated" ticker below shows staleness
-  XPT_LAST_TICK_OK = new Date();
-  XPT_LAST_SOURCE = gold.source || 'yahoo';
-  var fx = await xptFetchUSDINR();
-  if (fx && fx.ltp) XPT_USDINR = fx.ltp;
-
-  XPT_LAST_USD_PRICE = gold.ltp;
-  var priceInr = gold.ltp * XPT_USDINR;
-  var dp = gold.prevClose ? (gold.ltp - gold.prevClose) / gold.prevClose * 100 : 0;
-
-  if (xptIsPriceOutlier(priceInr)) {
-    xptLog('⚠️ Rejected a suspicious price tick (₹' + Math.round(priceInr).toLocaleString('en-IN') + ' vs last good ₹' + Math.round(XPT_LAST_GOOD_PRICE).toLocaleString('en-IN') + ', >3% in one tick) — likely a bad data point, skipping this cycle');
-    xptRefreshUI();
-    return;
-  }
-  XPT_LAST_GOOD_PRICE = priceInr;
-
-  xptSeedCandlesFromFeed(gold);
-  xptUpdateCandles(priceInr);
-  XPT_HISTORY_INR = XPT_CANDLES.map(function(c){ return c.c; });
-  XPT_HIGH_HISTORY = XPT_CANDLES.map(function(c){ return c.h; });
-  XPT_LOW_HISTORY  = XPT_CANDLES.map(function(c){ return c.l; });
-
-  var atr = xptCalcATR(XPT_HIGH_HISTORY, XPT_LOW_HISTORY, XPT_HISTORY_INR, 14);
-  xptUpdateAsianRange(priceInr);
-  xptUpdateSessionVWAP(priceInr);
-  await xptRefreshDXY();
-
-  var open = xptOpenTrade();
-  if (open) {
-    xptEvaluateOpenTrade(open, priceInr);
-  } else if (XPT_PORTFOLIO.engineOn && xptMarketOpen()) {
-    var inSession = xptInSession();
-    // Only log the session-gate message on the ON->OFF transition, not
-    // every 30s tick, or the log fills with the same line all night.
-    if (!inSession && XPT_LAST_SESSION_STATE !== false) {
-      xptLog('Outside London/NY session (12:30 PM\u201311:30 PM IST) \u2014 no new entries until session opens');
-    }
-    XPT_LAST_SESSION_STATE = inSession;
-    if (inSession) {
-      var sig = (xptStrategyEnabled('sweep') && xptEvaluateLiquiditySweep(priceInr))
-             || (xptStrategyEnabled('trendline') && xptEvaluateTrendlineSignal(priceInr))
-             || (xptStrategyEnabled('breakout') && xptEvaluateBreakoutSignal(priceInr))
-             || (xptStrategyEnabled('emarsi') && xptEvaluateSignal(priceInr, dp));
-      if (sig) xptEnterTrade(sig, priceInr, atr);
-    }
-  }
-
-  xptRefreshUI(gold.ltp, priceInr, dp);
-}
-
-function xptEnsureTicker() {
-  if (XPT_TICKER) return;
-  xptTick();
-  XPT_TICKER = setInterval(xptTick, XPT_POLL_MS);
-  // Separate 1s timer just for the "updated Xs ago" label — independent
-  // of the 15s data poll so staleness is visible in real time even
-  // between fetches, not just refreshed once per poll.
-  setInterval(xptUpdateLastUpdateLabel, 1000);
-}
-
-function xptUpdateLastUpdateLabel() {
-  var el = document.getElementById('xpt-last-update');
-  if (!el) return;
-  if (!XPT_LAST_TICK_OK) { el.textContent = 'no data yet'; el.style.color = 'var(--dim)'; return; }
-  var secs = Math.round((Date.now() - XPT_LAST_TICK_OK.getTime()) / 1000);
-  var label = secs < 60 ? ('updated ' + secs + 's ago') : ('updated ' + Math.round(secs/60) + 'm ago');
-  el.textContent = label;
-  // Turn amber past 45s (missed ~3 polls) and red past 120s so staleness
-  // is visible at a glance instead of trusting a frozen number.
-  el.style.color = secs > 120 ? 'var(--r)' : secs > 45 ? 'var(--w)' : 'var(--dim)';
-}
-
-function xptFmtInr(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
-
-function xptRefreshUI(usdPrice, inrPrice, dp) {
-  if (!XPT_PORTFOLIO) return;
-  var closed = XPT_PORTFOLIO.trades.filter(function(t){ return t.status==='CLOSED'; });
-  var open = XPT_PORTFOLIO.trades.filter(function(t){ return t.status==='OPEN'; });
-  var totalNet = closed.reduce(function(s,t){ return s + (t.net||0); }, 0);
-  var wins = closed.filter(function(t){ return t.net >= 0; }).length;
-  var winRate = closed.length ? (wins / closed.length * 100).toFixed(1) : null;
-
-  var set = function(id, text, color) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = text;
-    if (color) el.style.color = color;
-  };
-
-  if (usdPrice != null) {
-    var srcTag = XPT_LAST_SOURCE === 'finnhub-ws' ? ' 🔌WS live' : ' Yahoo';
-    set('xpt-live-price', '$' + usdPrice.toFixed(2) + (dp!=null ? ' (' + (dp>=0?'+':'') + dp.toFixed(2) + '%)' : '') + srcTag, dp>=0?'var(--g)':'var(--r)');
-    set('xpt-live-price-inr', xptFmtInr(inrPrice) + '/oz');
-  }
-  set('xpt-cash', xptFmtInr(XPT_PORTFOLIO.cash));
-  xptUpdateCustomOzPreview();
-  var openMTM = open.reduce(function(s,t){
-    var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : t.entry;
-    var dir = t.side==='BUY'?1:-1;
-    return s + dir*(last - t.entry)*t.qty;
-  }, 0);
-  var value = XPT_PORTFOLIO.cash + open.reduce(function(s,t){return s+t.cost;},0) + openMTM;
-  set('xpt-value', xptFmtInr(value));
-  set('xpt-pnl', (totalNet+openMTM>=0?'+':'') + xptFmtInr(totalNet+openMTM), (totalNet+openMTM)>=0?'var(--g)':'var(--r)');
-  set('xpt-winrate', winRate!=null ? winRate+'%' : '—');
-
-  var openCountEl = document.getElementById('xpt-open-count');
-  if (openCountEl) openCountEl.textContent = open.length + ' position' + (open.length===1?'':'s');
-  var openList = document.getElementById('xpt-open-list');
-  if (openList) {
-    if (!open.length) {
-      openList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);font-family:Share Tech Mono;font-size:11px">No open position. Turn the engine ON above ↑</div>';
-    } else {
-      openList.innerHTML = open.map(function(t){
-        var last = XPT_HISTORY_INR.length ? XPT_HISTORY_INR[XPT_HISTORY_INR.length-1] : t.entry;
-        var dir = t.side==='BUY'?1:-1;
-        var mtm = dir*(last-t.entry)*t.qty;
-        var color = t.side==='BUY' ? 'var(--g)' : 'var(--r)';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">'
-          + '<div><b style="color:'+color+'">'+t.side+'</b> '+xptFmtOz(t.qty)+' oz @ ₹'+Math.round(t.entry).toLocaleString('en-IN')
-          + '<div style="font-size:9px;color:var(--dim)">Target ₹'+Math.round(t.target).toLocaleString('en-IN')+' · SL ₹'+Math.round(t.stopLoss).toLocaleString('en-IN')+' · '+t.reasons+'</div></div>'
-          + '<div style="text-align:right;font-weight:700;color:'+(mtm>=0?'var(--g)':'var(--r)')+'">'+(mtm>=0?'+':'')+xptFmtInr(mtm)+'</div>'
-          + '</div>';
-      }).join('');
-    }
-  }
-
-  var closedCountEl = document.getElementById('xpt-closed-count');
-  if (closedCountEl) closedCountEl.textContent = closed.length + ' closed trade' + (closed.length===1?'':'s');
-  var body = document.getElementById('xpt-history-body');
-  if (body) {
-    if (!closed.length) {
-      body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--dim)">No closed trades yet</td></tr>';
-    } else {
-      body.innerHTML = closed.slice().reverse().map(function(t){
-        var color = t.net>=0 ? 'var(--g)' : 'var(--r)';
-        return '<tr>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+t.side+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.openedAt).toLocaleDateString('en-IN')+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.openedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+new Date(t.closedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+xptFmtOz(t.qty)+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+Math.round(t.entry).toLocaleString('en-IN')+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+Math.round(t.exit).toLocaleString('en-IN')+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:'+color+';font-weight:700">'+(t.net>=0?'+':'')+t.net.toLocaleString('en-IN')+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">'+t.reason+'</td>'
-          + '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:'+color+'">'+t.result+'</td>'
-          + '</tr>';
-      }).join('');
-    }
-  }
-}
-
-function xptExportCSV() {
-  if (!XPT_PORTFOLIO || !XPT_PORTFOLIO.trades.length) { alert('No trades to export yet.'); return; }
-  var rows = [['Side','Opened','Closed','Qty(oz)','Entry INR/oz','Exit INR/oz','Net INR','Reason','Result']];
-  XPT_PORTFOLIO.trades.filter(function(t){return t.status==='CLOSED';}).forEach(function(t){
-    rows.push([t.side, t.openedAt, t.closedAt, t.qty, Math.round(t.entry), Math.round(t.exit), t.net, t.reason, t.result]);
-  });
-  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
-  var blob = new Blob([csv], {type:'text/csv'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'jarvis-xauusd-paper-trades.csv';
-  a.click();
-}
-
-// Auto-init when the page loads, same pattern as ptInit()/sptInit() above.
-(function(){
-  try { xptInit(); } catch(e) {}
-  try { xptCloudLoad(); } catch(e) {}
 })();
 </script>
 
