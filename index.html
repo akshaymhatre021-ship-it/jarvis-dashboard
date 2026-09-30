@@ -10364,7 +10364,7 @@ var OC_STATE = {
 // ══════════════════════════════════════════════════════════════════
 var OC_REC_LAST_CANDLE_TIME = null;
 var OC_REC_STORE_PREFIX = 'jarvis_ocrec_';
-var OC_REC_RETENTION_DAYS = 180; // bound localStorage growth
+var OC_REC_RETENTION_DAYS = 30; // reduced from 180 — 180 days of 5-min option-chain snapshots was far more data than a browser's ~5-10MB localStorage quota can hold, which is what caused the "storage write failed (quota)" errors. 30 days keeps real backtest history while reliably staying under quota.
 
 function ocRecTimeKey(d) {
   return d.toLocaleTimeString('en-IN', { hour12:false, timeZone:'Asia/Kolkata' }).slice(0,5); // "HH:MM"
@@ -17154,9 +17154,26 @@ function ptRecalculateCash() {
   return diff;
 }
 
+var PT_SAVE_QUOTA_WARNED = false;
 function ptSave() {
   if (!PT_PORTFOLIO) return;
-  try { localStorage.setItem('jarvis_pt_portfolio', JSON.stringify(PT_PORTFOLIO)); } catch(e) {}
+  try {
+    localStorage.setItem('jarvis_pt_portfolio', JSON.stringify(PT_PORTFOLIO));
+  } catch(e) {
+    // Previously an empty catch(e){} here — a real trade could fail to
+    // save to this browser with zero warning shown anywhere. Now it
+    // warns once per session (not on every failed save, to avoid
+    // spamming) via both an alert (impossible to miss) and the visible
+    // engine log. The cloud sync below still runs regardless, so the
+    // trade isn't necessarily lost — just not persisted to THIS
+    // browser's local copy until storage is freed up.
+    console.error('[PT] localStorage save failed — likely quota exceeded', e);
+    if (!PT_SAVE_QUOTA_WARNED) {
+      PT_SAVE_QUOTA_WARNED = true;
+      try { aseLog('⚠ CRITICAL: browser storage is full — this trade could not be saved locally. Your cloud copy may still be fine, but free up storage soon (see the option-chain recorder retention setting) to avoid losing trades on this device.'); } catch(e2) {}
+      alert('⚠ Could not save your F&O paper trading portfolio to this browser — storage quota exceeded. Your trades may not persist here after a reload. Your cloud-synced copy should still be intact if cloud sync is enabled.');
+    }
+  }
 }
 
 function ptReset() {
@@ -18693,9 +18710,19 @@ function sptRecalculateCash() {
   return diff;
 }
 
+var SPT_SAVE_QUOTA_WARNED = false;
 function sptSave() {
   if (!SPT_PORTFOLIO) return;
-  try { localStorage.setItem('jarvis_spt_portfolio', JSON.stringify(SPT_PORTFOLIO)); } catch(e) {}
+  try {
+    localStorage.setItem('jarvis_spt_portfolio', JSON.stringify(SPT_PORTFOLIO));
+  } catch(e) {
+    console.error('[SPT] localStorage save failed — likely quota exceeded', e);
+    if (!SPT_SAVE_QUOTA_WARNED) {
+      SPT_SAVE_QUOTA_WARNED = true;
+      try { aseLog('⚠ CRITICAL: browser storage is full — this stock paper trade could not be saved locally. Your cloud copy may still be fine, but free up storage soon.'); } catch(e2) {}
+      alert('⚠ Could not save your Stock paper trading portfolio to this browser — storage quota exceeded. Your trades may not persist here after a reload. Your cloud-synced copy should still be intact if cloud sync is enabled.');
+    }
+  }
 }
 
 // Cloud sync for the stock portfolio — same 'reports' key-value table and
