@@ -230,6 +230,35 @@
     </div>
   </div>
 
+  <div class="panel" id="walletPanel">
+    <h2>💰 Angel One Wallet &amp; Last Order <small id="walletMeta">—</small></h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
+      Read-only account snapshot, refreshed by the backend every ~60s (never places or modifies anything). "Net" is your real account balance including today's unrealized P&amp;L; "Available Cash" is what's free to trade with right now.
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div style="flex:1;min-width:140px;background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--muted)">AVAILABLE CASH</div>
+        <div id="wFundsAvailable" style="font-size:18px;font-weight:700">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--muted)">NET BALANCE</div>
+        <div id="wFundsNet" style="font-size:18px;font-weight:700">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--muted)">MARGIN USED</div>
+        <div id="wFundsMargin" style="font-size:18px;font-weight:700">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--muted)">UNREALIZED P&amp;L (M2M)</div>
+        <div id="wFundsM2m" style="font-size:18px;font-weight:700">—</div>
+      </div>
+    </div>
+    <div style="background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:13px">
+      <span style="color:var(--muted);font-size:10px">LAST ORDER&nbsp;</span>
+      <span id="wLastOrder">—</span>
+    </div>
+  </div>
+
   <div class="panel" id="liveConfigPanel">
     <h2>Live Trading Settings <small id="liveConfigMeta">—</small></h2>
     <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
@@ -407,6 +436,34 @@ function renderLiveEngineStatus(status, pauseReason){
     el.textContent = "LIVE ENGINE: —";
     el.style.color = "var(--muted)";
     el.title = "";
+  }
+}
+
+function fmtINR(n){
+  if(n === null || n === undefined || isNaN(n)) return "—";
+  return "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+function renderWalletSnapshot(s){
+  document.getElementById("wFundsAvailable").textContent = fmtINR(s.wallet_available_cash);
+  document.getElementById("wFundsNet").textContent = fmtINR(s.wallet_net);
+  document.getElementById("wFundsMargin").textContent = fmtINR(s.wallet_margin_used);
+  const m2m = s.wallet_m2m_unrealized;
+  const m2mEl = document.getElementById("wFundsM2m");
+  m2mEl.textContent = fmtINR(m2m);
+  m2mEl.style.color = (m2m === null || m2m === undefined) ? "" : (m2m >= 0 ? "#3ddc84" : "#ff3d5a");
+
+  const metaEl = document.getElementById("walletMeta");
+  metaEl.textContent = s.last_order_time ? ("updated " + fmtAge(s.last_order_time)) : "—";
+
+  const orderEl = document.getElementById("wLastOrder");
+  if(!s.last_order_symbol){
+    orderEl.textContent = "No orders placed yet";
+    orderEl.style.color = "var(--muted)";
+  } else {
+    const sideColor = s.last_order_side === "BUY" ? "#3ddc84" : "#ff3d5a";
+    orderEl.innerHTML = `<b style="color:${sideColor}">${s.last_order_side}</b> ${s.last_order_qty} × ${s.last_order_symbol} @ ${fmtINR(s.last_order_price)} — <b>${s.last_order_status}</b> <span style="color:var(--muted)">(${fmtTime(s.last_order_time)})</span>`;
+    orderEl.style.color = "";
   }
 }
 
@@ -917,6 +974,7 @@ async function loadAll(){
       document.getElementById("mSignal").textContent = s.last_signal ? fmtAge(s.last_signal) : "—";
       document.getElementById("mVersion").textContent = s.version || "—";
       renderLiveEngineStatus(s.live_trading_status, s.live_trading_pause_reason);
+      renderWalletSnapshot(s);
     }
   } catch(e){
     setPulse("unknown");
