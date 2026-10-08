@@ -231,7 +231,7 @@
   </div>
 
   <div class="panel" id="walletPanel">
-    <h2>💰 Angel One Wallet &amp; Last Order <small id="walletMeta">—</small></h2>
+    <h2>💰 Angel One Wallet &amp; Today's Orders <small id="walletMeta">—</small></h2>
     <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
       Read-only account snapshot, refreshed by the backend every ~60s (never places or modifies anything). "Net" is your real account balance including today's unrealized P&amp;L; "Available Cash" is what's free to trade with right now.
     </p>
@@ -252,9 +252,13 @@
         <div style="font-size:10px;color:var(--muted)">UNREALIZED P&amp;L (M2M)</div>
         <div id="wFundsM2m" style="font-size:18px;font-weight:700">—</div>
       </div>
+      <div style="flex:1;min-width:140px;background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--muted)">TODAY'S REALIZED P&amp;L (before charges)</div>
+        <div id="wFundsRealized" style="font-size:18px;font-weight:700">—</div>
+      </div>
     </div>
     <div style="background:var(--bg2,#0d1117);border:1px solid var(--border,#30363d);border-radius:6px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:13px">
-      <span style="color:var(--muted);font-size:10px">LAST ORDER&nbsp;</span>
+      <span style="color:var(--muted);font-size:10px">TODAY'S ORDERS&nbsp;</span>
       <span id="wLastOrder">—</span>
     </div>
   </div>
@@ -456,13 +460,24 @@ function renderWalletSnapshot(s){
   const metaEl = document.getElementById("walletMeta");
   metaEl.textContent = s.last_order_time ? ("updated " + fmtAge(s.last_order_time)) : "—";
 
+  const rEl = document.getElementById("wFundsRealized");
+  const rp = s.wallet_realized_pnl;
+  rEl.textContent = (rp === null || rp === undefined) ? "—" : ((rp >= 0 ? "+" : "-") + fmtINR(Math.abs(rp)));
+  rEl.style.color = (rp === null || rp === undefined) ? "" : (rp >= 0 ? "#3ddc84" : "#ff3d5a");
+
   const orderEl = document.getElementById("wLastOrder");
-  if(!s.last_order_symbol){
+  let list = Array.isArray(s.todays_orders) ? s.todays_orders : [];
+  if(!list.length && s.last_order_symbol){
+    list = [{symbol:s.last_order_symbol, side:s.last_order_side, qty:s.last_order_qty, price:s.last_order_price, status:s.last_order_status, time:s.last_order_time}];
+  }
+  if(!list.length){
     orderEl.textContent = "No orders placed yet";
     orderEl.style.color = "var(--muted)";
   } else {
-    const sideColor = s.last_order_side === "BUY" ? "#3ddc84" : "#ff3d5a";
-    orderEl.innerHTML = `<b style="color:${sideColor}">${s.last_order_side}</b> ${s.last_order_qty} × ${s.last_order_symbol} @ ${fmtINR(s.last_order_price)} — <b>${s.last_order_status}</b> <span style="color:var(--muted)">(${fmtTime(s.last_order_time)})</span>`;
+    orderEl.innerHTML = list.map(o => {
+      const sideColor = o.side === "BUY" ? "#3ddc84" : "#ff3d5a";
+      return `<div style="margin:4px 0"><b style="color:${sideColor}">${o.side}</b> ${o.qty} × ${o.symbol} @ ${fmtINR(o.price)} — <b>${o.status}</b> <span style="color:var(--muted)">(${fmtTime(o.time)})</span></div>`;
+    }).join("");
     orderEl.style.color = "";
   }
 }
