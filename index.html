@@ -17844,9 +17844,24 @@ function liveTradingInit() {
   }
 }
 
+var LIVE_TRADING_SAVE_QUOTA_WARNED = false;
 function liveTradingSave() {
   if (!LIVE_TRADING) return;
-  try { localStorage.setItem('jarvis_live_trading', JSON.stringify(LIVE_TRADING)); } catch(e) {}
+  try {
+    localStorage.setItem('jarvis_live_trading', JSON.stringify(LIVE_TRADING));
+  } catch(e) {
+    // Previously an empty catch(e){} — this saves your LIVE TRADING
+    // on/off state and risk config (real money), so a silent failure
+    // here is exactly the risk class the ptSave/sptSave bug was. The
+    // cloud sync below still runs regardless, so this isn't necessarily
+    // lost — just not guaranteed to persist on THIS browser/reload.
+    console.error('[LiveTrading] localStorage save failed — likely quota exceeded', e);
+    if (!LIVE_TRADING_SAVE_QUOTA_WARNED) {
+      LIVE_TRADING_SAVE_QUOTA_WARNED = true;
+      try { aseLog('⚠ CRITICAL: browser storage is full — your live trading on/off state and risk config could not be saved locally. Verify it in status.html, which reads from the cloud copy.'); } catch(e2) {}
+      alert('⚠ Could not save your live trading configuration to this browser — storage quota exceeded. Please verify your live trading on/off state in status.html (which reads the cloud copy) rather than trusting this browser after a reload.');
+    }
+  }
   liveTradingSyncCloud();
 }
 
@@ -18494,12 +18509,25 @@ function jarvisRestoreBackup(file) {
       var backup = JSON.parse(e.target.result);
       if (!backup || !backup.data || typeof backup.data !== 'object') throw new Error('Not a valid Jarvis backup file');
       var restored = 0;
+      var failedKeys = [];
       Object.keys(backup.data).forEach(function(k){
         if (JARVIS_BACKUP_EXCLUDE_KEYS.indexOf(k) !== -1) return; // never restore credentials even if an old/tampered file somehow contains them
-        try { localStorage.setItem(k, backup.data[k]); restored++; } catch(err) {}
+        try { localStorage.setItem(k, backup.data[k]); restored++; }
+        catch(err) { failedKeys.push(k); } // previously silently dropped — you'd have no way to know a key was skipped
       });
-      if (statusEl) { statusEl.textContent = '✅ Restored ' + restored + ' keys. Reloading...'; statusEl.style.color = 'var(--g)'; }
-      setTimeout(function(){ location.reload(); }, 1200);
+      if (statusEl) {
+        if (failedKeys.length) {
+          statusEl.textContent = '⚠ Restored ' + restored + ' keys, but ' + failedKeys.length + ' FAILED (storage full): ' + failedKeys.join(', ') + '. Free up browser storage and try again rather than trusting this as a full restore.';
+          statusEl.style.color = 'var(--r)';
+        } else {
+          statusEl.textContent = '✅ Restored ' + restored + ' keys. Reloading...';
+          statusEl.style.color = 'var(--g)';
+        }
+      }
+      // Don't auto-reload on a partial restore — let the warning stay on
+      // screen so it's actually seen, instead of being wiped by a reload
+      // a second later.
+      if (!failedKeys.length) setTimeout(function(){ location.reload(); }, 1200);
     } catch(err) {
       console.warn('[Backup] restore failed', err);
       if (statusEl) { statusEl.textContent = '⚠ Restore failed: ' + err.message; statusEl.style.color = 'var(--r)'; }
@@ -19860,8 +19888,17 @@ function aseToggleStrategy(key, checked) {
     aseLog('⚠ At least one strategy must stay selected — kept ' + ASE_STRATEGY_LABELS[key] + ' active.');
   }
   ASE_STRATEGY = ASE_STRATEGIES[0]; // primary for chart overlay/display
-  try { localStorage.setItem('jarvis_ase_strategies', JSON.stringify(ASE_STRATEGIES)); } catch(e) {}
-  try { localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY); } catch(e) {}
+  try {
+    localStorage.setItem('jarvis_ase_strategies', JSON.stringify(ASE_STRATEGIES));
+    localStorage.setItem('jarvis_ase_strategy', ASE_STRATEGY);
+  } catch(e) {
+    // Previously two separate empty catch(e){} here — if this silently
+    // fails, a reload could show a different set of active strategies
+    // than what you actually selected, with no indication anything
+    // reverted. Warned the same way as the other state-save fixes.
+    console.error('[ASE] strategy selection save failed — likely quota exceeded', e);
+    try { aseLog('⚠ Browser storage full — your strategy selection may not survive a reload. Re-check it after refreshing.'); } catch(e2) {}
+  }
   ASE_LAST_LOGGED_KEY[key] = null; // reset de-dupe only for the strategy that was just toggled
   aseApplyStrategyUI();
   aseUpdateChartChrome(ASE_STRATEGY);
@@ -19927,7 +19964,15 @@ document.addEventListener('click', function(e){
 function aseToggle() {
   var cb = document.getElementById('ase-toggle');
   ASE_ON = !!(cb && cb.checked);
-  try { localStorage.setItem('jarvis_ase_on', ASE_ON ? '1' : '0'); } catch(e) {}
+  try {
+    localStorage.setItem('jarvis_ase_on', ASE_ON ? '1' : '0');
+  } catch(e) {
+    // Previously an empty catch(e){} — if this fails to save, a reload
+    // could show the engine ON when you turned it OFF (or vice versa),
+    // with nothing telling you it didn't persist.
+    console.error('[ASE] engine ON/OFF save failed — likely quota exceeded', e);
+    try { aseLog('⚠ Browser storage full — engine ON/OFF state may not survive a reload. Re-check it after refreshing.'); } catch(e2) {}
+  }
   aseUpdateToggleUI();
   if (ASE_ON) {
     aseLog('Engine turned ON — evaluating conditions every cycle.');
