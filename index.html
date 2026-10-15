@@ -6561,7 +6561,13 @@ async function loadListedNiftyExpiry() {
     if (!res.ok) return;
     var rows = await res.json();
     var v = rows && rows[0] && rows[0].nifty_expiry;
-    if (v && _parseExpiryStr(v)) _LISTED_NIFTY_EXPIRY = v;
+    if (v && _parseExpiryStr(v) && v !== _LISTED_NIFTY_EXPIRY) {
+      _LISTED_NIFTY_EXPIRY = v;
+      // The chain's expiry box is filled when the chain is built, which can
+      // be before this value arrives (and not rebuilt again while the market
+      // is closed) — rebuild once so the box shows the real expiry.
+      try { if (typeof buildOptionChain === 'function') buildOptionChain(); } catch (e2) {}
+    }
   } catch (e) { /* keep fallback */ }
 }
 setTimeout(loadListedNiftyExpiry, 2500);
