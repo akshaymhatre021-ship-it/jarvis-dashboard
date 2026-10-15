@@ -5415,6 +5415,12 @@ function updateTodayGlance() {
     var now = new Date(), day = now.getDay();
     var daysToTue = (2 - day + 7) % 7;
     if (daysToTue === 0 && now.getHours() >= 15) daysToTue = 7;
+    // Use the real listed expiry for the countdown when we have it.
+    var _le = _listedExpiryStillValid() ? _parseExpiryStr(_LISTED_NIFTY_EXPIRY) : null;
+    if (_le) {
+      var _t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      daysToTue = Math.round((_le.getTime() - _t0.getTime()) / 86400000);
+    }
     expEl.textContent = (daysToTue === 0 ? 'TODAY' : daysToTue + 'd') + ' · ' + getNiftyExpiry();
     expEl.style.color = daysToTue <= 1 ? 'var(--r)' : daysToTue <= 2 ? 'var(--w)' : 'var(--txt)';
   }
@@ -6527,7 +6533,42 @@ function getNearestExpiry() {
   // Nifty weekly expiry = every Tuesday → show next Tuesday
   return getNiftyExpiry();
 }
+// Real NIFTY expiry as listed by Angel One, published by the cloud
+// engine into engine_status.nifty_expiry (e.g. "19 Oct 2026"). The
+// Tuesday rule below is only a fallback: it is wrong whenever an
+// expiry moves for a market holiday, and a strike symbol built from a
+// non-existent expiry has no real price at the broker.
+var _LISTED_NIFTY_EXPIRY = null;
+function _parseExpiryStr(s) {
+  var m = /^(\d{1,2}) ([A-Za-z]{3}) (\d{4})$/.exec(s || '');
+  if (!m) return null;
+  var mo = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[2].toLowerCase());
+  if (mo < 0) return null;
+  return new Date(parseInt(m[3], 10), mo, parseInt(m[1], 10));
+}
+function _listedExpiryStillValid() {
+  var t = _parseExpiryStr(_LISTED_NIFTY_EXPIRY);
+  if (!t) return false;
+  var n = new Date(), today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return t.getTime() > today.getTime() || (t.getTime() === today.getTime() && n.getHours() < 15);
+}
+async function loadListedNiftyExpiry() {
+  try {
+    // Plain anon read, same as status.html — does not depend on login.
+    var res = await fetch(SUPA_URL + '/rest/v1/engine_status?select=nifty_expiry&id=eq.1', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if (!res.ok) return;
+    var rows = await res.json();
+    var v = rows && rows[0] && rows[0].nifty_expiry;
+    if (v && _parseExpiryStr(v)) _LISTED_NIFTY_EXPIRY = v;
+  } catch (e) { /* keep fallback */ }
+}
+setTimeout(loadListedNiftyExpiry, 2500);
+setInterval(loadListedNiftyExpiry, 5 * 60 * 1000);
+
 function getNiftyExpiry() {
+  if (_LISTED_NIFTY_EXPIRY && _listedExpiryStillValid()) return _LISTED_NIFTY_EXPIRY;
   var d = new Date(), day = d.getDay(); // 0=Sun,2=Tue
   var daysToTue = (2 - day + 7) % 7;
   if (daysToTue === 0 && d.getHours() >= 15) daysToTue = 7;
