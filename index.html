@@ -6555,8 +6555,10 @@ function _listedExpiryStillValid() {
 async function loadListedNiftyExpiry() {
   try {
     // Plain anon read, same as status.html — does not depend on login.
-    var res = await fetch(SUPA_URL + '/rest/v1/engine_status?select=nifty_expiry&id=eq.1', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    // (SUPA_URL/SUPA_KEY live inside another script's closure, so the same
+    // public anon values are used directly here.)
+    var res = await fetch('https://kmrsqijzjixpmbgcjnxs.supabase.co' + '/rest/v1/engine_status?select=nifty_expiry&id=eq.1', {
+      headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnNxaWp6aml4cG1iZ2NqbnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MjcyNjQsImV4cCI6MjA5NjQwMzI2NH0.rkOZ0TpUJ5wKiJLhKxfnSZmtAljPKFAOlMDo70cp_88', 'Authorization': 'Bearer ' + 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnNxaWp6aml4cG1iZ2NqbnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MjcyNjQsImV4cCI6MjA5NjQwMzI2NH0.rkOZ0TpUJ5wKiJLhKxfnSZmtAljPKFAOlMDo70cp_88' }
     });
     if (!res.ok) return;
     var rows = await res.json();
@@ -6566,9 +6568,15 @@ async function loadListedNiftyExpiry() {
       // The chain's expiry box is filled when the chain is built, which can
       // be before this value arrives (and not rebuilt again while the market
       // is closed) — rebuild once so the box shows the real expiry.
-      try { if (typeof buildOptionChain === 'function') buildOptionChain(); } catch (e2) {}
+      try {
+        // Update the box directly too — a rebuild can be skipped if another
+        // chain build is in flight at that moment.
+        var _ix = document.getElementById('ocIndex'), _e1 = document.getElementById('ocExp1');
+        if (_e1 && (!_ix || _ix.value === 'NIFTY')) { _e1.textContent = getNiftyExpiry(); _e1.value = getNiftyExpiry(); }
+        if (typeof buildOptionChain === 'function') buildOptionChain();
+      } catch (e2) {}
     }
-  } catch (e) { /* keep fallback */ }
+  } catch (e) { console.warn('[Expiry] could not load listed expiry — using fallback', e); }
 }
 setTimeout(loadListedNiftyExpiry, 2500);
 setInterval(loadListedNiftyExpiry, 5 * 60 * 1000);
