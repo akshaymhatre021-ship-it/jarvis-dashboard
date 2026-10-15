@@ -6557,11 +6557,20 @@ async function loadListedNiftyExpiry() {
     // Plain anon read, same as status.html — does not depend on login.
     // (SUPA_URL/SUPA_KEY live inside another script's closure, so the same
     // public anon values are used directly here.)
-    var res = await fetch('https://kmrsqijzjixpmbgcjnxs.supabase.co' + '/rest/v1/engine_status?select=nifty_expiry&id=eq.1', {
+    var res = await fetch('https://kmrsqijzjixpmbgcjnxs.supabase.co' + '/rest/v1/engine_status?select=nifty_expiry,nifty_option_tokens&id=eq.1', {
       headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnNxaWp6aml4cG1iZ2NqbnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MjcyNjQsImV4cCI6MjA5NjQwMzI2NH0.rkOZ0TpUJ5wKiJLhKxfnSZmtAljPKFAOlMDo70cp_88', 'Authorization': 'Bearer ' + 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnNxaWp6aml4cG1iZ2NqbnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MjcyNjQsImV4cCI6MjA5NjQwMzI2NH0.rkOZ0TpUJ5wKiJLhKxfnSZmtAljPKFAOlMDo70cp_88' }
     });
     if (!res.ok) return;
     var rows = await res.json();
+    // Seed the browser's option-token cache with the VM's real tokens, so the
+    // chain doesn't depend on Angel One's rate-limited searchScrip.
+    var toks = rows && rows[0] && rows[0].nifty_option_tokens, seeded = 0;
+    if (toks && typeof toks === 'object' && typeof _angelOptTokenCache !== 'undefined') {
+      Object.keys(toks).forEach(function (sym) {
+        if (!_angelOptTokenCache[sym]) { _angelOptTokenCache[sym] = String(toks[sym]); seeded++; }
+      });
+      if (seeded && typeof _persistAngelTokCache === 'function') _persistAngelTokCache();
+    }
     var v = rows && rows[0] && rows[0].nifty_expiry;
     if (v && _parseExpiryStr(v) && v !== _LISTED_NIFTY_EXPIRY) {
       _LISTED_NIFTY_EXPIRY = v;
@@ -6576,6 +6585,7 @@ async function loadListedNiftyExpiry() {
         if (typeof buildOptionChain === 'function') buildOptionChain();
       } catch (e2) {}
     }
+    if (seeded && typeof buildOptionChain === 'function') { try { buildOptionChain(); } catch (e3) {} }
   } catch (e) { console.warn('[Expiry] could not load listed expiry — using fallback', e); }
 }
 setTimeout(loadListedNiftyExpiry, 2500);
