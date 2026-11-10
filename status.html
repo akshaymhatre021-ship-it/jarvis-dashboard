@@ -230,6 +230,19 @@
     </div>
   </div>
 
+  <div class="panel" id="restartPanel">
+    <h2>🔁 Restart engine <small id="rsMeta">—</small></h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
+      Use when the engine shows OFFLINE. Asks the VM to restart the engine (about 20–30 seconds). Needs your PIN. Does not change any trading settings.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="rsPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"
+        style="flex:1;min-width:120px;font-size:16px;padding:12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text)">
+      <button id="rsBtn" style="font-size:15px;padding:12px 18px;border-radius:8px;border:1px solid var(--red);color:var(--red);background:transparent;cursor:pointer">↻ Restart engine</button>
+    </div>
+    <div id="rsMsg" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">—</div>
+  </div>
+
   <div class="panel" id="walletPanel">
     <h2>💰 Angel One Wallet &amp; Today's Orders <small id="walletMeta">—</small></h2>
     <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;line-height:1.5">
@@ -1151,6 +1164,50 @@ loadLiveConfig();
 document.getElementById("refreshBtn").addEventListener("click", loadAll);
 loadAll();
 setInterval(loadAll, 5000);
+
+// ── Restart engine button ─────────────────────────────────────────
+// Calls two SECURITY DEFINER functions only (PIN checked in the DB;
+// the PIN is never stored in this page). A helper process on the VM
+// does the actual `pm2 restart`.
+function rsAgo(iso){ if(!iso) return "never"; const m=Math.round((Date.now()-new Date(iso).getTime())/60000); return m<1?"just now":m+" min ago"; }
+async function rsRefresh(){
+  try{
+    const r = await sbRpc("restart_status", {});
+    const seen = r && r.watcher_seen ? (Date.now()-new Date(r.watcher_seen).getTime()) : null;
+    const alive = seen!==null && seen<60000;
+    document.getElementById("rsMeta").textContent = alive ? "VM helper: online" : "VM helper: NOT responding (VM may be stopped)";
+    const msg = document.getElementById("rsMsg");
+    if(r && r.status && !window._rsBusyMsg){
+      msg.textContent = "Last request " + rsAgo(r.requested_at) + ": " + r.status + (r.result?" — "+r.result:"");
+    }
+  }catch(e){ document.getElementById("rsMeta").textContent = "not set up yet"; }
+}
+document.getElementById("rsBtn").addEventListener("click", async function(){
+  const pin = document.getElementById("rsPin").value.trim();
+  const msg = document.getElementById("rsMsg");
+  if(!pin){ msg.textContent="Enter your PIN first."; return; }
+  if(!confirm("Restart the engine now?")) return;
+  window._rsBusyMsg = true; msg.textContent="Sending…";
+  try{
+    const res = await sbRpc("request_engine_restart", {p_pin: pin});
+    document.getElementById("rsPin").value="";
+    if(res==="BAD_PIN"){ msg.textContent="Wrong PIN."; window._rsBusyMsg=false; return; }
+    if(res==="LOCKED"){ msg.textContent="Too many wrong PINs — locked for 10 minutes."; window._rsBusyMsg=false; return; }
+    if(res==="TOO_SOON"){ msg.textContent="A restart was just requested — wait a minute."; window._rsBusyMsg=false; return; }
+    msg.textContent="Queued. Waiting for the VM…";
+    const t0=Date.now();
+    const iv=setInterval(async function(){
+      try{
+        const r=await sbRpc("restart_status",{});
+        if(r.status==="DONE"){ clearInterval(iv); window._rsBusyMsg=false; msg.textContent="✓ Restarted. Status turns ONLINE within ~1 minute."; loadAll(); }
+        else if(r.status==="FAILED"||r.status==="EXPIRED"){ clearInterval(iv); window._rsBusyMsg=false; msg.textContent="✗ "+r.status+": "+(r.result||""); }
+        else if(Date.now()-t0>90000){ clearInterval(iv); window._rsBusyMsg=false; msg.textContent="No answer from the VM in 90s — the VM itself may be stopped (check the Oracle app)."; }
+      }catch(e){}
+    },3000);
+  }catch(e){ msg.textContent="Error: "+e.message+" (was restart-button.sql run?)"; window._rsBusyMsg=false; }
+});
+rsRefresh(); setInterval(rsRefresh, 15000);
+
 </script>
 </body>
 </html>
